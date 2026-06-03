@@ -1729,13 +1729,24 @@
                 subjectUnits[code].allocated = 0;
             });
 
-            // Sum up allocated units from schedules
+            // Sum up allocated units from schedules FOR CURRENT YEAR/SEMESTER ONLY
             schedules.forEach(function (sch) {
-                if (subjectUnits[sch.subjCode]) {
+                // Only count schedules that match current year and semester
+                var matchesYearSem = false;
+                if (sch.year && sch.semester) {
+                    matchesYearSem = (sch.year === currentYear && sch.semester === currentSemester);
+                }
+
+                if (matchesYearSem && subjectUnits[sch.subjCode]) {
                     var duration = (slotIdx(sch.end) - slotIdx(sch.start)) / 2; // Convert to hours
                     subjectUnits[sch.subjCode].allocated += duration;
                 }
             });
+
+            console.log('📊 Allocated units for Year', currentYear, 'Sem', currentSemester, ':',
+                Object.keys(subjectUnits).map(function (code) {
+                    return code + ': ' + subjectUnits[code].allocated + '/' + subjectUnits[code].configured;
+                }).join(', '));
         }
 
         function renderDraggableBlocks() {
@@ -2133,6 +2144,12 @@
             applyYearSemesterFilter();
             renderTimetable();
             renderReport();
+
+            // Re-render draggable blocks for new year/semester
+            if (unitConfigSaved) {
+                calculateAllocatedUnits();
+                renderDraggableBlocks();
+            }
         };
 
         function applyYearSemesterFilter() {
