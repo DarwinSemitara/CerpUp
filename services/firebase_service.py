@@ -24,6 +24,15 @@ if not firebase_admin._apps:
         # Fallback to file path (for local development)
         cred_path = os.getenv('FIREBASE_CREDENTIALS_PATH',
                               'firebase-credentials.json')
+
+        # Check if file exists before trying to load it
+        if not os.path.exists(cred_path):
+            raise FileNotFoundError(
+                f"❌ Firebase credentials not found!\n"
+                f"For production: Set FIREBASE_CREDENTIALS_JSON environment variable\n"
+                f"For local dev: Place {cred_path} in project root"
+            )
+
         cred = credentials.Certificate(cred_path)
         print(f"✅ Firebase initialized from file: {cred_path}")
 
