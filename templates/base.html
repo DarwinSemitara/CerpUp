@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CERP{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background: #6b0f1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+        }
+
+        #loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .cerp-word {
+            display: flex;
+            gap: 4px;
+            line-height: 1;
+            align-items: flex-end;
+        }
+
+        .cerp-letter {
+            font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+            font-weight: 900;
+            font-size: 5.5rem;
+            color: white;
+            display: inline-block;
+        }
+
+        #wave-svg {
+            display: block;
+            margin-top: 1px;
+            overflow: visible;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+
+    {% if show_loading %}
+    <div id="loading-screen">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+            <div class="cerp-word">
+                <span class="cerp-letter" id="gl-0">C</span>
+                <span class="cerp-letter" id="gl-1">E</span>
+                <span class="cerp-letter" id="gl-2">R</span>
+                <span class="cerp-letter" id="gl-3">P</span>
+                <span class="cerp-letter" style="margin-left:20px;" id="gl-4">U</span>
+                <span class="cerp-letter" id="gl-5">P</span>
+            </div>
+            <svg id="wave-svg" height="18" viewBox="0 0 420 18" style="width:420px;">
+                <path id="wave-path" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round"
+                    d="M0,9 L420,9" />
+            </svg>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const svgW = 420, wavePath = document.getElementById('wave-path');
+            const glyphX = [35, 100, 162, 224, 310, 372], totalGlyphs = 6;
+            const travelDuration = 1600, bumpWidth = 55, bumpHeight = 9;
+            let startTime = null;
+            function gaussian(x, c, w) { return Math.exp(-0.5 * Math.pow((x - c) / w, 2)); }
+            function buildPath(center) {
+                const pts = [];
+                for (let i = 0; i <= 140; i++) { const x = (i / 140) * svgW; const y = 9 - bumpHeight * gaussian(x, center, bumpWidth); pts.push((i === 0 ? 'M' : 'L') + x.toFixed(2) + ',' + y.toFixed(2)); }
+                return pts.join(' ');
+            }
+            function setY(i, y) { document.getElementById('gl-' + i).style.transform = 'translateY(' + y + 'px)'; }
+            function animate(ts) {
+                if (!startTime) startTime = ts;
+                const elapsed = ts - startTime;
+                const center = -60 + (svgW + 120) * (elapsed / travelDuration);
+                wavePath.setAttribute('d', buildPath(center));
+                for (let i = 0; i < totalGlyphs; i++)setY(i, -(gaussian(glyphX[i], center, bumpWidth)) * 30);
+                if (elapsed < travelDuration + 200) { requestAnimationFrame(animate); }
+                else { wavePath.setAttribute('d', 'M0,9 L' + svgW + ',9'); for (let i = 0; i < totalGlyphs; i++)setY(i, 0); }
+            }
+            requestAnimationFrame(animate);
+            setTimeout(() => document.getElementById('loading-screen').classList.add('fade-out'), 2100);
+            setTimeout(() => { const el = document.getElementById('loading-screen'); if (el) el.remove(); }, 2500);
+        })();
+    </script>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+    <script src="/static/js/main.js"></script>
+</body>
+
+</html>

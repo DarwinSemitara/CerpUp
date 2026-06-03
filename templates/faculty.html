@@ -1,0 +1,731 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CERP UPLB - Faculty and Staff</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Arsenal:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'maroon': { 700: '#8B0000', 800: '#6B0000', 900: '#5C0000' },
+                        'forest': { 700: '#014421', 800: '#013318', 900: '#01220F' }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                        'arsenal': ['Arsenal', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html {
+            scrollbar-width: none;
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f9fafb;
+        }
+
+        /* Header */
+        header {
+            height: 58px;
+            background: #013318;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 50;
+            overflow: visible;
+        }
+
+        #logo-circle {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: -30px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            z-index: 60;
+            overflow: hidden;
+        }
+
+        #logo-arc-wrap {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: -30px;
+            width: 80px;
+            height: 80px;
+            z-index: 62;
+            pointer-events: none;
+        }
+
+        #progress-left,
+        #progress-right {
+            position: absolute;
+            bottom: 0;
+            height: 6px;
+            width: 0%;
+            z-index: 61;
+            transition: width 0.1s linear;
+            background: linear-gradient(to right, #5C0000, #8B0000);
+        }
+
+        #progress-left {
+            left: 0;
+        }
+
+        #progress-right {
+            right: 0;
+        }
+
+        .nav-btn {
+            font-family: 'Arsenal', sans-serif;
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.85);
+            padding: 6px 14px;
+            border-radius: 4px;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-btn:hover,
+        .nav-btn.active {
+            color: #E6B800;
+        }
+
+        .nav-dropdown {
+            position: fixed;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            display: none;
+            flex-direction: column;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .nav-dropdown.open {
+            display: flex;
+        }
+
+        .nav-dropdown a {
+            padding: 10px 16px;
+            font-size: 0.8rem;
+            font-family: 'Arsenal', sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: #374151;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .nav-dropdown a:hover {
+            background: #f3f4f6;
+            color: #6B0000;
+        }
+
+        /* Hero */
+        #hero {
+            position: fixed;
+            inset: 0;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        #hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url('/static/images/hero.png');
+            background-size: cover;
+            background-position: center;
+            filter: blur(2px) brightness(0.45);
+            transform: scale(1.05);
+        }
+
+        #hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(92, 0, 0, 0.25);
+        }
+
+        #hero-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+        }
+
+        /* Content */
+        #scroll-content {
+            position: relative;
+            z-index: 10;
+            margin-top: calc(100vh - 58px);
+        }
+
+        .content-section {
+            background: #f9fafb;
+            padding: 80px 32px 100px;
+        }
+
+        .section-title {
+            font-family: 'Arsenal', sans-serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-align: center;
+            color: #5C0000;
+            margin-bottom: 14px;
+        }
+
+        .section-subtitle {
+            max-width: 700px;
+            margin: 0 auto 70px;
+            text-align: center;
+            color: #6b7280;
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+
+        /* Grids */
+        .chairperson-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 80px;
+        }
+
+        .faculty-grid {
+            max-width: 1200px;
+            margin: 0 auto 100px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 34px;
+        }
+
+        .staff-grid-4 {
+            max-width: 1200px;
+            margin: 0 auto 100px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 28px;
+        }
+
+        .mini-section-title {
+            font-family: 'Arsenal', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #5C0000;
+            text-align: center;
+            margin-bottom: 42px;
+        }
+
+        /* Member Cards */
+        .member-card {
+            background: white;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .member-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.12);
+        }
+
+        .member-image-wrap {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            overflow: hidden;
+            background: #e5e7eb;
+        }
+
+        .member-image-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .email-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.48);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .member-image-wrap:hover .email-overlay {
+            opacity: 1;
+        }
+
+        .email-btn {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .email-btn:hover {
+            transform: scale(1.08);
+        }
+
+        .email-btn svg {
+            width: 26px;
+            height: 26px;
+            color: #5C0000;
+        }
+
+        .member-info {
+            padding: 24px 22px 28px;
+            text-align: center;
+        }
+
+        .member-name {
+            font-family: 'Arsenal', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.45;
+            margin-bottom: 8px;
+        }
+
+        .member-role {
+            font-size: 0.88rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #8B0000;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .member-email {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* Footer */
+        footer {
+            background-image: url('/static/images/hero.png');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        footer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.78);
+        }
+
+        .footer-inner {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 52px 40px 32px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 36px;
+        }
+
+        .footer-dept-name {
+            font-family: 'Arsenal', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.04em;
+            color: white;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            line-height: 1.4;
+        }
+
+        .footer-contact-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .footer-contact-item svg {
+            flex-shrink: 0;
+            margin-top: 2px;
+            opacity: 0.8;
+        }
+
+        .footer-contact-item a {
+            color: rgba(255, 255, 255, 0.75);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-contact-item a:hover {
+            color: #E6B800;
+        }
+
+        .footer-links-title {
+            font-family: 'Arsenal', sans-serif;
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.45);
+            margin-bottom: 16px;
+        }
+
+        .footer-link-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-link-item:hover {
+            color: #E6B800;
+        }
+
+        .footer-link-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.5);
+            flex-shrink: 0;
+        }
+
+        .footer-logos {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+        }
+
+        .footer-logo-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .footer-logo-circle img {
+            width: 68px;
+            height: 68px;
+            object-fit: contain;
+        }
+
+        .footer-divider {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            margin-bottom: 20px;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 0.04em;
+        }
+
+        @media (max-width: 1024px) {
+
+            .faculty-grid,
+            .staff-grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+
+            .faculty-grid,
+            .staff-grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .member-image-wrap {
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div id="logo-circle">
+            <img src="/static/images/uplogo.png" alt="UP Logo" class="w-full h-full object-contain p-1">
+        </div>
+        <div id="logo-arc-wrap">
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                <circle id="arc-progress" cx="40" cy="40" r="37" stroke="url(#arcGrad)" stroke-width="6" fill="none"
+                    stroke-linecap="butt" stroke-dasharray="232" stroke-dashoffset="232"
+                    transform="rotate(-90 40 40)" />
+                <defs>
+                    <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#5C0000" />
+                        <stop offset="100%" stop-color="#8B0000" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+        <div id="progress-left"></div>
+        <div id="progress-right"></div>
+        <div class="absolute top-1/2 -translate-y-1/2 flex items-center gap-6" style="right:calc(50% + 60px);">
+            <a href="/" class="nav-btn">HOME</a>
+            <div style="position:relative;"><a href="#" class="nav-btn active" data-dropdown="dd-about">ABOUT US</a>
+            </div>
+        </div>
+        <div class="absolute top-1/2 -translate-y-1/2 flex items-center gap-6" style="left:calc(50% + 60px);">
+            <div style="position:relative;"><a href="#" class="nav-btn" data-dropdown="dd-research">RESEARCH</a></div>
+            <a href="/login" class="nav-btn">CERP-UP</a>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <div id="hero">
+        <div id="hero-content">
+            <h1 class="text-white text-center px-6"
+                style="font-family:'Arsenal',sans-serif;font-size:clamp(3rem,8vw,6rem);font-weight:700;letter-spacing:0.1em;line-height:1;text-shadow:0 2px 20px rgba(0,0,0,0.7);">
+                FACULTY & STAFF</h1>
+            <p class="text-center px-6 max-w-2xl"
+                style="color:rgba(255,255,255,0.82);font-size:0.97rem;line-height:1.8;text-shadow:0 1px 6px rgba(0,0,0,0.5);">
+                Meet the faculty members, researchers, representatives, and administrative staff of the Department of
+                Community and Environmental Resource Planning.</p>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div id="scroll-content">
+        <section class="content-section">
+            <h2 class="section-title">Faculty Members</h2>
+            <p class="section-subtitle">The department is composed of planners, educators, researchers, and
+                practitioners committed to advancing community and environmental resource planning.</p>
+
+            <!-- Chairperson -->
+            <div class="chairperson-wrap" id="chairperson-section"></div>
+
+            <!-- Faculty Grid -->
+            <div class="faculty-grid" id="faculty-grid"></div>
+
+            <!-- Representatives -->
+            <h2 class="mini-section-title">Representatives</h2>
+            <div class="staff-grid-4" id="reps-grid"></div>
+
+            <!-- Administrative Staff -->
+            <h2 class="mini-section-title">Administrative Staff</h2>
+            <div class="staff-grid-4" id="admin-staff-grid"></div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-grid">
+                <div>
+                    <p class="footer-dept-name">Department of Community and<br>Environmental Resource Planning</p>
+                    <div class="footer-contact-item"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 9.75L12 3l9 6.75V21a.75.75 0 01-.75.75H15v-6h-6v6H3.75A.75.75 0 013 21V9.75z" />
+                        </svg><span>Gil F Saguiguit Hall, College of Human Ecology, UP Los Baños</span></div>
+                    <div class="footer-contact-item"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                        </svg><span>+63 945 664 6705 | +63 962 068 4996</span></div>
+                    <div class="footer-contact-item"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg><a href="mailto:che_dcerp.uplb@up.edu.ph">che_dcerp.uplb@up.edu.ph</a></div>
+                    <div class="footer-contact-item"><svg width="15" height="15" fill="currentColor"
+                            viewBox="0 0 24 24">
+                            <path
+                                d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987H7.898V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+                        </svg><a href="#">DCERP Facebook</a></div>
+                </div>
+                <div>
+                    <p class="footer-links-title">Related Units</p>
+                    <a href="#" class="footer-link-item"><span class="footer-link-dot"></span>College of Human
+                        Ecology</a>
+                    <a href="#" class="footer-link-item"><span class="footer-link-dot"></span>Department of Social
+                        Development Services</a>
+                    <a href="#" class="footer-link-item"><span class="footer-link-dot"></span>Institute of Human
+                        Nutrition and Food</a>
+                    <a href="#" class="footer-link-item"><span class="footer-link-dot"></span>Department of Human Family
+                        and Development Studies</a>
+                </div>
+                <div class="footer-logos">
+                    <div class="footer-logo-circle"><img src="/static/images/uplogo.png" alt="UP Logo"></div>
+                    <div class="footer-logo-circle"><img src="/static/images/dcerp.png" alt="DCERP Logo"
+                            onerror="this.style.display='none'"></div>
+                </div>
+            </div>
+            <hr class="footer-divider">
+            <p class="footer-bottom">&copy; 2024 Department of Community and Environmental Resources Planning</p>
+        </div>
+    </footer>
+
+    <!-- Dropdowns -->
+    <div id="dd-about" class="nav-dropdown"><a href="/alumni">Alumni</a><a href="/faculty">Faculty and Staff</a></div>
+    <div id="dd-research" class="nav-dropdown"><a href="#labs">Labs</a><a href="#projects">Projects</a><a
+            href="/publications">Publications</a></div>
+
+    <script>
+        // Progress bar
+        const progressLeft = document.getElementById('progress-left');
+        const progressRight = document.getElementById('progress-right');
+        const arcEl = document.getElementById('arc-progress');
+        const circumference = 232;
+        const headerEl = document.querySelector('header');
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const pct = Math.min(scrollTop / docHeight, 1);
+            const sideWidth = headerEl.offsetWidth / 2 - 40;
+            if (pct <= 0.5) {
+                progressLeft.style.width = (sideWidth * (pct / 0.5)) + 'px';
+                progressRight.style.width = '0px';
+                arcEl.style.strokeDashoffset = circumference;
+            } else {
+                progressLeft.style.width = sideWidth + 'px';
+                const rightPct = (pct - 0.5) / 0.5;
+                arcEl.style.strokeDashoffset = circumference * (1 - Math.min(rightPct * 2, 1));
+                progressRight.style.width = (sideWidth * Math.max(0, (rightPct - 0.5) / 0.5)) + 'px';
+            }
+        });
+
+        // Dropdowns
+        document.querySelectorAll('[data-dropdown]').forEach(trigger => {
+            const dd = document.getElementById(trigger.getAttribute('data-dropdown'));
+            trigger.addEventListener('mouseenter', () => {
+                const rect = trigger.getBoundingClientRect();
+                dd.style.top = (rect.bottom + 8) + 'px';
+                dd.style.left = rect.left + 'px';
+                dd.classList.add('open');
+            });
+            trigger.addEventListener('mouseleave', () => {
+                setTimeout(() => { if (!dd.matches(':hover')) dd.classList.remove('open'); }, 80);
+            });
+            dd.addEventListener('mouseleave', () => dd.classList.remove('open'));
+        });
+
+        // Copy email
+        function copyEmail(email) {
+            navigator.clipboard.writeText(email);
+            const toast = document.createElement('div');
+            toast.innerText = 'Email copied!';
+            toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#111827;color:white;padding:12px 18px;border-radius:10px;font-size:0.85rem;z-index:99999;opacity:0;transition:opacity 0.25s ease';
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => { toast.style.opacity = '1'; });
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 1600);
+        }
+
+        // Load members
+        async function loadMembers() {
+            try {
+                const res = await fetch('/api/members');
+                if (!res.ok) throw new Error();
+                const members = await res.json();
+
+                const chairperson = members.find(m => m.type === 'chairperson');
+                const faculty = members.filter(m => m.type === 'faculty');
+                const reps = members.filter(m => m.type === 'reps');
+                const adminStaff = members.filter(m => m.type === 'admin_staff');
+
+                document.getElementById('chairperson-section').innerHTML = chairperson ? renderMemberCard(chairperson, true) : '';
+                document.getElementById('faculty-grid').innerHTML = faculty.length > 0 ? faculty.map(m => renderMemberCard(m)).join('') : '<p style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:32px;">No faculty members yet</p>';
+                document.getElementById('reps-grid').innerHTML = reps.length > 0 ? reps.map(m => renderMemberCard(m)).join('') : '<p style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:32px;">No representatives yet</p>';
+                document.getElementById('admin-staff-grid').innerHTML = adminStaff.length > 0 ? adminStaff.map(m => renderMemberCard(m)).join('') : '<p style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:32px;">No administrative staff yet</p>';
+            } catch (e) {
+                console.error('Failed to load members:', e);
+            }
+        }
+
+        function renderMemberCard(member, isChairperson = false) {
+            const fullName = `${member.first} ${member.last}${member.suffix ? ', ' + member.suffix : ''}`;
+            const email = member.email || 'N/A';
+            const role = member.role || (isChairperson ? 'Department Chairperson' : 'Faculty Member');
+            const photoHtml = member.photo_url ? `<img src="${member.photo_url}" alt="${fullName}">` : '';
+            const wrapperClass = isChairperson ? 'member-card max-w-sm w-full' : 'member-card';
+
+            return `
+                <div class="${wrapperClass}">
+                    <div class="member-image-wrap">
+                        ${photoHtml}
+                        <div class="email-overlay">
+                            <button class="email-btn" onclick="copyEmail('${email}')">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="member-info">
+                        <h3 class="member-name">${fullName}</h3>
+                        <p class="member-role">${role}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        loadMembers();
+    </script>
+</body>
+
+</html>

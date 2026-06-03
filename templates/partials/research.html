@@ -1,0 +1,134 @@
+<div style="padding:32px;">
+  <!-- Filter and Search Bar -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;gap:20px;">
+
+    <!-- Sort By Dropdown -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <label style="font-size:0.85rem;color:#374151;font-weight:500;">Sort by:</label>
+      <select class="filter-select" id="res-sort" onchange="resTable.apply()"
+        style="min-width:160px;padding:6px 10px;border:none;border-radius:6px;font-size:0.85rem;background:white;cursor:pointer;outline:none;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <option value="">Faculty name</option>
+        <option value="faculty">Faculty name</option>
+        <option value="cat">Category</option>
+        <option value="start">Date</option>
+      </select>
+    </div>
+
+    <!-- Search Bar -->
+    <div style="position:relative;width:280px;">
+      <input type="text" id="res-search" placeholder="Search" oninput="resTable.apply()"
+        style="width:100%;padding:8px 36px 8px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;background:white;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+      <button class="search-btn" type="button"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#6b7280" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8" />
+          <path stroke-linecap="round" d="M21 21l-4.35-4.35" />
+        </svg>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Research Table -->
+  <div class="table-wrap">
+    <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;background:white;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Faculty</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Category</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Sub-category</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;min-width:250px;border-right:1px solid #e5e7eb;">
+              Title</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Funding Agency</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              FundCode</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Nature of Project</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Project ID</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              SDG's</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Role</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;min-width:180px;border-right:1px solid #e5e7eb;">
+              Coworkers Involved</th>
+            <th
+              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
+              Start Date</th>
+            <th style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;">
+              End Date</th>
+          </tr>
+        </thead>
+        <tbody id="res-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="res-pg" style="margin-top:24px;"></div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    if (window._resTableInit) return; window._resTableInit = true;
+
+    // Sample data with Faculty column - 20 entries
+    const resData = [
+      { faculty: 'Dr. Juan Dela Cruz', cat: 'Applied Research', sub: 'Agriculture', title: 'Soil Nutrient Analysis in Upland Farms', agency: 'DOST', code: 'DOST-2024-001', nature: 'Funded', id: 'PRJ-001', sdg: 'SDG 2', role: 'Lead Researcher', coworkers: 'J. Santos, M. Cruz', start: '2024-01-15', end: '2025-01-14' },
+      { faculty: 'Dr. Maria Santos', cat: 'Basic Research', sub: 'Biology', title: 'Microbial Diversity in Mangrove Ecosystems', agency: 'CHED', code: 'CHED-2023-045', nature: 'Funded', id: 'PRJ-002', sdg: 'SDG 14', role: 'Co-Researcher', coworkers: 'A. Reyes', start: '2023-06-01', end: '2024-12-31' },
+      { faculty: 'Dr. Roberto Reyes', cat: 'Applied Research', sub: 'Engineering', title: 'Low-Cost Water Filtration System Design', agency: 'NRCP', code: 'NRCP-2024-012', nature: 'Funded', id: 'PRJ-003', sdg: 'SDG 6', role: 'Lead Researcher', coworkers: 'R. Dela Cruz, P. Lim', start: '2024-03-01', end: '2025-03-01' },
+      { faculty: 'Dr. Ana Garcia', cat: 'Policy Research', sub: 'Education', title: 'Impact of Modular Learning on Student Performance', agency: 'DepEd', code: 'DEPED-2023-088', nature: 'Unfunded', id: 'PRJ-004', sdg: 'SDG 4', role: 'Lead Researcher', coworkers: 'L. Garcia', start: '2023-08-01', end: '2024-07-31' },
+      { faculty: 'Dr. Carlos Mendoza', cat: 'Applied Research', sub: 'Health', title: 'Herbal Formulation for Wound Healing', agency: 'DOH', code: 'DOH-2024-033', nature: 'Funded', id: 'PRJ-005', sdg: 'SDG 3', role: 'Co-Researcher', coworkers: 'C. Mendoza, T. Bautista', start: '2024-02-01', end: '2025-08-01' },
+      { faculty: 'Dr. Nina Torres', cat: 'Basic Research', sub: 'Chemistry', title: 'Synthesis of Biodegradable Plastics from Cassava', agency: 'DOST', code: 'DOST-2023-077', nature: 'Funded', id: 'PRJ-006', sdg: 'SDG 12', role: 'Lead Researcher', coworkers: 'N. Torres', start: '2023-09-01', end: '2025-09-01' },
+      { faculty: 'Dr. Eduardo Villanueva', cat: 'Applied Research', sub: 'ICT', title: 'AI-Based Crop Disease Detection System', agency: 'DICT', code: 'DICT-2024-019', nature: 'Funded', id: 'PRJ-007', sdg: 'SDG 2', role: 'Lead Researcher', coworkers: 'E. Villanueva, K. Tan', start: '2024-04-01', end: '2025-10-01' },
+      { faculty: 'Dr. Fe Aquino', cat: 'Policy Research', sub: 'Governance', title: 'E-Governance Adoption in Rural LGUs', agency: 'DILG', code: 'DILG-2023-055', nature: 'Unfunded', id: 'PRJ-008', sdg: 'SDG 16', role: 'Co-Researcher', coworkers: 'F. Aquino', start: '2023-11-01', end: '2024-10-31' },
+      { faculty: 'Dr. Gabriel Ramos', cat: 'Basic Research', sub: 'Physics', title: 'Solar Energy Efficiency in Tropical Climates', agency: 'DOE', code: 'DOE-2024-008', nature: 'Funded', id: 'PRJ-009', sdg: 'SDG 7', role: 'Lead Researcher', coworkers: 'G. Ramos, H. Flores', start: '2024-01-01', end: '2026-01-01' },
+      { faculty: 'Dr. Isabel Castillo', cat: 'Applied Research', sub: 'Marine Science', title: 'Coral Reef Restoration Techniques', agency: 'DENR', code: 'DENR-2023-041', nature: 'Funded', id: 'PRJ-010', sdg: 'SDG 14', role: 'Co-Researcher', coworkers: 'I. Castillo', start: '2023-07-01', end: '2025-06-30' },
+      { faculty: 'Dr. Jose Navarro', cat: 'Applied Research', sub: 'Nutrition', title: 'Malnutrition Intervention in Indigenous Communities', agency: 'FNRI', code: 'FNRI-2024-022', nature: 'Funded', id: 'PRJ-011', sdg: 'SDG 3', role: 'Lead Researcher', coworkers: 'J. Navarro, B. Ong', start: '2024-05-01', end: '2025-11-01' },
+      { faculty: 'Dr. Miguel Pascual', cat: 'Basic Research', sub: 'Geology', title: 'Seismic Risk Mapping of Fault Lines', agency: 'PHIVOLCS', code: 'PHI-2023-066', nature: 'Funded', id: 'PRJ-012', sdg: 'SDG 11', role: 'Co-Researcher', coworkers: 'M. Pascual', start: '2023-10-01', end: '2025-04-01' },
+      { faculty: 'Dr. Olivia Soriano', cat: 'Policy Research', sub: 'Economics', title: 'Microfinance Impact on Women Entrepreneurs', agency: 'BSP', code: 'BSP-2024-014', nature: 'Unfunded', id: 'PRJ-013', sdg: 'SDG 8', role: 'Lead Researcher', coworkers: 'O. Soriano, P. Diaz', start: '2024-06-01', end: '2025-05-31' },
+      { faculty: 'Dr. Quintin Hernandez', cat: 'Applied Research', sub: 'Forestry', title: 'Reforestation Strategies for Degraded Watersheds', agency: 'DENR', code: 'DENR-2024-039', nature: 'Funded', id: 'PRJ-014', sdg: 'SDG 15', role: 'Lead Researcher', coworkers: 'Q. Hernandez', start: '2024-07-01', end: '2026-07-01' },
+      { faculty: 'Dr. Rosa Aguilar', cat: 'Basic Research', sub: 'Linguistics', title: 'Endangered Language Documentation in Mindanao', agency: 'NCCA', code: 'NCCA-2023-091', nature: 'Funded', id: 'PRJ-015', sdg: 'SDG 4', role: 'Co-Researcher', coworkers: 'R. Aguilar, S. Macaraeg', start: '2023-12-01', end: '2025-11-30' },
+      { faculty: 'Dr. Samuel Cruz', cat: 'Applied Research', sub: 'Urban Planning', title: 'Sustainable Transport Systems in Metro Manila', agency: 'MMDA', code: 'MMDA-2024-007', nature: 'Funded', id: 'PRJ-016', sdg: 'SDG 11', role: 'Lead Researcher', coworkers: 'T. Lopez, U. Reyes', start: '2024-02-15', end: '2025-08-15' },
+      { faculty: 'Dr. Teresa Bautista', cat: 'Basic Research', sub: 'Botany', title: 'Endemic Plant Species Conservation', agency: 'DENR', code: 'DENR-2023-088', nature: 'Funded', id: 'PRJ-017', sdg: 'SDG 15', role: 'Co-Researcher', coworkers: 'V. Santos', start: '2023-05-01', end: '2025-05-01' },
+      { faculty: 'Dr. Victor Morales', cat: 'Applied Research', sub: 'Renewable Energy', title: 'Biomass Energy Production from Agricultural Waste', agency: 'DOE', code: 'DOE-2024-021', nature: 'Funded', id: 'PRJ-018', sdg: 'SDG 7', role: 'Lead Researcher', coworkers: 'W. Garcia, X. Tan', start: '2024-03-15', end: '2026-03-15' },
+      { faculty: 'Dr. Wendy Flores', cat: 'Policy Research', sub: 'Social Welfare', title: 'Conditional Cash Transfer Program Evaluation', agency: 'DSWD', code: 'DSWD-2023-034', nature: 'Unfunded', id: 'PRJ-019', sdg: 'SDG 1', role: 'Lead Researcher', coworkers: 'Y. Navarro', start: '2023-09-15', end: '2024-09-14' },
+      { faculty: 'Dr. Xavier Lim', cat: 'Applied Research', sub: 'Aquaculture', title: 'Tilapia Breeding Optimization Techniques', agency: 'BFAR', code: 'BFAR-2024-016', nature: 'Funded', id: 'PRJ-020', sdg: 'SDG 2', role: 'Co-Researcher', coworkers: 'Z. Ramos, A. Cruz', start: '2024-04-20', end: '2025-10-20' },
+    ];
+
+    function row(r) {
+      return `<tr style="border-bottom:1px solid #f3f4f6;transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+      <td style="padding:10px 12px;font-size:0.8rem;color:#111827;font-weight:500;border-right:1px solid #f3f4f6;">${r.faculty}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.cat}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.sub}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;max-width:300px;border-right:1px solid #f3f4f6;">${r.title}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.agency}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;font-family:monospace;border-right:1px solid #f3f4f6;">${r.code}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.nature}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;font-family:monospace;border-right:1px solid #f3f4f6;">${r.id}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.sdg}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.role}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.coworkers}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;white-space:nowrap;border-right:1px solid #f3f4f6;">${r.start}</td>
+      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;white-space:nowrap;">${r.end}</td>
+    </tr>`;
+    }
+
+    window.resTable = window.makePagTable('res-tbody', 'res-pg', () => resData, 'res-sort', 'res-search', row);
+    resTable.apply();
+  })();
+</script>

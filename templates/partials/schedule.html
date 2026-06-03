@@ -1,0 +1,4119 @@
+<style>
+    /* ── Layout ── */
+    #sched-root {
+        display: flex;
+        position: relative;
+    }
+
+    #sched-main {
+        flex: 1;
+        min-width: 0;
+        transition: margin-right 0.35s ease;
+    }
+
+    #sched-root.chat-open #sched-main {
+        margin-right: 364px;
+    }
+
+    /* ── Toggle ── */
+    .mode-toggle {
+        display: inline-flex;
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 3px;
+        gap: 2px;
+        margin-bottom: 16px;
+    }
+
+    .mode-btn {
+        padding: 7px 20px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: #6b7280;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .mode-btn.active {
+        background: white;
+        color: #6b0f1a;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ── Year & Semester Selects ── */
+    .year-sem-select {
+        padding: 7px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #374151;
+        background: white;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.15s;
+        min-width: 120px;
+    }
+
+    .year-sem-select:hover {
+        border-color: #9ca3af;
+    }
+
+    .year-sem-select:focus {
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+    }
+
+    /* ── Hint ── */
+    #manual-hint {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #fdf2f3;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 0.8rem;
+        color: #6b0f1a;
+        margin-bottom: 14px;
+    }
+
+    /* ── Filters ── */
+    .sched-filters {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+    }
+
+    .sched-filters select {
+        padding: 7px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: #374151;
+        background: white;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .sched-filters select:focus {
+        border-color: #6b0f1a;
+    }
+
+    .sched-filters label {
+        font-size: 0.78rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    /* ── Timetable ── */
+    .timetable-wrap {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        user-select: none;
+    }
+
+    .timetable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.75rem;
+        table-layout: fixed;
+    }
+
+    .timetable th {
+        background: #f9fafb;
+        padding: 9px 6px;
+        text-align: center;
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .timetable th:first-child {
+        width: 68px;
+        text-align: right;
+        padding-right: 10px;
+    }
+
+    .timetable td {
+        border: 1px solid #f0f0f0;
+        padding: 0;
+        height: 28px;
+        vertical-align: top;
+        position: relative;
+        cursor: crosshair;
+    }
+
+    .timetable td:first-child {
+        background: #fafafa;
+        text-align: right;
+        padding-right: 10px;
+        color: #6b7280;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: default;
+        vertical-align: middle;
+        font-weight: 500;
+    }
+
+    .timetable td.cell-hover {
+        background: rgba(107, 15, 26, 0.05);
+    }
+
+    /* ── Schedule block ── */
+    .sched-block {
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        top: 1px;
+        border-radius: 5px;
+        padding: 3px 6px;
+        font-size: 0.67rem;
+        line-height: 1.3;
+        overflow: hidden;
+        z-index: 2;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        display: flex;
+        flex-direction: column;
+        cursor: grab;
+    }
+
+    .sched-block:active {
+        cursor: grabbing;
+    }
+
+    .sched-block.dragging {
+        opacity: 0.5;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .sched-block .sb-subj {
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    .sched-block .sb-prof {
+        color: #555;
+        font-size: 0.63rem;
+    }
+
+    .sched-block .sb-room {
+        color: #888;
+        font-size: 0.63rem;
+    }
+
+    .sched-block .sb-resize {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 7px;
+        cursor: ns-resize;
+    }
+
+    .sched-block .sb-resize:hover {
+        background: rgba(0, 0, 0, 0.08);
+    }
+
+    .sched-block .sb-del {
+        position: absolute;
+        top: 3px;
+        right: 4px;
+        font-size: 0.6rem;
+        color: rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        display: none;
+    }
+
+    .sched-block:hover .sb-del {
+        display: block;
+    }
+
+    .sched-block .sb-del:hover {
+        color: #dc2626;
+    }
+
+    /* draw overlay */
+    #draw-overlay {
+        position: absolute;
+        pointer-events: none;
+        z-index: 10;
+        border: 2px solid #6b0f1a;
+        background: rgba(107, 15, 26, 0.08);
+        border-radius: 4px;
+        display: none;
+    }
+
+    /* drag ghost */
+    #drag-ghost {
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        border-radius: 5px;
+        padding: 4px 8px;
+        font-size: 0.67rem;
+        font-family: inherit;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        opacity: 0.85;
+        display: none;
+    }
+
+    /* drop preview */
+    .drop-preview {
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        top: 1px;
+        border-radius: 5px;
+        border: 2px dashed #6b0f1a;
+        background: rgba(107, 15, 26, 0.1);
+        pointer-events: none;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: #6b0f1a;
+        font-weight: 600;
+    }
+
+    /* ── New block modal ── */
+    #new-block-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+
+    #new-block-modal.open {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .nbm-box {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        width: 100%;
+        max-width: 480px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        transform: translateY(8px);
+        transition: transform 0.2s;
+    }
+
+    #new-block-modal.open .nbm-box {
+        transform: translateY(0);
+    }
+
+    .nbm-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 4px;
+    }
+
+    .nbm-sub {
+        font-size: 0.78rem;
+        color: #6b7280;
+        margin: 0 0 16px;
+    }
+
+    .nbm-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .nbm-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .nbm-group label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .nbm-group input,
+    .nbm-group select {
+        padding: 8px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: #374151;
+        outline: none;
+        font-family: inherit;
+        transition: border-color 0.15s;
+        background: white;
+        cursor: pointer;
+    }
+
+    .nbm-group input:focus,
+    .nbm-group select:focus {
+        border-color: #6b0f1a;
+    }
+
+    .nbm-group input[readonly] {
+        cursor: not-allowed;
+    }
+
+    .nbm-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .nbm-btn-primary {
+        padding: 8px 20px;
+        background: #6b0f1a;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .nbm-btn-primary:hover {
+        background: #850f20;
+    }
+
+    .nbm-btn-secondary {
+        padding: 8px 16px;
+        background: white;
+        color: #374151;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        cursor: pointer;
+    }
+
+    .nbm-err {
+        font-size: 0.75rem;
+        color: #dc2626;
+        margin: 0 0 10px;
+        display: none;
+    }
+
+    /* ── Add Subject Card ── */
+    .add-subject-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .add-subject-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .add-subject-header h3 {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #374151;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .add-subject-toggle {
+        padding: 7px 16px;
+        background: #6b0f1a;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 0.15s;
+    }
+
+    .add-subject-toggle:hover {
+        background: #850f20;
+    }
+
+    .add-subject-form {
+        padding: 20px;
+        background: #fafafa;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .asf-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .asf-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .asf-group label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .asf-group input,
+    .asf-group select {
+        padding: 8px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: #374151;
+        outline: none;
+        font-family: inherit;
+        transition: border-color 0.15s;
+        background: white;
+        cursor: pointer;
+    }
+
+    .asf-group input:focus,
+    .asf-group select:focus {
+        border-color: #6b0f1a;
+    }
+
+    .asf-group input[readonly] {
+        cursor: not-allowed;
+    }
+
+    .asf-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    /* ── Staging Area ── */
+    .staging-area {
+        padding: 16px 20px;
+        min-height: 100px;
+    }
+
+    .staging-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .staging-blocks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        min-height: 80px;
+        padding: 16px;
+        background: #f9fafb;
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+    }
+
+    /* Draggable subject blocks */
+    .draggable-subject {
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: grab;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        transition: all 0.15s;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 100px;
+        color: #1a1a1a;
+        /* Black text for better contrast on pastel backgrounds */
+        user-select: none;
+        border: 2px solid transparent;
+        /* Default transparent border for partially allocated */
+    }
+
+    .draggable-subject:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .draggable-subject:active {
+        cursor: grabbing;
+        transform: scale(0.98);
+    }
+
+    .draggable-subject.dragging {
+        opacity: 0.5;
+    }
+
+    .draggable-subject.incomplete {
+        /* Keep fully visible with normal colors */
+        opacity: 1 !important;
+        /* Remove filter - colors from palette are already light/pastel */
+        /* Add a dashed border to show "not started" status */
+        border: 2px dashed rgba(107, 15, 26, 0.3);
+    }
+
+    .draggable-subject.incomplete .subj-code,
+    .draggable-subject.incomplete .subj-units {
+        /* Force text to be fully visible and black */
+        opacity: 1 !important;
+        color: #1a1a1a !important;
+    }
+
+    .draggable-subject .subj-code {
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .draggable-subject .subj-units {
+        font-size: 0.65rem;
+        opacity: 0.9;
+    }
+
+    /* Unit Configuration Form */
+    .unit-config-form {
+        padding: 20px;
+        background: #fafafa;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .unit-config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 4px;
+    }
+
+    .unit-config-item {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: border-color 0.15s;
+    }
+
+    .unit-config-item:hover {
+        border-color: #6b0f1a;
+    }
+
+    .unit-config-item .subject-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .unit-config-item .subject-code {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #6b0f1a;
+        margin-bottom: 2px;
+    }
+
+    .unit-config-item .subject-name {
+        font-size: 0.7rem;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .unit-config-item .unit-input {
+        width: 60px;
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+        color: #374151;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+
+    .unit-config-item .unit-input:focus {
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+    }
+
+    .unit-config-item .unit-label {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        white-space: nowrap;
+    }
+
+    /* ── Subject Details Modal (Right-click) ── */
+    #subject-details-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+
+    #subject-details-modal.open {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .sdm-box {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        transform: translateY(8px);
+        transition: transform 0.2s;
+    }
+
+    #subject-details-modal.open .sdm-box {
+        transform: translateY(0);
+    }
+
+    .sdm-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .sdm-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+    }
+
+    .sdm-close {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: none;
+        background: #f3f4f6;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        transition: background 0.15s;
+    }
+
+    .sdm-close:hover {
+        background: #e5e7eb;
+    }
+
+    .sdm-grid {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 14px 20px;
+        margin-bottom: 20px;
+    }
+
+    .sdm-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .sdm-value {
+        font-size: 0.9rem;
+        color: #111827;
+        font-weight: 500;
+    }
+
+    .sdm-value.highlight {
+        color: #6b0f1a;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .sdm-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 16px;
+        border-top: 1px solid #f3f4f6;
+    }
+
+    /* ── Report ── */
+    .report-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .report-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .report-card-header h3 {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #374151;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+    }
+
+    .report-table th {
+        background: #f9fafb;
+        padding: 9px 14px;
+        text-align: left;
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .report-table td {
+        padding: 9px 14px;
+        color: #374151;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .report-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .report-table tr:hover td {
+        background: #fdf2f3;
+    }
+
+    /* ── AI Chat panel ── */
+    #ai-chat-panel {
+        position: fixed;
+        top: 60px;
+        right: 0;
+        width: 360px;
+        height: calc(100vh - 60px);
+        background: white;
+        border-left: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        z-index: 500;
+        transform: translateX(100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+    }
+
+    #ai-chat-panel.open {
+        transform: translateX(0);
+    }
+
+    .chat-header {
+        padding: 16px 18px 14px;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+
+    .chat-header-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .chat-header-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .chat-header-sub {
+        font-size: 0.72rem;
+        color: #6b7280;
+        margin-top: 1px;
+    }
+
+    .chat-close-btn {
+        margin-left: auto;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: none;
+        background: #f3f4f6;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        transition: background 0.15s;
+        flex-shrink: 0;
+    }
+
+    .chat-close-btn:hover {
+        background: #e5e7eb;
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .chat-msg {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+    }
+
+    .chat-msg.user {
+        flex-direction: row-reverse;
+    }
+
+    .chat-bubble {
+        max-width: 82%;
+        padding: 9px 13px;
+        border-radius: 14px;
+        font-size: 0.8rem;
+        line-height: 1.55;
+        color: #111827;
+        white-space: pre-wrap;
+    }
+
+    .chat-msg.ai .chat-bubble {
+        background: #f3f4f6;
+        border-bottom-left-radius: 4px;
+    }
+
+    .chat-msg.user .chat-bubble {
+        background: #6b0f1a;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .chat-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        font-weight: 700;
+    }
+
+    .chat-msg.ai .chat-avatar {
+        background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+        color: white;
+    }
+
+    .chat-msg.user .chat-avatar {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .chat-typing .chat-bubble {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 14px;
+    }
+
+    .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #9ca3af;
+        animation: typingBounce 1.2s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typingBounce {
+
+        0%,
+        60%,
+        100% {
+            transform: translateY(0)
+        }
+
+        30% {
+            transform: translateY(-5px)
+        }
+    }
+
+    .chat-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 0 16px 10px;
+        flex-shrink: 0;
+    }
+
+    .sugg-chip {
+        padding: 5px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        color: #374151;
+        cursor: pointer;
+        background: white;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
+
+    .sugg-chip:hover {
+        border-color: #6b0f1a;
+        color: #6b0f1a;
+        background: #fdf2f3;
+    }
+
+    .chat-input-area {
+        padding: 12px 14px;
+        border-top: 1px solid #f3f4f6;
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        flex-shrink: 0;
+    }
+
+    .chat-input {
+        flex: 1;
+        padding: 9px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        font-size: 0.82rem;
+        font-family: inherit;
+        color: #374151;
+        outline: none;
+        resize: none;
+        max-height: 100px;
+        line-height: 1.4;
+        transition: border-color 0.15s;
+    }
+
+    .chat-input:focus {
+        border-color: #6b0f1a;
+    }
+
+    .chat-send-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        background: #6b0f1a;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        flex-shrink: 0;
+        transition: background 0.15s;
+    }
+
+    .chat-send-btn:hover {
+        background: #850f20;
+    }
+</style>
+
+
+<!-- ═══ HTML ═══ -->
+<div id="sched-root">
+    <div id="sched-main">
+
+        <!-- Top bar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="btn-manual" onclick="schedSwitchMode('manual')">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
+                    </svg>
+                    Manual
+                </button>
+                <button class="mode-btn" id="btn-auto" onclick="schedSwitchMode('auto')">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI Scheduler
+                </button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <select id="year-select" class="year-sem-select" onchange="onYearSemesterChange()">
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+                <select id="semester-select" class="year-sem-select" onchange="onYearSemesterChange()">
+                    <option value="1">1st Semester</option>
+                    <option value="2">2nd Semester</option>
+                </select>
+                <button class="nbm-btn-secondary" onclick="confirmClearAll()"
+                    style="font-size:0.78rem;padding:6px 12px;color:#dc2626;border-color:#fca5a5;">Clear All</button>
+                <div class="gen-report-wrap">
+                    <button class="gen-report-btn" onclick="toggleDropdown('sched-report-menu')">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                        Generate Report
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="gen-report-menu" id="sched-report-menu">
+                        <a href="#">📄 Export as DOCX</a>
+                        <a href="#">📕 Export as PDF</a>
+                        <a href="#">📊 Export as Excel</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual hint -->
+        <div id="manual-hint">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                style="flex-shrink:0;">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span><strong>Manual mode:</strong> Click and drag on any day column to create a block. Drag existing blocks
+                to move them. Pull the bottom edge to resize.</span>
+        </div>
+
+        <!-- Filters -->
+        <div class="sched-filters">
+            <label>Filter:</label>
+            <select id="sf-professor" onchange="applySchedFilter()">
+                <option value="">All FICs</option>
+            </select>
+            <select id="sf-subject" onchange="applySchedFilter()">
+                <option value="">All Subjects</option>
+            </select>
+            <select id="sf-room" onchange="applySchedFilter()">
+                <option value="">All Classrooms</option>
+            </select>
+            <select id="sf-day" onchange="applySchedFilter()">
+                <option value="">All Days</option>
+                <option>Monday</option>
+                <option>Tuesday</option>
+                <option>Wednesday</option>
+                <option>Thursday</option>
+                <option>Friday</option>
+                <option>Saturday</option>
+            </select>
+            <button class="nbm-btn-secondary" onclick="clearSchedFilters()"
+                style="font-size:0.78rem;padding:6px 12px;">Clear</button>
+        </div>
+
+        <!-- Timetable -->
+        <div class="timetable-wrap">
+            <div style="overflow-x:auto;position:relative;" id="timetable-scroll">
+                <div id="draw-overlay"></div>
+                <table class="timetable" id="sched-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Monday</th>
+                            <th>Tuesday</th>
+                            <th>Wednesday</th>
+                            <th>Thursday</th>
+                            <th>Friday</th>
+                            <th>Saturday</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timetable-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Subject Unit Configuration Section -->
+        <div class="add-subject-card">
+            <div class="add-subject-header">
+                <h3>Subject Unit Configuration</h3>
+                <button class="nbm-btn-primary" onclick="toggleUnitConfig()" id="unit-config-toggle-btn">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Set Units
+                </button>
+            </div>
+
+            <!-- Unit Configuration Form (collapsible) -->
+            <div class="unit-config-form" id="unit-config-form" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <p style="font-size:0.85rem;color:#6b7280;margin:0;">
+                        Configure weekly unit hours for each subject in <strong id="unit-config-year-sem">1st Year, 1st
+                            Semester</strong>
+                    </p>
+                    <button class="nbm-btn-secondary" onclick="autoFillUnits()"
+                        style="font-size:0.8rem;padding:6px 12px;">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5" style="display:inline;margin-right:4px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Auto-fill from Curriculum
+                    </button>
+                </div>
+                <div class="unit-config-grid" id="unit-config-grid">
+                    <!-- Will be populated dynamically -->
+                </div>
+                <div class="asf-actions" style="margin-top:16px;">
+                    <button class="nbm-btn-secondary" onclick="toggleUnitConfig()">Cancel</button>
+                    <button class="nbm-btn-primary" onclick="saveUnitConfiguration()">Save Configuration</button>
+                </div>
+            </div>
+
+            <!-- Draggable Subject Blocks (Staging Area) -->
+            <div class="staging-area" id="staging-area">
+                <div class="staging-label">
+                    <span>Unscheduled Subjects (drag to timetable)</span>
+                    <span id="unit-progress-indicator" style="font-size:0.75rem;color:#6b7280;"></span>
+                </div>
+                <div class="staging-blocks" id="staging-blocks">
+                    <div
+                        style="text-align:center;padding:30px;color:#9ca3af;font-size:0.85rem;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div>Set unit hours first to enable draggable subject blocks</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Faculty Section -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h2 class="card-title">Faculty</h2>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn-danger" onclick="confirmBulkDeleteStaff()" id="bulk-delete-btn"
+                        style="display:none;padding:8px 12px;">
+                        <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                    <button class="btn-primary" onclick="openAddStaffModal()">
+                        <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Faculty
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Staff Grid -->
+                <div id="staff-grid" class="staff-grid">
+                    <div class="content-spinner">
+                        <div class="spinner-ring"></div> Loading staff…
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Faculty Load Report -->
+        <div class="report-card">
+            <div class="report-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <h3>Faculty Load Report</h3>
+                <button onclick="openLoadReportModal()"
+                    style="background:#6b0f1a;color:white;border:none;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.9rem;">Report</button>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>FIC</th>
+                            <th>Year</th>
+                            <th>Course</th>
+                            <th>Day &amp; Time</th>
+                            <th>Units</th>
+                            <th>Classroom</th>
+                            <th>Section</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Load Report Modal -->
+        <div id="load-report-modal"
+            style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;overflow-y:auto;">
+            <div
+                style="max-width:900px;margin:40px auto;background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div
+                    style="padding:24px;border-bottom:2px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+                    <h2 style="margin:0;color:#6b0f1a;">Faculty Load Report Summary</h2>
+                    <button onclick="closeLoadReportModal()"
+                        style="background:none;border:none;font-size:24px;cursor:pointer;color:#6b7280;padding:0;width:32px;height:32px;">×</button>
+                </div>
+                <div style="padding:24px;">
+                    <!-- Good Load Section -->
+                    <div style="margin-bottom:32px;">
+                        <h3 style="color:#059669;margin-bottom:16px;font-size:1.1rem;">✓ Good Load (6-12 units)</h3>
+                        <div id="good-load-list"
+                            style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;"></div>
+                    </div>
+
+                    <!-- Underloaded Section -->
+                    <div style="margin-bottom:32px;">
+                        <h3 style="color:#d97706;margin-bottom:16px;font-size:1.1rem;">⚠ Underloaded (< 6 units)</h3>
+                                <div id="underloaded-list"
+                                    style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:16px;">
+                                </div>
+                    </div>
+
+                    <!-- Overloaded Section -->
+                    <div>
+                        <h3 style="color:#dc2626;margin-bottom:16px;font-size:1.1rem;">⚠ Overloaded (> 12 units)</h3>
+                        <div id="overloaded-list"
+                            style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:16px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div><!-- /sched-main -->
+</div><!-- /sched-root -->
+
+<!-- drag ghost (outside sched-root so it's not clipped) -->
+<div id="drag-ghost"></div>
+
+<!-- New Block Modal -->
+<div id="new-block-modal">
+    <div class="nbm-box">
+        <div class="nbm-title">New Schedule Block</div>
+        <div class="nbm-sub" id="nbm-time-label"></div>
+        <p class="nbm-err" id="nbm-err"></p>
+        <div class="nbm-grid">
+            <div class="nbm-group" style="grid-column:span 2;">
+                <label>Subject Code</label>
+                <select id="nbm-code" onchange="onSubjectCodeChange('nbm')">
+                    <option value="">Select Subject</option>
+                </select>
+            </div>
+            <div class="nbm-group" style="grid-column:span 2;">
+                <label>Subject Name</label>
+                <input type="text" id="nbm-name" readonly style="background:#f9fafb;cursor:not-allowed;">
+            </div>
+            <div class="nbm-group" style="grid-column:span 2;">
+                <label>FIC</label>
+                <select id="nbm-prof">
+                    <option value="">Select FIC</option>
+                </select>
+            </div>
+            <div class="nbm-group">
+                <label>Type</label>
+                <select id="nbm-type">
+                    <option value="Lecture">Lecture</option>
+                    <option value="Laboratory">Laboratory</option>
+                    <option value="Field">Field</option>
+                </select>
+            </div>
+            <div class="nbm-group"><label>Classroom</label><input type="text" id="nbm-room" placeholder="e.g. Room 201">
+            </div>
+            <div class="nbm-group" style="grid-column:span 2;"><label>Section</label><input type="text" id="nbm-section"
+                    placeholder="e.g. BSEP 2-A"></div>
+        </div>
+        <p style="font-size:0.75rem;color:#6b7280;margin:0 0 12px;">
+            <strong>Note:</strong> Units will be automatically calculated based on block duration (1 unit = 1 hour).
+        </p>
+        <div class="nbm-actions">
+            <button class="nbm-btn-secondary" onclick="closeNewBlockModal()">Cancel</button>
+            <button class="nbm-btn-primary" onclick="confirmNewBlock()">Add Block</button>
+        </div>
+    </div>
+</div>
+
+<!-- Subject Details Modal (Right-click) -->
+<div id="subject-details-modal">
+    <div class="sdm-box">
+        <div class="sdm-header">
+            <h3 class="sdm-title">Subject Details</h3>
+            <button class="sdm-close" onclick="closeSubjectDetails()">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="sdm-grid">
+            <div class="sdm-label">Subject Code</div>
+            <div class="sdm-value highlight" id="sdm-code"></div>
+
+            <div class="sdm-label">Subject Name</div>
+            <div class="sdm-value" id="sdm-name"></div>
+
+            <div class="sdm-label">FIC</div>
+            <div class="sdm-value" id="sdm-prof"></div>
+
+            <div class="sdm-label">Schedule</div>
+            <div class="sdm-value" id="sdm-schedule"></div>
+
+            <div class="sdm-label">Classroom</div>
+            <div class="sdm-value" id="sdm-room"></div>
+
+            <div class="sdm-label">Units</div>
+            <div class="sdm-value" id="sdm-units"></div>
+
+            <div class="sdm-label">Section</div>
+            <div class="sdm-value" id="sdm-section"></div>
+        </div>
+        <div class="sdm-actions">
+            <button class="nbm-btn-secondary" onclick="closeSubjectDetails()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- AI Chat Panel (fixed, outside content flow) -->
+<div id="ai-chat-panel">
+    <div class="chat-header">
+        <div class="chat-header-icon">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+        </div>
+        <div>
+            <div class="chat-header-title">AI Schedule Assistant</div>
+            <div class="chat-header-sub">Genetic Algorithm + NLP</div>
+        </div>
+        <button class="chat-close-btn" onclick="schedSwitchMode('manual')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-suggestions" id="chat-suggestions">
+        <button class="sugg-chip" onclick="sendSuggestion(this)">Generate a full schedule</button>
+        <button class="sugg-chip" onclick="sendSuggestion(this)">Move Dr. Santos to afternoons</button>
+        <button class="sugg-chip" onclick="sendSuggestion(this)">No classes on Saturday</button>
+        <button class="sugg-chip" onclick="sendSuggestion(this)">Spread ENRP 101 across 2 days</button>
+        <button class="sugg-chip" onclick="sendSuggestion(this)">Show conflicts</button>
+    </div>
+    <div class="chat-input-area">
+        <textarea class="chat-input" id="chat-input" rows="1" placeholder="Ask the AI to adjust the schedule…"
+            onkeydown="chatKeyDown(event)"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+        <button class="chat-send-btn" onclick="sendChatMessage()">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    (function () {
+        if (window._schedInit) return;
+        window._schedInit = true;
+
+        var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        var SLOT_H = 28;
+        var START_H = 7;
+        var END_H = 17;
+        var TOTAL_SLOTS = (END_H - START_H) * 2;
+
+        var slots = [];
+        for (var h = START_H; h < END_H; h++) {
+            slots.push(h + ':00');
+            slots.push(h + ':30');
+        }
+        slots.push(END_H + ':00');
+
+        function fmt(t) {
+            var parts = t.split(':');
+            var h = parseInt(parts[0]);
+            var m = parseInt(parts[1]);
+            var ap = h >= 12 ? 'PM' : 'AM';
+            var hh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            return hh + ':' + (m === 0 ? '00' : '30') + ' ' + ap;
+        }
+        function slotIdx(t) { return slots.indexOf(t); }
+
+        // 8 distinct colors for up to 8 subjects per semester
+        var palette = [
+            '#fde8ea', // Light red
+            '#e8f4fd', // Light blue
+            '#e8fdf0', // Light green
+            '#fdf6e8', // Light yellow
+            '#f0e8fd', // Light purple
+            '#fde8f8', // Light pink
+            '#e8fdfd', // Light cyan
+            '#fdf0e8'  // Light orange
+        ];
+
+        // Color assignment per year-semester: { 'year-semester': { 'subjCode': 'color' } }
+        var colorMapBySemester = {};
+
+        function colorFor(code, year, semester) {
+            var key = year + '-' + semester;
+            if (!colorMapBySemester[key]) {
+                colorMapBySemester[key] = {};
+            }
+
+            var semesterMap = colorMapBySemester[key];
+
+            // If this subject already has a color in this semester, return it
+            if (semesterMap[code]) {
+                return semesterMap[code];
+            }
+
+            // Find which colors are already used in this semester
+            var usedColors = Object.values(semesterMap);
+
+            // Find first available color
+            for (var i = 0; i < palette.length; i++) {
+                if (usedColors.indexOf(palette[i]) === -1) {
+                    semesterMap[code] = palette[i];
+                    return palette[i];
+                }
+            }
+
+            // If all colors used (more than 8 subjects), cycle through
+            semesterMap[code] = palette[Object.keys(semesterMap).length % palette.length];
+            return semesterMap[code];
+        }
+
+        // ═══ Unit Configuration System ═══
+        var subjectUnits = {}; // { 'HIST/KAS 1': { configured: 3, allocated: 0 }, ... }
+        var unitConfigSaved = false;
+
+        // Load saved configuration from localStorage
+        function loadSavedUnitConfig() {
+            try {
+                var saved = localStorage.getItem('cerp_unit_config');
+                if (saved) {
+                    subjectUnits = JSON.parse(saved);
+                    unitConfigSaved = Object.keys(subjectUnits).length > 0;
+                    console.log('📥 Loaded saved unit configuration:', subjectUnits);
+
+                    // Update button text if config exists
+                    if (unitConfigSaved) {
+                        var btn = document.getElementById('unit-config-toggle-btn');
+                        if (btn) {
+                            btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit Units';
+                        }
+                    }
+
+                    return true;
+                }
+            } catch (error) {
+                console.error('Failed to load unit configuration:', error);
+            }
+            return false;
+        }
+
+        // Save configuration to localStorage
+        function saveSavedUnitConfig() {
+            try {
+                localStorage.setItem('cerp_unit_config', JSON.stringify(subjectUnits));
+                console.log('💾 Saved unit configuration to localStorage');
+            } catch (error) {
+                console.error('Failed to save unit configuration:', error);
+            }
+        }
+
+        // Load on page load
+        loadSavedUnitConfig();
+
+        function toggleUnitConfig() {
+            var form = document.getElementById('unit-config-form');
+            var btn = document.getElementById('unit-config-toggle-btn');
+
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg> Cancel';
+                btn.classList.remove('nbm-btn-primary');
+                btn.classList.add('nbm-btn-secondary');
+                populateUnitConfigGrid();
+            } else {
+                form.style.display = 'none';
+                btn.innerHTML = unitConfigSaved
+                    ? '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit Units'
+                    : '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg> Set Units';
+                btn.classList.add('nbm-btn-primary');
+                btn.classList.remove('nbm-btn-secondary');
+            }
+        }
+
+        function populateUnitConfigGrid() {
+            var grid = document.getElementById('unit-config-grid');
+            var yearSemLabel = document.getElementById('unit-config-year-sem');
+
+            if (!grid) return;
+
+            var key = currentYear + '-' + currentSemester;
+            var subjects = ALL_SUBJECTS[key] || [];
+
+            var yearNames = ['1st', '2nd', '3rd', '4th'];
+            yearSemLabel.textContent = yearNames[parseInt(currentYear) - 1] + ' Year, ' +
+                (currentSemester === '1' ? '1st' : '2nd') + ' Semester';
+
+            var html = '';
+            subjects.forEach(function (subj) {
+                var currentValue = subjectUnits[subj.code] ? subjectUnits[subj.code].configured : '';
+                html += `
+                    <div class="unit-config-item">
+                        <div class="subject-info">
+                            <div class="subject-code">${subj.code}</div>
+                            <div class="subject-name">${subj.name}</div>
+                        </div>
+                        <input type="number" class="unit-input" 
+                            data-subject-code="${subj.code}"
+                            value="${currentValue}" 
+                            min="1" max="10" step="1"
+                            placeholder="${subj.units}">
+                        <span class="unit-label">hrs/week</span>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html || '<p style="text-align:center;color:#9ca3af;padding:20px;">No subjects found for this year/semester</p>';
+        }
+
+        function autoFillUnits() {
+            var key = currentYear + '-' + currentSemester;
+            var subjects = ALL_SUBJECTS[key] || [];
+
+            subjects.forEach(function (subj) {
+                var input = document.querySelector(`input[data-subject-code="${subj.code}"]`);
+                if (input) {
+                    input.value = subj.units;
+                }
+            });
+        }
+
+        function saveUnitConfiguration() {
+            var inputs = document.querySelectorAll('.unit-input');
+            var hasValues = false;
+
+            console.log('💾 Saving unit configuration...');
+            console.log('Found', inputs.length, 'input fields');
+
+            inputs.forEach(function (input) {
+                var code = input.dataset.subjectCode;
+                var value = parseInt(input.value) || 0;
+
+                console.log('Processing:', code, '=', value, 'hours');
+
+                if (value > 0) {
+                    hasValues = true;
+                    if (!subjectUnits[code]) {
+                        subjectUnits[code] = { configured: 0, allocated: 0 };
+                    }
+                    subjectUnits[code].configured = value;
+                    // Ensure allocated is initialized
+                    if (typeof subjectUnits[code].allocated === 'undefined') {
+                        subjectUnits[code].allocated = 0;
+                    }
+                }
+            });
+
+            if (!hasValues) {
+                alert('Please set unit hours for at least one subject.');
+                return;
+            }
+
+            console.log('✅ Configuration data:', subjectUnits);
+
+            unitConfigSaved = true;
+
+            // Save to localStorage for persistence
+            saveSavedUnitConfig();
+
+            toggleUnitConfig();
+
+            // Calculate allocated units from existing schedules
+            calculateAllocatedUnits();
+
+            // Render draggable blocks
+            renderDraggableBlocks();
+
+            console.log('✅ Unit configuration saved successfully!');
+        }
+
+        function calculateAllocatedUnits() {
+            // Reset allocated units
+            Object.keys(subjectUnits).forEach(function (code) {
+                subjectUnits[code].allocated = 0;
+            });
+
+            // Sum up allocated units from schedules
+            schedules.forEach(function (sch) {
+                if (subjectUnits[sch.subjCode]) {
+                    var duration = (slotIdx(sch.end) - slotIdx(sch.start)) / 2; // Convert to hours
+                    subjectUnits[sch.subjCode].allocated += duration;
+                }
+            });
+        }
+
+        function renderDraggableBlocks() {
+            var container = document.getElementById('staging-blocks');
+            if (!container) {
+                console.error('❌ staging-blocks container not found!');
+                return;
+            }
+
+            var key = currentYear + '-' + currentSemester;
+            var subjects = ALL_SUBJECTS[key] || [];
+
+            console.log('🎨 Rendering draggable blocks...');
+            console.log('Year/Semester:', key);
+            console.log('Total subjects:', subjects.length);
+            console.log('Subject units config:', subjectUnits);
+
+            // Filter subjects that have configured units and remaining allocation
+            var availableSubjects = subjects.filter(function (subj) {
+                var unitData = subjectUnits[subj.code];
+
+                console.log('Checking:', subj.code, 'unitData:', unitData);
+
+                if (!unitData) {
+                    console.log('  ❌ No unit data for', subj.code);
+                    return false;
+                }
+
+                if (unitData.configured === 0) {
+                    console.log('  ❌', subj.code, 'configured is 0');
+                    return false;
+                }
+
+                var hasRemaining = unitData.allocated < unitData.configured;
+                console.log('  Check remaining:', unitData.allocated, '<', unitData.configured, '=', hasRemaining);
+
+                if (hasRemaining) {
+                    console.log('  ✅', subj.code, 'will be shown');
+                } else {
+                    console.log('  ❌', subj.code, 'fully allocated');
+                }
+
+                return hasRemaining;
+            });
+
+            console.log('Available subjects to render:', availableSubjects.length);
+
+            if (availableSubjects.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:30px;color:#9ca3af;font-size:0.85rem;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>All subjects fully allocated!</div>
+                    </div>
+                `;
+                updateUnitProgress();
+                return;
+            }
+
+            var html = '';
+            availableSubjects.forEach(function (subj) {
+                var unitData = subjectUnits[subj.code];
+                var remaining = unitData.configured - unitData.allocated;
+                var hasPartialAllocation = unitData.allocated > 0;
+                // Apply incomplete class only if no allocation yet
+                var classNames = hasPartialAllocation ? '' : 'incomplete';
+                var color = colorFor(subj.code, currentYear, currentSemester);
+
+                console.log('Creating block for:', subj.code, '- Remaining:', remaining, '- Color:', color, '- Class:', classNames);
+
+                html += `
+                    <div class="draggable-subject ${classNames}" 
+                        draggable="true"
+                        data-subject-code="${subj.code}"
+                        data-subject-name="${subj.name}"
+                        style="background-color: ${color};"
+                        ondragstart="handleDragStart(event)"
+                        ondragend="handleDragEnd(event)">
+                        <span class="subj-code">${subj.code}</span>
+                        <span class="subj-units">${remaining.toFixed(1)}h remaining</span>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            console.log('✅ Blocks rendered successfully!');
+            updateUnitProgress();
+        }
+
+        function updateUnitProgress() {
+            var indicator = document.getElementById('unit-progress-indicator');
+            if (!indicator) return;
+
+            var key = currentYear + '-' + currentSemester;
+            var subjects = ALL_SUBJECTS[key] || [];
+
+            var totalConfigured = 0;
+            var totalAllocated = 0;
+            var fullyAllocated = 0;
+
+            subjects.forEach(function (subj) {
+                var unitData = subjectUnits[subj.code];
+                if (unitData && unitData.configured > 0) {
+                    totalConfigured += unitData.configured;
+                    totalAllocated += unitData.allocated;
+                    if (unitData.allocated >= unitData.configured) {
+                        fullyAllocated++;
+                    }
+                }
+            });
+
+            if (totalConfigured === 0) {
+                indicator.textContent = '';
+            } else {
+                indicator.textContent = `${fullyAllocated}/${subjects.filter(s => subjectUnits[s.code] && subjectUnits[s.code].configured > 0).length} subjects fully allocated • ${totalAllocated.toFixed(1)}/${totalConfigured} hours`;
+            }
+        }
+
+        // ═══ Drag and Drop Handlers ═══
+        var draggedSubject = null;
+
+        function handleDragStart(event) {
+            var target = event.target;
+            draggedSubject = {
+                code: target.dataset.subjectCode,
+                name: target.dataset.subjectName
+            };
+            target.classList.add('dragging');
+
+            // Set drag data
+            event.dataTransfer.effectAllowed = 'copy';
+            event.dataTransfer.setData('text/plain', draggedSubject.code);
+
+            console.log('🎯 Started dragging:', draggedSubject.code);
+        }
+
+        function handleDragEnd(event) {
+            event.target.classList.remove('dragging');
+            draggedSubject = null;
+        }
+
+        // Make timetable cells droppable
+        function enableTimetableDropZones() {
+            var cells = document.querySelectorAll('#sched-table tbody td:not(:first-child)');
+
+            cells.forEach(function (cell) {
+                cell.addEventListener('dragover', handleCellDragOver);
+                cell.addEventListener('dragleave', handleCellDragLeave);
+                cell.addEventListener('drop', handleCellDrop);
+            });
+        }
+
+        function handleCellDragOver(event) {
+            if (!draggedSubject) return;
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+
+            var cell = event.currentTarget;
+            if (!cell.querySelector('.sched-cell')) {
+                cell.style.background = '#fef2f2';
+                cell.style.border = '2px dashed #6b0f1a';
+            }
+        }
+
+        function handleCellDragLeave(event) {
+            var cell = event.currentTarget;
+            cell.style.background = '';
+            cell.style.border = '';
+        }
+
+        function handleCellDrop(event) {
+            event.preventDefault();
+
+            var cell = event.currentTarget;
+            cell.style.background = '';
+            cell.style.border = '';
+
+            if (!draggedSubject) return;
+
+            // Don't allow drop on occupied cells
+            if (cell.querySelector('.sched-cell')) {
+                alert('This time slot is already occupied. Please choose an empty slot.');
+                return;
+            }
+
+            // Get day and time from cell
+            var row = cell.parentElement;
+            var cellIndex = Array.from(row.children).indexOf(cell);
+            var rowIndex = Array.from(row.parentElement.children).indexOf(row);
+
+            var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            var day = days[cellIndex - 1]; // -1 because first column is time
+
+            var startSlot = rowIndex;
+            var endSlot = startSlot + 2; // Default 1 hour (2 slots of 30min each)
+
+            var start = slots[startSlot];
+            var end = slots[Math.min(endSlot, slots.length - 1)];
+
+            console.log('📍 Dropped on:', day, start, '-', end);
+
+            // Open NBM with pre-filled subject
+            openNewBlockModalWithSubject(day, start, end, draggedSubject.code, draggedSubject.name);
+        }
+
+        function openNewBlockModalWithSubject(day, start, end, code, name) {
+            // Calculate slot indices
+            var startSlotIdx = slotIdx(start);
+            var endSlotIdx = slotIdx(end);
+
+            // Set pending variables for the modal (used by confirmNewBlock)
+            pendingDay = day;
+            pendingStart = startSlotIdx;
+            pendingEnd = endSlotIdx;
+
+            console.log('Opening NBM with:', {
+                day: day,
+                start: start,
+                end: end,
+                startSlot: startSlotIdx,
+                endSlot: endSlotIdx,
+                code: code,
+                name: name
+            });
+
+            // Set the selection info
+            document.getElementById('nbm-time-label').textContent = day + '  -  ' + fmt(start) + ' to ' + fmt(end);
+
+            // Pre-fill subject code and name
+            var codeSelect = document.getElementById('nbm-code');
+            var nameInput = document.getElementById('nbm-name');
+
+            if (codeSelect && nameInput) {
+                // Set the subject code dropdown
+                codeSelect.value = code;
+                nameInput.value = name;
+
+                // Trigger professor population
+                onSubjectCodeChange('nbm');
+            }
+
+            // Open modal
+            document.getElementById('new-block-modal').classList.add('open');
+
+            // Focus on professor field since subject is already filled
+            setTimeout(function () {
+                var profSelect = document.getElementById('nbm-prof');
+                if (profSelect) profSelect.focus();
+            }, 100);
+        }
+
+        var schedules = [];
+        var filtered = [];
+        var currentMode = 'manual';
+        var currentYear = '1';
+        var currentSemester = '1';
+
+        async function loadSchedules() {
+            try {
+                var res = await fetch('/api/schedules');
+                schedules = res.ok ? await res.json() : [];
+            } catch (e) { schedules = []; }
+            filtered = schedules.slice();
+            applyYearSemesterFilter();
+            refreshFilterOptions();
+            renderTimetable();
+            renderReport();
+
+            // Recalculate allocated units after loading schedules
+            if (unitConfigSaved) {
+                calculateAllocatedUnits();
+                renderDraggableBlocks();
+                populateSubjectDropdowns(); // Update dropdown to show fully allocated subjects
+            }
+        }
+
+        // Validation function for schedule conflicts and unit limits
+        function validateSchedule(prof, day, start, end, excludeId) {
+            // Check faculty day availability
+            var faculty = staffData.find(function (s) { return s.fullName === prof; });
+            if (faculty && faculty.availability && faculty.availability.length > 0) {
+                if (faculty.availability.indexOf(day) === -1) {
+                    return {
+                        valid: false,
+                        message: prof + ' is not available on ' + day + '.\n\n' +
+                            'Available days: ' + faculty.availability.join(', ') + '\n\n' +
+                            'Please choose a different day or faculty member.'
+                    };
+                }
+            }
+
+            // Check for time conflicts across all years (but only in current semester)
+            var conflicts = [];
+            schedules.forEach(function (s) {
+                if (s.id === excludeId) return; // Skip the block being edited
+                if (s.prof !== prof) return; // Different FIC
+                if (s.day !== day) return; // Different day
+
+                // Check for time overlap
+                var existingStart = slotIdx(s.start);
+                var existingEnd = slotIdx(s.end);
+                var newStart = slotIdx(start);
+                var newEnd = slotIdx(end);
+
+                if (newStart < existingEnd && newEnd > existingStart) {
+                    conflicts.push({
+                        subjCode: s.subjCode,
+                        year: s.year,
+                        time: fmt(s.start) + ' - ' + fmt(s.end)
+                    });
+                }
+            });
+
+            if (conflicts.length > 0) {
+                var msg = 'Time conflict detected for ' + prof + ' on ' + day + ':\n\n';
+                conflicts.forEach(function (c) {
+                    msg += '• ' + c.subjCode + ' (Year ' + c.year + ') at ' + c.time + '\n';
+                });
+                msg += '\nPlease choose a different time slot.';
+                return { valid: false, message: msg };
+            }
+
+            // Check unit limits (6-12 units per semester)
+            var profSchedules = schedules.filter(function (s) {
+                return s.prof === prof &&
+                    s.year === currentYear &&
+                    s.semester === currentSemester &&
+                    s.id !== excludeId;
+            });
+
+            var currentUnits = 0;
+            profSchedules.forEach(function (s) {
+                var startIdx = slotIdx(s.start);
+                var endIdx = slotIdx(s.end);
+                if (startIdx >= 0 && endIdx > startIdx) {
+                    currentUnits += (endIdx - startIdx) * 0.5;
+                }
+            });
+
+            // Calculate new block units
+            var newStart = slotIdx(start);
+            var newEnd = slotIdx(end);
+            var newUnits = (newEnd - newStart) * 0.5;
+            var totalUnits = currentUnits + newUnits;
+
+            if (totalUnits > 12) {
+                return {
+                    valid: false,
+                    message: prof + ' would have ' + totalUnits.toFixed(1) + ' units (max: 12).\n\n' +
+                        'Current units: ' + currentUnits.toFixed(1) + '\n' +
+                        'New block: ' + newUnits.toFixed(1) + ' units\n\n' +
+                        'Please reduce the block duration or choose a different faculty member.'
+                };
+            }
+
+            if (totalUnits < 6 && excludeId) {
+                // Only warn when editing (not adding new)
+                return {
+                    valid: true,
+                    warning: prof + ' will have ' + totalUnits.toFixed(1) + ' units (min recommended: 6)'
+                };
+            }
+
+            return { valid: true };
+        }
+
+        window.onYearSemesterChange = function () {
+            var yearSelect = document.getElementById('year-select');
+            var semesterSelect = document.getElementById('semester-select');
+
+            if (yearSelect) currentYear = yearSelect.value;
+            if (semesterSelect) currentSemester = semesterSelect.value;
+
+            // Repopulate subject dropdowns with subjects for selected year/semester
+            populateSubjectDropdowns();
+
+            // Clear any selected subjects in the forms
+            var nbmCode = document.getElementById('nbm-code');
+            var nbmName = document.getElementById('nbm-name');
+            var nbmProf = document.getElementById('nbm-prof');
+            if (nbmCode) nbmCode.value = '';
+            if (nbmName) nbmName.value = '';
+            if (nbmProf) nbmProf.innerHTML = '<option value="">Select Subject First</option>';
+
+            var asfCode = document.getElementById('asf-code');
+            var asfName = document.getElementById('asf-name');
+            var asfProf = document.getElementById('asf-prof');
+            if (asfCode) asfCode.value = '';
+            if (asfName) asfName.value = '';
+            if (asfProf) asfProf.innerHTML = '<option value="">Select Subject First</option>';
+
+            // Apply filter and re-render
+            applyYearSemesterFilter();
+            renderTimetable();
+            renderReport();
+        };
+
+        function applyYearSemesterFilter() {
+            // Filter schedules based on stored year and semester
+            filtered = schedules.filter(function (s) {
+                // Use stored year and semester if available
+                if (s.year && s.semester) {
+                    return s.year === currentYear && s.semester === currentSemester;
+                }
+
+                // Fallback: If section contains year information, filter by it
+                var section = s.section || '';
+                var yearMatch = section.match(/(\d)[^\d]/); // Match year number followed by non-digit
+
+                // If we can extract year from section, filter by it
+                if (yearMatch && yearMatch[1]) {
+                    return yearMatch[1] === currentYear;
+                }
+
+                // If no year info in section, show all schedules
+                return true;
+            });
+
+            // Update unit tracking and draggable blocks when filter changes
+            calculateAllocatedUnits();
+            if (unitConfigSaved) {
+                renderDraggableBlocks();
+            }
+        }
+
+        function refreshFilterOptions() {
+            var profs = [...new Set(schedules.map(function (s) { return s.prof; }))].sort();
+            var subjs = [...new Set(schedules.map(function (s) { return s.subjCode + ' - ' + s.subjName; }))].sort();
+            var rooms = [...new Set(schedules.map(function (s) { return s.room; }))].sort();
+            [['sf-professor', profs, 'Professors'],
+            ['sf-subject', subjs, 'Subjects'],
+            ['sf-room', rooms, 'Classrooms']].forEach(function (item) {
+                var sel = document.getElementById(item[0]);
+                if (!sel) return;
+                var cur = sel.value;
+                sel.innerHTML = '<option value="">All ' + item[2] + '</option>';
+                item[1].forEach(function (o) {
+                    var el = document.createElement('option');
+                    el.value = o; el.textContent = o; sel.appendChild(el);
+                });
+                sel.value = cur;
+            });
+        }
+
+        window.applySchedFilter = function () {
+            var prof = document.getElementById('sf-professor').value;
+            var subj = document.getElementById('sf-subject').value;
+            var room = document.getElementById('sf-room').value;
+            var day = document.getElementById('sf-day').value;
+
+            // Start with year/semester filtered schedules
+            applyYearSemesterFilter();
+
+            // Then apply other filters on top
+            filtered = filtered.filter(function (s) {
+                return (!prof || s.prof === prof) &&
+                    (!subj || (s.subjCode + ' - ' + s.subjName) === subj) &&
+                    (!room || s.room === room) &&
+                    (!day || s.day === day);
+            });
+
+            renderTimetable();
+            renderReport();
+        };
+
+        window.clearSchedFilters = function () {
+            ['sf-professor', 'sf-subject', 'sf-room', 'sf-day'].forEach(function (id) {
+                var el = document.getElementById(id); if (el) el.value = '';
+            });
+            applyYearSemesterFilter();
+            renderTimetable();
+            renderReport();
+        };
+
+        function renderTimetable() {
+            var tbody = document.getElementById('timetable-body');
+            if (!tbody) return;
+            var grid = {};
+            DAYS.forEach(function (d) { grid[d] = {}; });
+            filtered.forEach(function (s) {
+                var si = slotIdx(s.start);
+                var ei = slotIdx(s.end);
+                if (si < 0 || ei <= si) return;
+                for (var i = si; i < ei; i++) {
+                    if (!grid[s.day][i]) {
+                        grid[s.day][i] = Object.assign({}, s, { span: ei - si, isFirst: i === si });
+                    }
+                }
+            });
+            var covered = {};
+            var rows = '';
+            for (var si = 0; si < TOTAL_SLOTS; si++) {
+                var timeStr = slots[si];
+                var isHour = timeStr.slice(-2) === '00';
+                rows += '<tr data-slot="' + si + '">';
+                rows += '<td style="opacity:' + (isHour ? '1' : '0.45') + ';font-weight:' + (isHour ? '600' : '400') + ';">'
+                    + (isHour ? fmt(timeStr) : '') + '</td>';
+                DAYS.forEach(function (day) {
+                    var key = day + '-' + si;
+                    if (covered[key]) return;
+                    var entry = grid[day][si];
+                    if (entry && entry.isFirst) {
+                        var span = entry.span;
+                        var bg = colorFor(entry.subjCode, entry.year, entry.semester);
+                        for (var k = 1; k < span; k++) covered[day + '-' + (si + k)] = true;
+                        rows += '<td rowspan="' + span + '" data-day="' + day + '" data-slot="' + si + '" data-id="' + entry.id + '" style="padding:0;position:relative;">'
+                            + '<div class="sched-block" id="blk-' + entry.id + '" data-id="' + entry.id + '" style="background:' + bg + ';height:' + (span * SLOT_H - 3) + 'px;">'
+                            + '<span class="sb-del" onclick="deleteEntry(\'' + entry.id + '\',event)">&#x2715;</span>'
+                            + '<span class="sb-subj">' + entry.subjCode + '</span>'
+                            + '<span class="sb-prof">' + (entry.prof || '').split(' ').slice(-1)[0] + '</span>'
+                            + '<span class="sb-room">' + entry.room + '</span>'
+                            + '<div class="sb-resize" data-id="' + entry.id + '"></div>'
+                            + '</div></td>';
+                    } else {
+                        rows += '<td data-day="' + day + '" data-slot="' + si + '"></td>';
+                    }
+                });
+                rows += '</tr>';
+            }
+            tbody.innerHTML = rows;
+            attachBlockHandlers();
+
+            // Enable drag and drop zones
+            enableTimetableDropZones();
+        }
+
+        // Global variable to store FIC load data for modal
+        var ficLoadData = {};
+
+        function renderReport() {
+            var tbody = document.getElementById('report-tbody');
+
+            if (!tbody) return;
+
+            // Calculate FIC loads across ALL year levels for current semester
+            ficLoadData = {};
+            schedules.forEach(function (s) {
+                // Only count schedules in the current semester (across all years)
+                if (s.semester === currentSemester) {
+                    if (!ficLoadData[s.prof]) {
+                        ficLoadData[s.prof] = 0;
+                    }
+
+                    // Calculate units for this schedule
+                    var startIdx = slotIdx(s.start);
+                    var endIdx = slotIdx(s.end);
+                    if (startIdx >= 0 && endIdx > startIdx) {
+                        var hours = (endIdx - startIdx) * 0.5; // Each slot is 0.5 hours
+                        ficLoadData[s.prof] += hours;
+                    }
+                }
+            });
+
+            // Filter schedules by current semester ONLY (all year levels)
+            var currentSemesterSchedules = schedules.filter(function (s) {
+                return s.semester === currentSemester;
+            });
+
+            if (!currentSemesterSchedules.length) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#9ca3af;padding:24px;">'
+                    + (currentMode === 'manual' ? 'No schedules yet. Click and drag on the timetable to add a block.'
+                        : 'Ask the AI assistant to generate a schedule.')
+                    + '</td></tr>';
+                return;
+            }
+
+            // Group schedules by professor (across all years for current semester)
+            var profMap = {};
+
+            currentSemesterSchedules.forEach(function (s) {
+                if (!profMap[s.prof]) {
+                    profMap[s.prof] = [];
+                }
+                profMap[s.prof].push(s);
+            });
+
+            // Build rows grouped by professor
+            var rows = [];
+            var rowNum = 1;
+            Object.keys(profMap).sort().forEach(function (prof) {
+                var schedules = profMap[prof];
+
+                // Sort schedules by year level for better readability
+                schedules.sort(function (a, b) {
+                    return parseInt(a.year) - parseInt(b.year);
+                });
+
+                var totalUnits = ficLoadData[prof] || 0; // Use global load across all years
+                var isGoodLoad = totalUnits >= 6 && totalUnits <= 12;
+
+                // First row for this professor (with rowspan)
+                var firstSched = schedules[0];
+                var firstHours = 0;
+                var startIdx = slotIdx(firstSched.start);
+                var endIdx = slotIdx(firstSched.end);
+                if (startIdx >= 0 && endIdx > startIdx) {
+                    firstHours = (endIdx - startIdx) * 0.5;
+                }
+
+                var yearLabel = firstSched.year === '1' ? '1st' :
+                    firstSched.year === '2' ? '2nd' :
+                        firstSched.year === '3' ? '3rd' : '4th';
+
+                rows.push('<tr>'
+                    + '<td style="color:#9ca3af;font-size:0.72rem;" rowspan="' + schedules.length + '">' + rowNum + '</td>'
+                    + '<td rowspan="' + schedules.length + '"><strong>' + prof + '</strong></td>'
+                    + '<td style="text-align:center;color:#6b0f1a;font-weight:600;">' + yearLabel + '</td>'
+                    + '<td>' + firstSched.subjCode + '</td>'
+                    + '<td>' + firstSched.day + ', ' + fmt(firstSched.start) + ' - ' + fmt(firstSched.end) + '</td>'
+                    + '<td style="text-align:center;">' + firstHours.toFixed(1) + '</td>'
+                    + '<td>' + firstSched.room + '</td>'
+                    + '<td>' + firstSched.section + '</td>'
+                    + '<td><button class="action-btn action-btn-red" onclick="deleteEntry(\'' + firstSched.id + '\')">Delete</button></td>'
+                    + '</tr>');
+
+                // Additional rows for this professor
+                for (var i = 1; i < schedules.length; i++) {
+                    var sched = schedules[i];
+                    var hours = 0;
+                    var startIdx = slotIdx(sched.start);
+                    var endIdx = slotIdx(sched.end);
+                    if (startIdx >= 0 && endIdx > startIdx) {
+                        hours = (endIdx - startIdx) * 0.5;
+                    }
+
+                    var yearLabel = sched.year === '1' ? '1st' :
+                        sched.year === '2' ? '2nd' :
+                            sched.year === '3' ? '3rd' : '4th';
+
+                    rows.push('<tr>'
+                        + '<td style="text-align:center;color:#6b0f1a;font-weight:600;">' + yearLabel + '</td>'
+                        + '<td>' + sched.subjCode + '</td>'
+                        + '<td>' + sched.day + ', ' + fmt(sched.start) + ' - ' + fmt(sched.end) + '</td>'
+                        + '<td style="text-align:center;">' + hours.toFixed(1) + '</td>'
+                        + '<td>' + sched.room + '</td>'
+                        + '<td>' + sched.section + '</td>'
+                        + '<td><button class="action-btn action-btn-red" onclick="deleteEntry(\'' + sched.id + '\')">Delete</button></td>'
+                        + '</tr>');
+                }
+
+                // Total row for this professor with color-coded text only
+                var totalColor = isGoodLoad ? '#059669' : '#6b0f1a'; // Forest green for good, maroon for bad
+
+                rows.push('<tr style="background:#f9fafb;font-weight:600;">'
+                    + '<td colspan="5" style="text-align:right;padding-right:20px;">Total Units for ' + prof + ':</td>'
+                    + '<td style="text-align:center;font-weight:700;color:' + totalColor + ';">' + totalUnits.toFixed(1) + '</td>'
+                    + '<td colspan="3"></td>'
+                    + '</tr>');
+
+                rowNum++;
+            });
+
+            tbody.innerHTML = rows.join('');
+        }
+
+        window.openLoadReportModal = function () {
+            var modal = document.getElementById('load-report-modal');
+            if (!modal) return;
+
+            // Categorize FICs by load status
+            var goodLoad = [];
+            var underloaded = [];
+            var overloaded = [];
+
+            Object.keys(ficLoadData).sort().forEach(function (prof) {
+                var units = ficLoadData[prof];
+                var ficData = { name: prof, units: units };
+
+                if (units < 6) {
+                    underloaded.push(ficData);
+                } else if (units > 12) {
+                    overloaded.push(ficData);
+                } else {
+                    goodLoad.push(ficData);
+                }
+            });
+
+            // Populate Good Load
+            var goodLoadList = document.getElementById('good-load-list');
+            if (goodLoad.length > 0) {
+                goodLoadList.innerHTML = goodLoad.map(function (fic) {
+                    return '<div style="padding:8px 12px;margin-bottom:8px;background:white;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">'
+                        + '<span style="font-weight:600;">' + fic.name + '</span>'
+                        + '<span style="color:#059669;font-weight:700;">' + fic.units.toFixed(1) + ' units</span>'
+                        + '</div>';
+                }).join('');
+            } else {
+                goodLoadList.innerHTML = '<p style="color:#6b7280;text-align:center;margin:0;">No FICs with good load</p>';
+            }
+
+            // Populate Underloaded
+            var underloadedList = document.getElementById('underloaded-list');
+            if (underloaded.length > 0) {
+                underloadedList.innerHTML = underloaded.map(function (fic) {
+                    var deficit = 6 - fic.units;
+                    return '<div style="padding:8px 12px;margin-bottom:8px;background:white;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">'
+                        + '<span style="font-weight:600;">' + fic.name + '</span>'
+                        + '<div style="display:flex;gap:16px;align-items:center;">'
+                        + '<span style="color:#d97706;font-weight:700;">' + fic.units.toFixed(1) + ' units</span>'
+                        + '<span style="color:#dc2626;font-size:0.85rem;">(-' + deficit.toFixed(1) + ' deficit)</span>'
+                        + '</div>'
+                        + '</div>';
+                }).join('');
+            } else {
+                underloadedList.innerHTML = '<p style="color:#6b7280;text-align:center;margin:0;">No underloaded FICs</p>';
+            }
+
+            // Populate Overloaded
+            var overloadedList = document.getElementById('overloaded-list');
+            if (overloaded.length > 0) {
+                overloadedList.innerHTML = overloaded.map(function (fic) {
+                    var excess = fic.units - 12;
+                    return '<div style="padding:8px 12px;margin-bottom:8px;background:white;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">'
+                        + '<span style="font-weight:600;">' + fic.name + '</span>'
+                        + '<div style="display:flex;gap:16px;align-items:center;">'
+                        + '<span style="color:#dc2626;font-weight:700;">' + fic.units.toFixed(1) + ' units</span>'
+                        + '<span style="color:#dc2626;font-size:0.85rem;">(+' + excess.toFixed(1) + ' excess)</span>'
+                        + '</div>'
+                        + '</div>';
+                }).join('');
+            } else {
+                overloadedList.innerHTML = '<p style="color:#6b7280;text-align:center;margin:0;">No overloaded FICs</p>';
+            }
+
+            modal.style.display = 'block';
+        };
+
+        window.closeLoadReportModal = function () {
+            var modal = document.getElementById('load-report-modal');
+            if (modal) modal.style.display = 'none';
+        };
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function (e) {
+            var modal = document.getElementById('load-report-modal');
+            if (modal && e.target === modal) {
+                closeLoadReportModal();
+            }
+        });
+
+        window.deleteEntry = async function (id, e) {
+            if (e) e.stopPropagation();
+            if (!confirm('Delete this schedule block?')) return;
+            try {
+                await fetch('/api/schedules/' + id, { method: 'DELETE' });
+                schedules = schedules.filter(function (s) { return s.id !== id; });
+                filtered = filtered.filter(function (s) { return s.id !== id; });
+                refreshFilterOptions(); renderTimetable(); renderReport();
+
+                // Update unit tracking
+                calculateAllocatedUnits();
+                renderDraggableBlocks();
+                populateSubjectDropdowns(); // Update dropdown
+            } catch (err) { alert('Failed to delete.'); }
+        };
+
+        window.confirmClearAll = async function () {
+            if (!confirm('Clear ALL schedule entries? This cannot be undone.')) return;
+            try {
+                await fetch('/api/schedules/clear', { method: 'POST' });
+                schedules = []; filtered = [];
+                refreshFilterOptions(); renderTimetable(); renderReport();
+            } catch (err) { alert('Failed to clear.'); }
+        };
+
+        var drawing = false, drawDay = null, drawStartSlot = -1, drawEndSlot = -1;
+
+        function getCell(e) {
+            var el = e.target;
+            while (el && el.tagName !== 'TD') el = el.parentElement;
+            return el;
+        }
+
+        function updateDrawOverlay() {
+            var overlay = document.getElementById('draw-overlay');
+            var scroll = document.getElementById('timetable-scroll');
+            if (!overlay || !scroll) return;
+            var minSlot = Math.min(drawStartSlot, drawEndSlot);
+            var maxSlot = Math.max(drawStartSlot, drawEndSlot);
+            var startRow = document.querySelector('#timetable-body tr[data-slot="' + minSlot + '"]');
+            var endRow = document.querySelector('#timetable-body tr[data-slot="' + maxSlot + '"]');
+            if (!startRow || !endRow) return;
+            var startTd = Array.from(startRow.querySelectorAll('td')).find(function (c) { return c.dataset.day === drawDay; });
+            var endTd = Array.from(endRow.querySelectorAll('td')).find(function (c) { return c.dataset.day === drawDay; });
+            if (!startTd || !endTd) return;
+            var sr = startTd.getBoundingClientRect();
+            var er = endTd.getBoundingClientRect();
+            var wr = scroll.getBoundingClientRect();
+            overlay.style.display = 'block';
+            overlay.style.left = (sr.left - wr.left + scroll.scrollLeft) + 'px';
+            overlay.style.top = (sr.top - wr.top + scroll.scrollTop) + 'px';
+            overlay.style.width = sr.width + 'px';
+            overlay.style.height = (er.bottom - sr.top) + 'px';
+        }
+
+        function attachDrawHandlers() {
+            var tbody = document.getElementById('timetable-body');
+            if (!tbody || tbody._drawBound) return;
+            tbody._drawBound = true;
+            tbody.addEventListener('mousedown', function (e) {
+                if (currentMode !== 'manual') return;
+                var td = getCell(e);
+                if (!td || !td.dataset.day || td.dataset.id) return;
+                if (e.target.closest && e.target.closest('.sched-block')) return;
+                drawing = true;
+                drawDay = td.dataset.day;
+                drawStartSlot = parseInt(td.dataset.slot);
+                drawEndSlot = drawStartSlot;
+                updateDrawOverlay();
+                e.preventDefault();
+            });
+            tbody.addEventListener('mousemove', function (e) {
+                if (!drawing) return;
+                var td = getCell(e);
+                if (!td || td.dataset.day !== drawDay) return;
+                var slot = parseInt(td.dataset.slot);
+                if (slot !== drawEndSlot) { drawEndSlot = slot; updateDrawOverlay(); }
+            });
+        }
+
+        document.addEventListener('mouseup', function (e) {
+            if (!drawing) return;
+            drawing = false;
+            var overlay = document.getElementById('draw-overlay');
+            if (overlay) overlay.style.display = 'none';
+            var s = Math.min(drawStartSlot, drawEndSlot);
+            var en = Math.max(drawStartSlot, drawEndSlot) + 1;
+            openNewBlockModal(drawDay, s, Math.min(en, TOTAL_SLOTS));
+        });
+
+        var dragId = null, dragEl = null;
+
+        function attachMoveHandlers() {
+            document.querySelectorAll('.sched-block').forEach(function (blk) {
+                if (blk._moveBound) return;
+                blk._moveBound = true;
+
+                // Right-click to show details
+                blk.addEventListener('contextmenu', function (e) {
+                    e.preventDefault();
+                    var id = blk.dataset.id;
+                    var entry = schedules.find(function (s) { return s.id === id; });
+                    if (entry) showSubjectDetails(entry);
+                });
+
+                blk.addEventListener('mousedown', function (e) {
+                    if (currentMode !== 'manual') return;
+                    if (e.target.classList.contains('sb-del') || e.target.classList.contains('sb-resize')) return;
+                    e.preventDefault();
+                    dragId = blk.dataset.id;
+                    dragEl = blk;
+                    dragEl.classList.add('dragging');
+                    var ghost = document.getElementById('drag-ghost');
+                    if (ghost) {
+                        ghost.style.background = blk.style.background;
+                        ghost.style.width = blk.offsetWidth + 'px';
+                        ghost.style.height = '36px';
+                        var subj = blk.querySelector('.sb-subj');
+                        ghost.textContent = subj ? subj.textContent : '';
+                        ghost.style.display = 'block';
+                        ghost.style.left = (e.clientX + 12) + 'px';
+                        ghost.style.top = (e.clientY + 4) + 'px';
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('mousemove', function (e) {
+            if (!dragEl && !stagingDragEl) return;
+            var ghost = document.getElementById('drag-ghost');
+            if (ghost) {
+                ghost.style.left = (e.clientX + 12) + 'px';
+                ghost.style.top = (e.clientY + 4) + 'px';
+            }
+
+            // Show drop preview for both existing blocks and staging blocks
+            if (dragEl || stagingDragEl) {
+                var td = document.elementFromPoint(e.clientX, e.clientY);
+                while (td && td.tagName !== 'TD') td = td.parentElement;
+
+                if (td && td.dataset && td.dataset.day && !td.dataset.id && td !== currentDropTarget) {
+                    var entry = null;
+                    if (dragEl) {
+                        entry = schedules.find(function (s) { return s.id === dragId; });
+                    } else if (stagingDragEl) {
+                        entry = unscheduledSubjects.find(function (s) { return s.id === stagingDragId; });
+                    }
+                    if (entry) {
+                        showDropPreview(td, entry);
+                    }
+                } else if (!td || !td.dataset || !td.dataset.day || td.dataset.id) {
+                    removeDropPreview();
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', async function (e) {
+            if (!dragEl) return;
+            dragEl.classList.remove('dragging');
+            var ghost = document.getElementById('drag-ghost');
+            if (ghost) ghost.style.display = 'none';
+
+            removeDropPreview();
+
+            var td = document.elementFromPoint(e.clientX, e.clientY);
+            while (td && td.tagName !== 'TD') td = td.parentElement;
+
+            if (td && td.dataset && td.dataset.day && !td.dataset.id) {
+                var entry = schedules.find(function (s) { return s.id === dragId; });
+                if (entry) {
+                    var dur = slotIdx(entry.end) - slotIdx(entry.start);
+                    var ns = parseInt(td.dataset.slot);
+                    var ne = ns + dur;
+                    if (ne <= TOTAL_SLOTS) {
+                        // Validate before moving
+                        var validation = validateSchedule(
+                            entry.prof,
+                            td.dataset.day,
+                            slots[ns],
+                            slots[ne],
+                            dragId
+                        );
+
+                        if (!validation.valid) {
+                            alert(validation.message);
+                            dragEl = null;
+                            dragId = null;
+                            return;
+                        }
+
+                        // Remove warning confirmation for moving blocks
+                        // if (validation.warning) {
+                        //     if (!confirm(validation.warning + '\n\nDo you want to continue?')) {
+                        //         dragEl = null;
+                        //         dragId = null;
+                        //         return;
+                        //     }
+                        // }
+
+                        // Optimistically update UI immediately
+                        var idx = schedules.findIndex(function (s) { return s.id === dragId; });
+                        if (idx >= 0) {
+                            var oldEntry = Object.assign({}, schedules[idx]);
+                            schedules[idx].day = td.dataset.day;
+                            schedules[idx].start = slots[ns];
+                            schedules[idx].end = slots[ne];
+                            applyYearSemesterFilter(); // Reapply filter
+
+                            // Update UI immediately
+                            refreshFilterOptions();
+                            renderTimetable();
+                            renderReport();
+
+                            // Save in background
+                            try {
+                                await fetch('/api/schedules/' + dragId, { method: 'DELETE' });
+                                var res = await fetch('/api/schedules', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(schedules[idx]),
+                                });
+                                var data = await res.json();
+                                if (res.ok) {
+                                    schedules[idx] = Object.assign({ id: data.id }, data.entry);
+                                    applyYearSemesterFilter(); // Reapply filter
+                                    refreshFilterOptions();
+                                    renderTimetable();
+                                    renderReport();
+                                } else {
+                                    // Rollback on error
+                                    schedules[idx] = oldEntry;
+                                    applyYearSemesterFilter(); // Reapply filter
+                                    refreshFilterOptions();
+                                    renderTimetable();
+                                    renderReport();
+                                    alert('Failed to move schedule block');
+                                }
+                            } catch (err) {
+                                // Rollback on error
+                                schedules[idx] = oldEntry;
+                                applyYearSemesterFilter(); // Reapply filter
+                                refreshFilterOptions();
+                                renderTimetable();
+                                renderReport();
+                                alert('Failed to move schedule block: ' + err.message);
+                            }
+                        }
+                    }
+                }
+            }
+            dragEl = null; dragId = null;
+        });
+
+        function attachResizeHandlers() {
+            document.querySelectorAll('.sb-resize').forEach(function (handle) {
+                if (handle._resizeBound) return;
+                handle._resizeBound = true;
+                handle.addEventListener('mousedown', function (e) {
+                    if (currentMode !== 'manual') return;
+                    e.preventDefault(); e.stopPropagation();
+                    var id = handle.dataset.id;
+                    var entry = schedules.find(function (s) { return s.id === id; });
+                    if (!entry) return;
+                    var startSlot = slotIdx(entry.start);
+                    var curEnd = slotIdx(entry.end);
+                    function onMove(ev) {
+                        var rows = document.querySelectorAll('#timetable-body tr');
+                        for (var i = 0; i < rows.length; i++) {
+                            var r = rows[i].getBoundingClientRect();
+                            if (ev.clientY >= r.top && ev.clientY < r.bottom) {
+                                var slot = parseInt(rows[i].dataset.slot);
+                                if (slot > startSlot && slot !== curEnd) {
+                                    curEnd = slot;
+                                    var blk = document.getElementById('blk-' + id);
+                                    if (blk) blk.style.height = ((curEnd - startSlot) * SLOT_H - 3) + 'px';
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    async function onUp() {
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                        if (curEnd > startSlot) {
+                            // Calculate new units based on duration (1 unit = 1 hour)
+                            var hours = (curEnd - startSlot) * 0.5; // Each slot is 0.5 hours
+                            var newUnits = Math.round(hours * 10) / 10; // Round to 1 decimal
+
+                            // Update entry with new end time and units
+                            await updateEntry(id, {
+                                start: slots[startSlot],
+                                end: slots[curEnd],
+                                units: newUnits
+                            });
+                        }
+                    }
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                });
+            });
+        }
+
+        function attachBlockHandlers() {
+            attachDrawHandlers();
+            attachMoveHandlers();
+            attachResizeHandlers();
+        }
+
+        async function updateEntry(id, changes) {
+            var idx = schedules.findIndex(function (s) { return s.id === id; });
+            if (idx < 0) return;
+            var updated = Object.assign({}, schedules[idx], changes);
+
+            // Validate before updating
+            var validation = validateSchedule(
+                updated.prof,
+                updated.day,
+                updated.start,
+                updated.end,
+                id  // Exclude current block from validation
+            );
+
+            if (!validation.valid) {
+                alert(validation.message);
+                // Revert visual changes
+                filtered = schedules.slice();
+                renderTimetable();
+                renderReport();
+                return;
+            }
+
+            // Remove warning confirmation for resizing blocks
+            // if (validation.warning) {
+            //     if (!confirm(validation.warning + '\n\nDo you want to continue?')) {
+            //         // Revert visual changes
+            //         filtered = schedules.slice();
+            //         renderTimetable();
+            //         renderReport();
+            //         return;
+            //     }
+            // }
+
+            try {
+                await fetch('/api/schedules/' + id, { method: 'DELETE' });
+                var res = await fetch('/api/schedules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updated),
+                });
+                var data = await res.json();
+                if (res.ok) schedules[idx] = Object.assign({ id: data.id }, data.entry);
+            } catch (err) { }
+            applyYearSemesterFilter(); // Reapply filter
+            refreshFilterOptions(); renderTimetable(); renderReport();
+        }
+
+        var pendingDay = null, pendingStart = -1, pendingEnd = -1;
+
+        function openNewBlockModal(day, startSlot, endSlot) {
+            pendingDay = day;
+            pendingStart = startSlot;
+            pendingEnd = endSlot;
+            var lbl = document.getElementById('nbm-time-label');
+            if (lbl) lbl.textContent = day + '  -  ' + fmt(slots[startSlot]) + ' to ' + fmt(slots[Math.min(endSlot, TOTAL_SLOTS)]);
+            ['nbm-code', 'nbm-name', 'nbm-prof', 'nbm-room', 'nbm-section'].forEach(function (id) {
+                var el = document.getElementById(id); if (el) el.value = '';
+            });
+            var u = document.getElementById('nbm-units'); if (u) u.value = '';
+            var err = document.getElementById('nbm-err'); if (err) err.style.display = 'none';
+            document.getElementById('new-block-modal').classList.add('open');
+            setTimeout(function () { var c = document.getElementById('nbm-code'); if (c) c.focus(); }, 80);
+        }
+
+        window.closeNewBlockModal = function () {
+            document.getElementById('new-block-modal').classList.remove('open');
+        };
+
+        window.confirmNewBlock = async function () {
+            var code = document.getElementById('nbm-code').value.trim();
+            var name = document.getElementById('nbm-name').value.trim();
+            var prof = document.getElementById('nbm-prof').value.trim();
+            var type = document.getElementById('nbm-type').value;
+            var room = document.getElementById('nbm-room').value.trim();
+            var section = document.getElementById('nbm-section').value.trim();
+            var errEl = document.getElementById('nbm-err');
+            if (!code || !name || !prof || !type || !room || !section) {
+                errEl.textContent = 'Please fill in all fields.';
+                errEl.style.display = 'block'; return;
+            }
+            var endSlot = Math.min(pendingEnd, TOTAL_SLOTS);
+
+            // Validate schedule before saving
+            var validation = validateSchedule(prof, pendingDay, slots[pendingStart], slots[endSlot], null);
+            if (!validation.valid) {
+                alert(validation.message);
+                errEl.textContent = 'Validation failed. Please adjust the schedule.';
+                errEl.style.display = 'block';
+                return;
+            }
+            if (validation.warning) {
+                if (!confirm(validation.warning + '\n\nDo you want to continue?')) {
+                    return;
+                }
+            }
+
+            // Calculate units based on duration (1 unit = 1 hour)
+            var duration = endSlot - pendingStart;
+            var hours = duration * 0.5; // Each slot is 0.5 hours
+            var units = Math.round(hours * 10) / 10; // Round to 1 decimal
+
+            // ═══ UNIT QUOTA VALIDATION ═══
+            if (unitConfigSaved && subjectUnits[code]) {
+                var unitData = subjectUnits[code];
+                var currentAllocated = unitData.allocated || 0;
+                var configured = unitData.configured || 0;
+                var remaining = configured - currentAllocated;
+
+                console.log('Unit Quota Check:', {
+                    subject: code,
+                    configured: configured,
+                    currentAllocated: currentAllocated,
+                    remaining: remaining,
+                    attemptingToAdd: units
+                });
+
+                if (units > remaining) {
+                    alert(
+                        '⚠️ UNIT QUOTA EXCEEDED\n\n' +
+                        'Subject: ' + code + '\n' +
+                        'Configured: ' + configured + ' hours/week\n' +
+                        'Already Allocated: ' + currentAllocated + ' hours\n' +
+                        'Remaining: ' + remaining + ' hours\n\n' +
+                        'You are trying to add ' + units + ' hours, but only ' + remaining + ' hours remain.\n\n' +
+                        'This subject has met its unit quota. Please reduce the block duration or delete existing blocks.'
+                    );
+                    errEl.textContent = 'Unit quota exceeded for ' + code;
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                if (currentAllocated + units > configured) {
+                    alert(
+                        '⚠️ UNIT QUOTA EXCEEDED\n\n' +
+                        'Subject: ' + code + '\n' +
+                        'Configured: ' + configured + ' hours/week\n' +
+                        'Already Allocated: ' + currentAllocated + ' hours\n' +
+                        'Trying to Add: ' + units + ' hours\n' +
+                        'Total Would Be: ' + (currentAllocated + units) + ' hours\n\n' +
+                        'This would exceed the configured quota by ' + ((currentAllocated + units) - configured) + ' hours.\n\n' +
+                        'Please reduce the block duration.'
+                    );
+                    errEl.textContent = 'Adding this block would exceed unit quota';
+                    errEl.style.display = 'block';
+                    return;
+                }
+            }
+
+            try {
+                var res = await fetch('/api/schedules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prof: prof, subjCode: code, subjName: name, type: type,
+                        day: pendingDay, start: slots[pendingStart], end: slots[endSlot],
+                        room: room, units: units, section: section,
+                        year: currentYear, semester: currentSemester
+                    }),
+                });
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed.');
+                schedules.push(Object.assign({ id: data.id }, data.entry));
+                applyYearSemesterFilter(); // Reapply filter instead of copying all
+                refreshFilterOptions(); renderTimetable(); renderReport();
+
+                // Update unit tracking
+                calculateAllocatedUnits();
+                renderDraggableBlocks();
+                populateSubjectDropdowns(); // Update dropdown
+
+                closeNewBlockModal();
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.style.display = 'block';
+            }
+        };
+
+        document.getElementById('new-block-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeNewBlockModal();
+        });
+        document.getElementById('new-block-modal').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') window.confirmNewBlock();
+            if (e.key === 'Escape') window.closeNewBlockModal();
+        });
+
+        window.schedSwitchMode = function (mode) {
+            currentMode = mode;
+            document.getElementById('btn-manual').classList.toggle('active', mode === 'manual');
+            document.getElementById('btn-auto').classList.toggle('active', mode === 'auto');
+            document.getElementById('manual-hint').style.display = mode === 'manual' ? '' : 'none';
+            var panel = document.getElementById('ai-chat-panel');
+            var root = document.getElementById('sched-root');
+            if (mode === 'auto') {
+                panel.classList.add('open');
+                root.classList.add('chat-open');
+                initChat();
+                var msgs = document.getElementById('chat-messages');
+                if (msgs) setTimeout(function () { msgs.scrollTop = msgs.scrollHeight; }, 60);
+            } else {
+                panel.classList.remove('open');
+                root.classList.remove('chat-open');
+            }
+            renderReport();
+        };
+
+        var chatInited = false;
+        var WELCOME = 'Hi! I\'m your AI Schedule Assistant.\n\nI can generate and adjust the class schedule using a Genetic Algorithm + NLP.\n\nTry asking:\n- "Generate a full schedule"\n- "Move Dr. Santos to mornings"\n- "No classes on Saturday"\n- "Show conflicts"';
+
+        function initChat() {
+            if (chatInited) return;
+            chatInited = true;
+            appendMsg('ai', WELCOME);
+        }
+
+        function appendMsg(role, text, isTyping) {
+            var msgs = document.getElementById('chat-messages');
+            if (!msgs) return null;
+            var div = document.createElement('div');
+            div.className = 'chat-msg ' + role + (isTyping ? ' chat-typing' : '');
+            var av = document.createElement('div');
+            av.className = 'chat-avatar';
+            av.textContent = role === 'ai' ? 'AI' : 'You';
+            var bub = document.createElement('div');
+            bub.className = 'chat-bubble';
+            if (isTyping) {
+                bub.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            } else {
+                bub.textContent = text;
+            }
+            div.appendChild(av);
+            div.appendChild(bub);
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
+            return div;
+        }
+
+        window.sendSuggestion = function (btn) {
+            var text = btn.textContent;
+            var sugg = document.getElementById('chat-suggestions');
+            if (sugg) sugg.style.display = 'none';
+            sendMessage(text);
+        };
+
+        window.chatKeyDown = function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+        };
+
+        window.sendChatMessage = function () {
+            var input = document.getElementById('chat-input');
+            var text = input ? input.value.trim() : '';
+            if (!text) return;
+            input.value = '';
+            input.style.height = 'auto';
+            var sugg = document.getElementById('chat-suggestions');
+            if (sugg) sugg.style.display = 'none';
+            sendMessage(text);
+        };
+
+        async function sendMessage(text) {
+            appendMsg('user', text);
+            var typingEl = appendMsg('ai', '', true);
+
+            try {
+                // Call the NLP API
+                var res = await fetch('/api/chat/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+
+                var data = await res.json();
+
+                // Remove typing indicator
+                if (typingEl) typingEl.remove();
+
+                if (!res.ok) {
+                    appendMsg('ai', 'Sorry, I encountered an error: ' + (data.error || 'Unknown error'));
+                    return;
+                }
+
+                // Display AI response
+                appendMsg('ai', data.message);
+
+                // Execute action based on intent
+                await executeAction(data);
+
+            } catch (err) {
+                if (typingEl) typingEl.remove();
+                appendMsg('ai', 'Sorry, I encountered an error: ' + err.message);
+            }
+        }
+
+        async function executeAction(data) {
+            var action = data.action;
+            var actionData = data.data || {};
+
+            if (action === 'remove_schedule' && actionData.schedules_to_remove) {
+                // Remove schedules
+                for (var i = 0; i < actionData.schedules_to_remove.length; i++) {
+                    var id = actionData.schedules_to_remove[i];
+                    try {
+                        await fetch('/api/schedules/' + id, { method: 'DELETE' });
+                        schedules = schedules.filter(function (s) { return s.id !== id; });
+                    } catch (err) {
+                        console.error('Failed to delete schedule:', err);
+                    }
+                }
+                filtered = schedules.slice();
+                refreshFilterOptions();
+                renderTimetable();
+                renderReport();
+                appendMsg('ai', 'Done! I\'ve removed the schedule(s).');
+            }
+
+            else if (action === 'show_conflicts' && actionData.conflicts) {
+                if (actionData.conflicts.length > 0) {
+                    var conflictMsg = 'Here are the conflicts I found:\n\n';
+                    actionData.conflicts.forEach(function (c, idx) {
+                        conflictMsg += (idx + 1) + '. ' + c.type.toUpperCase() + ' conflict: ';
+                        if (c.type === 'professor') {
+                            conflictMsg += c.professor + ' has overlapping classes on ' + c.schedule1.day;
+                        } else {
+                            conflictMsg += c.room + ' is double-booked on ' + c.schedule1.day;
+                        }
+                        conflictMsg += '\n';
+                    });
+                    appendMsg('ai', conflictMsg);
+                }
+            }
+
+            else if (action === 'move_schedule' && actionData.schedules_to_move) {
+                // For now, just acknowledge - full implementation would move the schedules
+                appendMsg('ai', 'To move schedules, I need the Genetic Algorithm to find optimal placement. This feature is coming soon!');
+            }
+
+            else if (action === 'add_schedule' && !actionData.requires_input) {
+                // For now, just acknowledge - full implementation would add the schedule
+                appendMsg('ai', 'To add a schedule, I need all details (subject, professor, day, time, room). You can also drag from the staging area!');
+            }
+
+            else if (action === 'generate_full') {
+                appendMsg('ai', 'Full schedule generation with GA is coming soon! For now, you can manually add schedules or use the staging area.');
+            }
+        }
+
+        loadSchedules();
+
+        // ═══ Add Subject & Staging Area ═══
+        var unscheduledSubjects = [];
+
+        window.toggleAddSubjectForm = function () {
+            var form = document.getElementById('add-subject-form');
+            if (!form) return;
+            var isVisible = form.style.display !== 'none';
+            form.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible) {
+                setTimeout(function () {
+                    var c = document.getElementById('asf-code');
+                    if (c) c.focus();
+                }, 80);
+            }
+        };
+
+        window.addUnscheduledSubject = function () {
+            var code = document.getElementById('asf-code').value.trim();
+            var name = document.getElementById('asf-name').value.trim();
+            var prof = document.getElementById('asf-prof').value.trim();
+            var type = document.getElementById('asf-type').value;
+            var room = document.getElementById('asf-room').value.trim();
+            var section = document.getElementById('asf-section').value.trim();
+
+            if (!code || !name || !prof || !type || !room || !section) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            var subject = {
+                id: 'unsched-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                subjCode: code,
+                subjName: name,
+                prof: prof,
+                type: type,
+                room: room,
+                units: 1.5, // Default 1.5 units (will be recalculated on placement)
+                section: section,
+            };
+
+            unscheduledSubjects.push(subject);
+            renderStagingArea();
+
+            // Clear form
+            ['asf-code', 'asf-name', 'asf-prof', 'asf-type', 'asf-room', 'asf-section'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            // Reset type to default
+            var typeEl = document.getElementById('asf-type');
+            if (typeEl) typeEl.value = 'Lecture';
+
+            toggleAddSubjectForm();
+        };
+
+        function renderStagingArea() {
+            var container = document.getElementById('staging-blocks');
+            if (!container) return;
+
+            container.innerHTML = unscheduledSubjects.map(function (subj) {
+                var bg = colorFor(subj.subjCode, currentYear, currentSemester);
+                return '<div class="staging-block" data-id="' + subj.id + '" style="background:' + bg + ';">'
+                    + '<span class="stg-del" onclick="removeUnscheduledSubject(\'' + subj.id + '\',event)">&#x2715;</span>'
+                    + '<span class="stg-code">' + subj.subjCode + '</span>'
+                    + '<span class="stg-name">' + subj.subjName + '</span>'
+                    + '<span class="stg-prof">' + subj.prof + '</span>'
+                    + '</div>';
+            }).join('');
+
+            attachStagingDragHandlers();
+        }
+
+        window.removeUnscheduledSubject = function (id, e) {
+            if (e) e.stopPropagation();
+            if (!confirm('Remove this subject from staging?')) return;
+            unscheduledSubjects = unscheduledSubjects.filter(function (s) { return s.id !== id; });
+            renderStagingArea();
+        };
+
+        var stagingDragId = null, stagingDragEl = null;
+        var currentDropTarget = null;
+        var dropPreviewEl = null;
+
+        function attachStagingDragHandlers() {
+            document.querySelectorAll('.staging-block').forEach(function (blk) {
+                if (blk._stagingBound) return;
+                blk._stagingBound = true;
+                blk.addEventListener('mousedown', function (e) {
+                    if (currentMode !== 'manual') return;
+                    if (e.target.classList.contains('stg-del')) return;
+                    e.preventDefault();
+                    stagingDragId = blk.dataset.id;
+                    stagingDragEl = blk;
+                    stagingDragEl.classList.add('dragging');
+                    var ghost = document.getElementById('drag-ghost');
+                    if (ghost) {
+                        ghost.style.background = blk.style.background;
+                        ghost.style.width = blk.offsetWidth + 'px';
+                        ghost.style.height = '36px';
+                        var code = blk.querySelector('.stg-code');
+                        ghost.textContent = code ? code.textContent : '';
+                        ghost.style.display = 'block';
+                        ghost.style.left = (e.clientX + 12) + 'px';
+                        ghost.style.top = (e.clientY + 4) + 'px';
+                    }
+                });
+            });
+        }
+
+        function showDropPreview(td, subject) {
+            if (!td || !subject) return;
+
+            var slot = parseInt(td.dataset.slot);
+            var day = td.dataset.day;
+            var duration = 3; // Default 1.5 hours
+            var endSlot = Math.min(slot + duration, TOTAL_SLOTS);
+
+            // Remove existing preview first
+            removeDropPreview();
+
+            // Find the cell for this slot
+            var startRow = document.querySelector('#timetable-body tr[data-slot="' + slot + '"]');
+            if (!startRow) return;
+
+            var startTd = Array.from(startRow.querySelectorAll('td')).find(function (c) {
+                return c.dataset.day === day && !c.dataset.id;
+            });
+
+            if (!startTd) return;
+
+            // Create preview element
+            dropPreviewEl = document.createElement('div');
+            dropPreviewEl.className = 'drop-preview';
+            dropPreviewEl.style.height = (duration * SLOT_H - 3) + 'px';
+            dropPreviewEl.textContent = '↓ Drop here';
+            dropPreviewEl.style.pointerEvents = 'none'; // Ensure it doesn't interfere with mouse events
+
+            // Position it
+            startTd.style.position = 'relative';
+            startTd.appendChild(dropPreviewEl);
+            currentDropTarget = startTd;
+        }
+
+        function removeDropPreview() {
+            // Remove all drop preview elements (in case multiple were created)
+            var previews = document.querySelectorAll('.drop-preview');
+            previews.forEach(function (p) {
+                if (p.parentNode) p.parentNode.removeChild(p);
+            });
+
+            if (dropPreviewEl) {
+                if (dropPreviewEl.parentNode) {
+                    dropPreviewEl.parentNode.removeChild(dropPreviewEl);
+                }
+                dropPreviewEl = null;
+            }
+            currentDropTarget = null;
+        }
+
+        // Extend existing mousemove handler to support staging blocks
+        document.addEventListener('mousemove', function (e) {
+            if (!stagingDragEl && !dragEl) return;
+            var ghost = document.getElementById('drag-ghost');
+            if (ghost) {
+                ghost.style.left = (e.clientX + 12) + 'px';
+                ghost.style.top = (e.clientY + 4) + 'px';
+            }
+
+            // Show drop preview for staging blocks
+            if (stagingDragEl) {
+                var td = document.elementFromPoint(e.clientX, e.clientY);
+                while (td && td.tagName !== 'TD') td = td.parentElement;
+
+                if (td && td.dataset && td.dataset.day && !td.dataset.id && td !== currentDropTarget) {
+                    var subject = unscheduledSubjects.find(function (s) { return s.id === stagingDragId; });
+                    if (subject) {
+                        showDropPreview(td, subject);
+                    }
+                } else if (!td || !td.dataset || !td.dataset.day || td.dataset.id) {
+                    removeDropPreview();
+                }
+            }
+        });
+
+        // Extend existing mouseup handler to support staging blocks
+        var stagingMouseUpHandler = async function (e) {
+            if (!stagingDragEl) return;
+
+            stagingDragEl.classList.remove('dragging');
+            var ghost = document.getElementById('drag-ghost');
+            if (ghost) ghost.style.display = 'none';
+
+            removeDropPreview();
+
+            var td = document.elementFromPoint(e.clientX, e.clientY);
+            while (td && td.tagName !== 'TD') td = td.parentElement;
+
+            if (td && td.dataset && td.dataset.day && !td.dataset.id) {
+                var subject = unscheduledSubjects.find(function (s) { return s.id === stagingDragId; });
+                if (subject) {
+                    var slot = parseInt(td.dataset.slot);
+                    var duration = 3; // Default 1.5 hours
+                    var endSlot = Math.min(slot + duration, TOTAL_SLOTS);
+
+                    // Validate before placing
+                    var validation = validateSchedule(
+                        subject.prof,
+                        td.dataset.day,
+                        slots[slot],
+                        slots[endSlot],
+                        null
+                    );
+
+                    if (!validation.valid) {
+                        alert(validation.message);
+                        stagingDragEl.classList.remove('dragging');
+                        stagingDragEl = null;
+                        stagingDragId = null;
+                        return;
+                    }
+
+                    // Remove warning confirmation for staging drops
+                    // if (validation.warning) {
+                    //     if (!confirm(validation.warning + '\n\nDo you want to continue?')) {
+                    //         stagingDragEl.classList.remove('dragging');
+                    //         stagingDragEl = null;
+                    //         stagingDragId = null;
+                    //         return;
+                    //     }
+                    // }
+
+                    // Calculate units based on duration (1 unit = 1 hour)
+                    var hours = duration * 0.5; // Each slot is 0.5 hours
+                    var units = Math.round(hours * 10) / 10; // Round to 1 decimal
+
+                    // Optimistically update UI immediately
+                    var tempId = 'temp-' + Date.now();
+                    var tempEntry = {
+                        id: tempId,
+                        prof: subject.prof,
+                        subjCode: subject.subjCode,
+                        subjName: subject.subjName,
+                        day: td.dataset.day,
+                        start: slots[slot],
+                        end: slots[endSlot],
+                        room: subject.room,
+                        units: units,
+                        section: subject.section,
+                        year: currentYear,
+                        semester: currentSemester
+                    };
+
+                    // Add to schedules immediately for instant feedback
+                    schedules.push(tempEntry);
+                    applyYearSemesterFilter(); // Reapply filter
+
+                    // Remove from staging immediately
+                    unscheduledSubjects = unscheduledSubjects.filter(function (s) {
+                        return s.id !== stagingDragId;
+                    });
+
+                    // Update UI immediately
+                    refreshFilterOptions();
+                    renderTimetable();
+                    renderReport();
+                    renderStagingArea();
+
+                    // Create schedule entry in background
+                    try {
+                        var res = await fetch('/api/schedules', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                prof: subject.prof,
+                                subjCode: subject.subjCode,
+                                subjName: subject.subjName,
+                                day: td.dataset.day,
+                                start: slots[slot],
+                                end: slots[endSlot],
+                                room: subject.room,
+                                units: units,
+                                section: subject.section,
+                                year: currentYear,
+                                semester: currentSemester
+                            }),
+                        });
+                        var data = await res.json();
+                        if (res.ok) {
+                            // Replace temp entry with real one
+                            var idx = schedules.findIndex(function (s) { return s.id === tempId; });
+                            if (idx >= 0) {
+                                schedules[idx] = Object.assign({ id: data.id }, data.entry);
+                                applyYearSemesterFilter(); // Reapply filter
+                                refreshFilterOptions();
+                                renderTimetable();
+                                renderReport();
+                            }
+                        } else {
+                            // Rollback on error
+                            schedules = schedules.filter(function (s) { return s.id !== tempId; });
+                            applyYearSemesterFilter(); // Reapply filter
+                            unscheduledSubjects.push(subject);
+                            refreshFilterOptions();
+                            renderTimetable();
+                            renderReport();
+                            renderStagingArea();
+                            alert('Failed to add schedule: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (err) {
+                        // Rollback on error
+                        schedules = schedules.filter(function (s) { return s.id !== tempId; });
+                        applyYearSemesterFilter(); // Reapply filter
+                        unscheduledSubjects.push(subject);
+                        refreshFilterOptions();
+                        renderTimetable();
+                        renderReport();
+                        renderStagingArea();
+                        alert('Failed to add schedule: ' + err.message);
+                    }
+                }
+            }
+
+            stagingDragEl = null;
+            stagingDragId = null;
+        };
+
+        // Add staging mouseup handler
+        document.addEventListener('mouseup', stagingMouseUpHandler);
+
+        // Global cleanup on any drag end or mouse leave
+        document.addEventListener('mouseleave', function () {
+            removeDropPreview();
+        });
+
+        // Cleanup on timetable re-render
+        var originalRenderTimetable = renderTimetable;
+        renderTimetable = function () {
+            removeDropPreview();
+            originalRenderTimetable();
+        };
+
+        // ═══ Subject Details Modal ═══
+        window.showSubjectDetails = function (entry) {
+            document.getElementById('sdm-code').textContent = entry.subjCode || 'N/A';
+            document.getElementById('sdm-name').textContent = entry.subjName || 'N/A';
+            document.getElementById('sdm-prof').textContent = entry.prof || 'N/A';
+            document.getElementById('sdm-schedule').textContent = entry.day + ', ' + fmt(entry.start) + ' - ' + fmt(entry.end);
+            document.getElementById('sdm-room').textContent = entry.room || 'N/A';
+            document.getElementById('sdm-units').textContent = entry.units || 'N/A';
+            document.getElementById('sdm-section').textContent = entry.section || 'N/A';
+            document.getElementById('subject-details-modal').classList.add('open');
+        };
+
+        window.closeSubjectDetails = function () {
+            document.getElementById('subject-details-modal').classList.remove('open');
+        };
+
+        document.getElementById('subject-details-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeSubjectDetails();
+        });
+
+        document.getElementById('subject-details-modal').addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeSubjectDetails();
+        });
+
+        // ═══ Staff Integration ═══
+        var ALL_SUBJECTS = {
+            '1-1': [ // 1st Year, 1st Semester
+                { code: 'HIST/KAS 1', name: 'Philippine History', units: 3, year: 1, semester: 1 },
+                { code: 'ETHICS 1', name: 'Ethics and Moral Reasoning', units: 3, year: 1, semester: 1 },
+                { code: 'HFDS 101', name: 'Family and Environment', units: 3, year: 1, semester: 1 },
+                { code: 'HUME 100', name: 'Introduction to Human Ecology', units: 3, year: 1, semester: 1 },
+                { code: 'CERP 101', name: 'Fundamentals of Human Settlements', units: 3, year: 1, semester: 1 },
+                { code: 'SDS 101', name: 'Introduction to Social Development', units: 3, year: 1, semester: 1 },
+                { code: 'HK 11', name: 'Concept in Wellness and Basic Injury Management', units: 2, year: 1, semester: 1 }
+            ],
+            '1-2': [ // 1st Year, 2nd Semester
+                { code: 'ARTS 1', name: 'Critical Perspectives in the Arts', units: 3, year: 1, semester: 2 },
+                { code: 'HUME 112', name: 'Sustainability Science', units: 3, year: 1, semester: 2 },
+                { code: 'HUME 107', name: 'Principles of Human Development', units: 3, year: 1, semester: 2 },
+                { code: 'HUME 105', name: 'Humans and their Environment', units: 3, year: 1, semester: 2 },
+                { code: 'SOC 140', name: 'Introduction to Demography', units: 3, year: 1, semester: 2 },
+                { code: 'BIO 150', name: 'Principles of Ecology', units: 4, year: 1, semester: 2 },
+                { code: 'HK 12/13', name: 'Human Kinetics Activities', units: 2, year: 1, semester: 2 },
+                { code: 'NSTP 1', name: 'National Service Training Program 1', units: 3, year: 1, semester: 2 }
+            ],
+            '2-1': [ // 2nd Year, 1st Semester
+                { code: 'PI 10', name: 'Life and Works of Rizal', units: 3, year: 2, semester: 1 },
+                { code: 'HUME 110', name: 'Ecology and Value Systems', units: 3, year: 2, semester: 1 },
+                { code: 'HUME 111', name: 'Human Ecological Perspective in Development', units: 3, year: 2, semester: 1 },
+                { code: 'HUME 113', name: 'Community Study in Human Welfare', units: 3, year: 2, semester: 1 },
+                { code: 'HK 12 or 13', name: 'Human Kinetics Activities', units: 2, year: 2, semester: 1 },
+                { code: 'NSTP 2', name: 'National Service Training Program 2', units: 3, year: 2, semester: 1 }
+            ],
+            '2-2': [ // 2nd Year, 2nd Semester
+                { code: 'STS 1', name: 'Science, Technology, and Society', units: 3, year: 2, semester: 2 },
+                { code: 'STAT 166', name: 'Statistics for Social Sciences', units: 3, year: 2, semester: 2 },
+                { code: 'HUME 114', name: 'Material and Energy Flows', units: 3, year: 2, semester: 2 },
+                { code: 'CERP 161', name: 'Planning Theory and Practice I', units: 3, year: 2, semester: 2 },
+                { code: 'HUME 115', name: 'Social Policies', units: 3, year: 2, semester: 2 },
+                { code: 'HK 12 or 13', name: 'Human Kinetics Activities', units: 2, year: 2, semester: 2 }
+            ],
+            '3-1': [ // 3rd Year, 1st Semester
+                { code: 'COMM 10', name: 'Critical Perspectives in Communication', units: 3, year: 3, semester: 1 },
+                { code: 'HUME 195', name: 'Research Methods in Human Ecology', units: 3, year: 3, semester: 1 },
+                { code: 'HUME 122', name: 'Human Needs and the Built Environment', units: 3, year: 3, semester: 1 },
+                { code: 'HUME 123', name: 'Climate Change Adaptation and Disaster Risk Reduction in Human Ecosystems', units: 3, year: 3, semester: 1 },
+                { code: 'CERP 140', name: 'Fundamentals of Environmental Economics', units: 3, year: 3, semester: 1 },
+                { code: 'CERP 122', name: 'Conservation of Natural Resources', units: 3, year: 3, semester: 1 },
+                { code: 'SDS 172', name: 'Techniques in Community Organizing', units: 3, year: 3, semester: 1 }
+            ],
+            '3-2': [ // 3rd Year, 2nd Semester
+                { code: 'HUME 125', name: 'Human Ecological Systems Mapping', units: 5, year: 3, semester: 2 },
+                { code: 'HUME 124', name: 'Environmental Health', units: 3, year: 3, semester: 2 },
+                { code: 'SDS 173', name: 'Consumer Education', units: 3, year: 3, semester: 2 },
+                { code: 'HFDS 110', name: 'Migration', units: 3, year: 3, semester: 2 },
+                { code: 'CERP 162', name: 'Planning Theory and Practice II', units: 3, year: 3, semester: 2 },
+                { code: 'CERP 163', name: 'Land Use Planning for Human Settlements', units: 5, year: 3, semester: 2 },
+                { code: 'CERP 165', name: 'Human Settlements Planning I', units: 5, year: 3, semester: 2 }
+            ],
+            '4-1': [ // 4th Year, 1st Semester
+                { code: 'HNF 141', name: 'Food and Nutrition Systems', units: 3, year: 4, semester: 1 },
+                { code: 'CERP 166', name: 'Human Settlements Planning II', units: 7, year: 4, semester: 1 },
+                { code: 'CERP 170', name: 'Environmental Project Planning & Administration', units: 3, year: 4, semester: 1 },
+                { code: 'CERP 164', name: 'Spatial Analysis & Planning for Human Settlements', units: 5, year: 4, semester: 1 },
+                { code: 'CERP 200', name: 'Undergraduate Thesis', units: 3, year: 4, semester: 1 }
+            ],
+            '4-2': [ // 4th Year, 2nd Semester
+                { code: 'HUME 200a', name: 'Supervised Field Experience', units: 6, year: 4, semester: 2 },
+                { code: 'HUME 199', name: 'Seminar in Human Ecology', units: 1, year: 4, semester: 2 },
+                { code: 'CERP 200', name: 'Undergraduate Thesis', units: 3, year: 4, semester: 2 }
+            ]
+        };
+
+        var staffData = [];
+
+        async function loadStaffData() {
+            try {
+                var res = await fetch('/api/staff');
+                if (res.ok) {
+                    staffData = await res.json();
+                    console.log('✅ Staff data loaded:', staffData.length, 'faculty members');
+                    if (staffData.length > 0) {
+                        console.log('📋 Sample staff object:', staffData[0]);
+                        console.log('📚 Subject codes available:',
+                            [...new Set(staffData.flatMap(s => s.subjects ? s.subjects.map(sub => sub.code) : []))].join(', ')
+                        );
+                    } else {
+                        console.warn('⚠️ No faculty members found. Please add faculty first in the Faculty section.');
+                    }
+                } else {
+                    staffData = [];
+                    console.error('❌ Failed to load staff: HTTP', res.status);
+                }
+            } catch (e) {
+                staffData = [];
+                console.error('❌ Failed to load staff data:', e);
+            }
+        }
+
+        function populateSubjectDropdowns() {
+            // Get subjects for current year and semester
+            var key = currentYear + '-' + currentSemester;
+            var availableSubjects = ALL_SUBJECTS[key] || [];
+
+            // Populate New Block Modal subject dropdown
+            var nbmSelect = document.getElementById('nbm-code');
+            if (nbmSelect) {
+                nbmSelect.innerHTML = '<option value="">Select Subject</option>';
+                if (availableSubjects.length === 0) {
+                    var opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'No subjects available for this year/semester';
+                    opt.disabled = true;
+                    nbmSelect.appendChild(opt);
+                } else {
+                    availableSubjects.forEach(function (subj) {
+                        var opt = document.createElement('option');
+                        opt.value = subj.code;
+
+                        // Check if subject has met unit quota
+                        var isFullyAllocated = false;
+                        if (unitConfigSaved && subjectUnits[subj.code]) {
+                            var unitData = subjectUnits[subj.code];
+                            isFullyAllocated = unitData.allocated >= unitData.configured;
+                        }
+
+                        if (isFullyAllocated) {
+                            opt.textContent = subj.code + ' - ' + subj.name + ' (FULLY ALLOCATED)';
+                            opt.disabled = true;
+                            opt.style.color = '#9ca3af';
+                        } else {
+                            opt.textContent = subj.code + ' - ' + subj.name;
+                        }
+
+                        nbmSelect.appendChild(opt);
+                    });
+                }
+            }
+
+            // Note: asfSelect removed as that form no longer exists
+        }
+
+        window.onSubjectCodeChange = function (prefix) {
+            var codeSelect = document.getElementById(prefix + '-code');
+            var nameInput = document.getElementById(prefix + '-name');
+            var profSelect = document.getElementById(prefix + '-prof');
+
+            if (!codeSelect || !nameInput || !profSelect) return;
+
+            var selectedCode = codeSelect.value;
+
+            // Auto-fill subject name
+            if (selectedCode) {
+                // Find subject in ALL_SUBJECTS
+                var subject = null;
+                var key = currentYear + '-' + currentSemester;
+                var subjects = ALL_SUBJECTS[key] || [];
+                subject = subjects.find(function (s) { return s.code === selectedCode; });
+
+                if (subject) {
+                    nameInput.value = subject.name;
+                } else {
+                    nameInput.value = '';
+                }
+
+                // Filter and populate professor dropdown
+                var eligibleStaff = staffData.filter(function (staff) {
+                    return staff.subjects && staff.subjects.some(function (s) {
+                        return s.code === selectedCode;
+                    });
+                });
+
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('🔍 Subject selected:', selectedCode);
+                console.log('📊 Total staff loaded:', staffData.length);
+                console.log('✅ Eligible professors for', selectedCode + ':', eligibleStaff.length);
+
+                if (eligibleStaff.length > 0) {
+                    console.log('👥 Professors:', eligibleStaff.map(s => s.fullName).join(', '));
+                } else {
+                    console.warn('⚠️ No professors found for subject:', selectedCode);
+                    console.log('💡 Hint: Make sure faculty members have been assigned this subject code in the Faculty section');
+                    if (staffData.length > 0) {
+                        console.log('📝 Available subject codes in staff data:',
+                            [...new Set(staffData.flatMap(s => s.subjects ? s.subjects.map(sub => sub.code) : []))].join(', ')
+                        );
+                    }
+                }
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                profSelect.innerHTML = '<option value="">Select Professor</option>';
+                if (eligibleStaff.length > 0) {
+                    eligibleStaff.forEach(function (staff) {
+                        var opt = document.createElement('option');
+                        opt.value = staff.fullName;
+                        opt.textContent = staff.fullName;
+                        profSelect.appendChild(opt);
+                    });
+                } else {
+                    var opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'No professors available for this subject';
+                    opt.disabled = true;
+                    profSelect.appendChild(opt);
+                }
+            } else {
+                nameInput.value = '';
+                profSelect.innerHTML = '<option value="">Select Subject First</option>';
+            }
+        };
+
+        // Initialize staff data and populate dropdowns
+        loadStaffData().then(function () {
+            populateSubjectDropdowns();
+        });
+
+        // Expose unit configuration functions globally
+        window.toggleUnitConfig = toggleUnitConfig;
+        window.autoFillUnits = autoFillUnits;
+        window.saveUnitConfiguration = saveUnitConfiguration;
+        window.handleDragStart = handleDragStart;
+        window.handleDragEnd = handleDragEnd;
+
+    })();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FACULTY MANAGEMENT MODALS & STYLES
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- Add Staff Modal -->
+<div class="modal" id="add-staff-modal">
+    <div class="modal-box" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Faculty</h3>
+            <button class="modal-close" onclick="closeAddStaffModal()">✕</button>
+        </div>
+        <form id="add-staff-form" onsubmit="submitAddStaff(event)">
+            <div class="modal-body">
+                <!-- Photo Upload -->
+                <div class="form-group">
+                    <label class="form-label">Photo</label>
+                    <label for="staff-photo-input" class="photo-upload">
+                        <img id="staff-photo-preview" class="photo-preview" alt="Preview">
+                        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span style="font-size:0.875rem;color:#6b7280;">Click to upload photo</span>
+                    </label>
+                    <input type="file" id="staff-photo-input" accept="image/*" style="display:none;"
+                        onchange="previewStaffPhoto(event)">
+                </div>
+
+                <!-- Select Faculty Member -->
+                <div class="form-group">
+                    <label class="form-label">Select Faculty Member *</label>
+                    <select name="memberId" id="staff-member-select" class="form-select" required
+                        onchange="onFacultyMemberChange()">
+                        <option value="">-- Select a faculty member --</option>
+                    </select>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">
+                        Faculty members are managed in the <a href="/manage/"
+                            style="color:#6b0f1a;text-decoration:underline;">Manage page</a>
+                    </p>
+                </div>
+
+                <!-- Full Name (Auto-filled, read-only) -->
+                <div class="form-group" id="staff-fullname-group" style="display:none;">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="staff-fullname" class="form-input" readonly
+                        style="background:#f9fafb;color:#6b7280;">
+                </div>
+
+                <!-- Time Availability (Auto-filled from member) -->
+                <div class="form-group" id="staff-availability-group" style="display:none;">
+                    <label class="form-label">Time Availability</label>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Monday" id="staff-avail-monday" disabled>
+                            <span>Monday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Tuesday" id="staff-avail-tuesday"
+                                disabled>
+                            <span>Tuesday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Wednesday" id="staff-avail-wednesday"
+                                disabled>
+                            <span>Wednesday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Thursday" id="staff-avail-thursday"
+                                disabled>
+                            <span>Thursday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Friday" id="staff-avail-friday" disabled>
+                            <span>Friday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Saturday" id="staff-avail-saturday"
+                                disabled>
+                            <span>Saturday</span>
+                        </label>
+                    </div>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Auto-filled from member profile</p>
+                </div>
+
+                <!-- Year Level -->
+                <div class="form-group">
+                    <label class="form-label">Year Level(s) *</label>
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="yearLevel" value="1" onchange="onStaffYearCheckChange('add')">
+                            <span>1st Year</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="yearLevel" value="2" onchange="onStaffYearCheckChange('add')">
+                            <span>2nd Year</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="yearLevel" value="3" onchange="onStaffYearCheckChange('add')">
+                            <span>3rd Year</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="yearLevel" value="4" onchange="onStaffYearCheckChange('add')">
+                            <span>4th Year</span>
+                        </label>
+                    </div>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Select year level(s) to see available
+                        subjects</p>
+                </div>
+
+                <!-- Subjects -->
+                <div class="form-group">
+                    <label class="form-label">Subjects Taught *</label>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 10px;">Select all subjects this staff member
+                        can teach</p>
+                    <div class="subject-chips" id="subject-chips">
+                        <div style="text-align:center;padding:20px;color:#9ca3af;font-size:0.8rem;width:100%;">
+                            Please select a year level first
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-error" id="add-staff-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeAddStaffModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Add Staff</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal" id="success-modal">
+    <div class="modal-box" style="max-width: 400px;">
+        <div class="modal-body" style="text-align:center;padding:32px 24px;">
+            <div
+                style="width:64px;height:64px;border-radius:50%;background:#10b981;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h3 style="font-size:1.1rem;font-weight:700;color:#111827;margin-bottom:8px;">Success!</h3>
+            <p style="font-size:0.875rem;color:#6b7280;" id="success-message">Staff member added successfully.</p>
+        </div>
+        <div class="modal-footer" style="justify-content:center;">
+            <button class="btn-primary" onclick="closeSuccessModal()">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div class="modal" id="bulk-delete-modal">
+    <div class="modal-box" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Delete Faculty Members</h3>
+            <button class="modal-close" onclick="closeBulkDeleteModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.875rem;color:#6b7280;margin-bottom:12px;">
+                Are you sure you want to delete <strong id="delete-count">0</strong> faculty member(s)?
+            </p>
+            <p style="font-size:0.875rem;color:#dc2626;">
+                This action cannot be undone.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeBulkDeleteModal()">Cancel</button>
+            <button class="btn-danger" onclick="executeBulkDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Faculty Management Styles */
+    .staff-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 16px;
+        min-height: 200px;
+    }
+
+    .staff-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.2s;
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .staff-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .staff-card.selected {
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 2px rgba(107, 15, 26, 0.1);
+    }
+
+    .staff-card-checkbox {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        z-index: 10;
+        accent-color: #6b0f1a;
+    }
+
+    .staff-photo-container {
+        width: 100%;
+        padding-top: 100%;
+        position: relative;
+        background: #f3f4f6;
+        overflow: hidden;
+    }
+
+    .staff-photo {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .staff-photo-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    .staff-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #111827;
+        padding: 10px;
+        text-align: center;
+        line-height: 1.3;
+    }
+
+    .staff-year-section {
+        margin-bottom: 32px;
+    }
+
+    .staff-year-header {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #6b0f1a;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #6b0f1a;
+    }
+
+    /* Photo Upload Styles */
+    .photo-upload {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 20px;
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .photo-upload:hover {
+        border-color: #6b0f1a;
+        background: #fdf2f3;
+    }
+
+    .photo-preview {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        display: none;
+    }
+
+    .photo-preview.show {
+        display: block;
+    }
+
+    /* Subject Chips Styles */
+    .subject-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 10px;
+        background: #f9fafb;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .subject-chip {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 8px 12px;
+        border: 1.5px solid #d1d5db;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: white;
+        user-select: none;
+        min-width: 180px;
+    }
+
+    .subject-chip:hover {
+        border-color: #6b0f1a;
+        background: #fdf2f3;
+    }
+
+    .subject-chip.selected {
+        background: #6b0f1a;
+        border-color: #6b0f1a;
+    }
+
+    .subject-chip.selected .subject-chip-code,
+    .subject-chip.selected .subject-chip-name,
+    .subject-chip.selected .subject-chip-units {
+        color: white;
+    }
+
+    .subject-chip-code {
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: #111827;
+    }
+
+    .subject-chip-name {
+        font-size: 0.72rem;
+        color: #6b7280;
+        line-height: 1.3;
+    }
+
+    .subject-chip-units {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    /* Availability Checkbox Styles */
+    .availability-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+    }
+
+    .availability-checkbox:hover {
+        border-color: #6b0f1a;
+        background: #fdf2f3;
+    }
+
+    .availability-checkbox input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+
+    .availability-checkbox input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .availability-checkbox span {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #374151;
+    }
+</style>

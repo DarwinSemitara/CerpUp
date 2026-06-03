@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CERP Admin - {{ page_title }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">CERP</div>
+                <div class="sidebar-subtitle">Admin Dashboard</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/dashboard/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Dashboard
+                </a>
+
+                <a href="/research/" class="nav-item {% if active_page == 'research' %}active{% endif %}">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Research
+                </a>
+
+                <button class="nav-item" onclick="toggleSubNav('extensions-sub', this)">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Extensions
+                    <svg class="nav-chevron" width="12" height="12" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div class="sub-nav" id="extensions-sub">
+                    <a href="/extensions/public-engagements/"
+                        class="sub-nav-item {% if active_page == 'pub_eng' %}active{% endif %}">
+                        Public Engagements
+                    </a>
+                    <a href="/extensions/tap-hsp/"
+                        class="sub-nav-item {% if active_page == 'tap_hsp' %}active{% endif %}">
+                        TAP-HSP
+                    </a>
+                </div>
+
+                <button class="nav-item" onclick="toggleSubNav('schedule-sub', this)">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Schedule
+                    <svg class="nav-chevron" width="12" height="12" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div class="sub-nav" id="schedule-sub">
+                    <a href="/schedule/class/" class="sub-nav-item {% if active_page == 'schedule' %}active{% endif %}">
+                        Class Schedule
+                    </a>
+                    <a href="/schedule/events/" class="sub-nav-item">News and Events</a>
+                </div>
+
+                <a href="/data/" class="nav-item {% if active_page == 'data' %}active{% endif %}">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                    Data
+                </a>
+
+                <a href="/manage/" class="nav-item {% if active_page == 'manage' %}active{% endif %}">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    Manage
+                </a>
+
+                <a href="/other/" class="nav-item {% if active_page == 'other' %}active{% endif %}">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                    </svg>
+                    Other
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="nav-item" onclick="openLogoutModal()" style="color: #f87171;">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main">
+            <header id="header">
+                <div class="page-title" id="page-title">{{ page_title }}</div>
+                <div class="user-info">
+                    <div class="user-email">{{ email }}</div>
+                    <div class="user-avatar">{{ initial }}</div>
+                </div>
+            </header>
+
+            <div id="content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Logout Modal -->
+    <div class="modal" id="logout-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">Confirm Logout</h3>
+                <button class="modal-close" onclick="closeLogoutModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.875rem;color:#6b7280;">Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeLogoutModal()">Cancel</button>
+                <button class="btn-danger" onclick="confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

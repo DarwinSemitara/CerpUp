@@ -1,0 +1,226 @@
+<!-- ══════════════════════════════════════════════════════════════
+     Public Engagements Section
+     ══════════════════════════════════════════════════════════════ -->
+
+<style>
+  .pe-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+
+  .pe-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pe-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pe-sort-select {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    border: none;
+    background: transparent;
+    color: #374151;
+    cursor: pointer;
+    font-weight: 500;
+    outline: none;
+  }
+
+  .pe-sort-select:hover {
+    color: #6b0f1a;
+  }
+
+  .pe-search-wrap {
+    position: relative;
+    width: 280px;
+  }
+
+  .pe-search-wrap input {
+    width: 100%;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.15s;
+  }
+
+  .pe-search-wrap input:focus {
+    border-color: #6b0f1a;
+    box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+  }
+
+  .pe-search-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pe-table-container {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+  }
+</style>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Public Engagements</h2>
+    <button class="btn-primary" onclick="openAddEngagementModal()">
+      <svg style="width:14px;height:14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+      Add Engagement
+    </button>
+  </div>
+
+  <div class="card-body">
+    <!-- Toolbar -->
+    <div class="pe-toolbar">
+      <div class="pe-toolbar-left">
+        <div class="gen-report-wrap">
+          <button class="gen-report-btn" onclick="toggleDropdown('pe-report-menu')">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            Generate Report
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="gen-report-menu" id="pe-report-menu">
+            <a href="#">📄 Export as DOCX</a>
+            <a href="#">📕 Export as PDF</a>
+            <a href="#">📊 Export as Excel</a>
+          </div>
+        </div>
+        <select class="pe-sort-select" id="pe-sort" onchange="applyPEFilter()">
+          <option value="">Sort by…</option>
+          <option value="faculty">Faculty</option>
+          <option value="site">Site</option>
+        </select>
+      </div>
+      <div class="pe-toolbar-right">
+        <div class="pe-search-wrap">
+          <input type="text" id="pe-search" placeholder="Search engagements…" oninput="applyPEFilter()">
+          <button class="pe-search-btn" type="button">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8" />
+              <path stroke-linecap="round" d="M21 21l-4.35-4.35" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="pe-table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type of Engagement</th>
+            <th>Designation</th>
+            <th>Name of Event</th>
+            <th>Partner</th>
+            <th>Person Involved</th>
+            <th>Period / Timeframe</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="pe-tbody">
+          <tr>
+            <td colspan="7" class="text-center" style="padding:32px;">
+              <div class="content-spinner">
+                <div class="spinner-ring"></div> Loading engagements…
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pe-pg"></div>
+  </div>
+</div>
+
+<!-- Add Engagement Modal -->
+<div class="modal" id="add-engagement-modal">
+  <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Public Engagement</h3>
+      <button class="modal-close" onclick="closeAddEngagementModal()">✕</button>
+    </div>
+    <form id="add-engagement-form" onsubmit="submitAddEngagement(event)">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Type of Engagement *</label>
+          <input type="text" name="type" class="form-input" required placeholder="e.g., Seminar, Workshop, Training">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Designation *</label>
+          <input type="text" name="designation" class="form-input" required placeholder="e.g., Speaker, Facilitator">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Name of Event *</label>
+          <input type="text" name="event_name" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Partner *</label>
+          <input type="text" name="partner" class="form-input" required placeholder="e.g., DENR Region X">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Person Involved *</label>
+          <input type="text" name="person_involved" class="form-input" required placeholder="e.g., Dr. Juan Dela Cruz">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Period / Timeframe *</label>
+          <input type="text" name="period" class="form-input" required placeholder="e.g., Mar 5-6, 2025">
+        </div>
+        <div class="form-error" id="add-engagement-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeAddEngagementModal()">Cancel</button>
+        <button type="submit" class="btn-primary">Add Engagement</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Engagement Modal -->
+<div class="modal" id="delete-engagement-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title">Delete Engagement</h3>
+      <button class="modal-close" onclick="closeDeleteEngagementModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.875rem;color:#6b7280;">
+        Are you sure you want to delete this engagement? This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeDeleteEngagementModal()">Cancel</button>
+      <button class="btn-danger" onclick="confirmDeleteEngagement()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/pub_eng.js"></script>

@@ -1,0 +1,1137 @@
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from dotenv import load_dotenv
+from services.firebase_service import verify_id_token, db
+from services.cloudinary_service import upload_member_photo, delete_member_photo
+import os
+import uuid
+
+load_dotenv()
+
+app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
+
+TAP_SECTIONS = [
+    ('tap-capdev',  'Capacity Development'),
+    ('tap-modelcom', 'Model Community'),
+    ('tap-praxis',  'Praxis'),
+]
+
+
+def login_required(f):
+    from functools import wraps
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'uid' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def is_partial():
+    return request.headers.get('X-Partial') == '1'
+
+
+# â”€â”€ Public routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@app.route('/')
+def landing():
+    return render_template('landing.html')
+
+
+@app.route('/alumni')
+def alumni():
+    return render_template('alumni.html')
+
+
+@app.route('/faculty')
+def faculty():
+    return render_template('faculty.html')
+
+
+@app.route('/publications')
+def publications():
+    return render_template('publications.html')
+
+
+@app.route('/login')
+def login():
+    if 'uid' in session:
+        return redirect(url_for('dashboard'))
+    return render_template('login.html', firebase_config={
+        'apiKey':            os.getenv('FIREBASE_API_KEY'),
+        'authDomain':        os.getenv('FIREBASE_AUTH_DOMAIN'),
+        'projectId':         os.getenv('FIREBASE_PROJECT_ID'),
+        'storageBucket':     os.getenv('FIREBASE_STORAGE_BUCKET'),
+        'messagingSenderId': os.getenv('FIREBASE_MESSAGING_SENDER_ID'),
+        'appId':             os.getenv('FIREBASE_APP_ID'),
+    })
+
+
+# â”€â”€ Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided.'}), 400
+
+    # Check for hardcoded admin credentials
+    username = data.get('username')
+    password = data.get('password')
+
+    if username and password:
+        # Direct username/password login (for admin)
+        if username == 'admin' and password == 'admin123':
+            session['uid'] = 'admin-hardcoded'
+            session['email'] = 'admin'
+            session['role'] = 'admin'
+            return jsonify({'status': 'ok', 'redirect': '/dashboard/'})
+        else:
+            return jsonify({'error': 'Invalid username or password.'}), 401
+
+    # Firebase token-based login
+    id_token = data.get('idToken')
+    if not id_token:
+        return jsonify({'error': 'No token provided.'}), 400
+
+    decoded, error = verify_id_token(id_token)
+    if error:
+        print(f"Token verification error: {error}")  # Debug log
+        return jsonify({'error': error}), 401
+
+    uid = decoded['uid']
+    email = decoded.get('email', '')
+
+    # Look up role from Firestore users collection
+    user_doc = db.collection('users').document(uid).get()
+    role = 'user'
+    if user_doc.exists:
+        role = user_doc.to_dict().get('role', 'user')
+
+    session['uid'] = uid
+    session['email'] = email
+    session['role'] = role
+
+    redirect_url = '/dashboard/' if role == 'admin' else '/user/dashboard/'
+    return jsonify({'status': 'ok', 'redirect': redirect_url})
+
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/current-member', methods=['GET'])
+@login_required
+def get_current_member():
+    """Get current logged-in member's data."""
+    try:
+        uid = session.get('uid')
+        if not uid:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Find member by uid
+        members = db.collection('members').where(
+            'uid', '==', uid).limit(1).stream()
+        member_list = [{'id': d.id, **d.to_dict()} for d in members]
+
+        if member_list:
+            return jsonify(member_list[0])
+        else:
+            return jsonify({'error': 'Member not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@app.route('/dashboard/')
+@login_required
+def dashboard():
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/dashboard.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Dashboard',
+                           active_page='dashboard')
+
+
+# â”€â”€ Partial views (AJAX) â€” mirrors Django's X-Partial pattern â”€â”€
+
+@app.route('/research/')
+@login_required
+def section_research():
+    if is_partial():
+        return render_template('partials/research.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/research.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Research',
+                           active_page='research')
+
+
+@app.route('/extensions/public-engagements/')
+@login_required
+def section_pub_eng():
+    if is_partial():
+        return render_template('partials/pub_eng.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/pub_eng.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Public Engagements',
+                           active_page='pub_eng')
+
+
+@app.route('/extensions/tap-hsp/')
+@login_required
+def section_tap():
+    if is_partial():
+        return render_template('partials/tap_hsp.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/tap_hsp.html',
+                           email=email,
+                           initial=initial,
+                           page_title='TAP-HSP',
+                           active_page='tap_hsp')
+
+
+@app.route('/schedule/class/')
+@login_required
+def section_class_schedule():
+    if is_partial():
+        return render_template('partials/schedule.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/schedule.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Class Schedule',
+                           active_page='schedule')
+
+
+@app.route('/schedule/events/')
+@login_required
+def section_events():
+    if is_partial():
+        return render_template('partials/news_events.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/news_events.html',
+                           email=email,
+                           initial=initial,
+                           page_title='News & Events',
+                           active_page='events')
+
+
+@app.route('/data/')
+@login_required
+def section_data():
+    if is_partial():
+        return render_template('partials/placeholder.html', label='Data')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/placeholder.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Data',
+                           active_page='data')
+
+
+@app.route('/manage/')
+@login_required
+def section_manage():
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/manage.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Manage',
+                           active_page='manage')
+
+
+@app.route('/instructions/')
+@login_required
+def section_instructions():
+    # Redirect old instructions route to manage
+    return redirect(url_for('section_manage'))
+
+
+@app.route('/other/')
+@login_required
+def section_other():
+    if is_partial():
+        return render_template('partials/placeholder.html', label='Other')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/placeholder.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Other',
+                           active_page='other')
+
+
+# ── Staff API ────────────────────────────────────────────────
+
+@app.route('/api/staff', methods=['GET'])
+@login_required
+def get_staff():
+    """Return all teaching staff from Firestore."""
+    try:
+        docs = db.collection('staff').order_by('created_at').stream()
+        staff = [{'id': d.id, **d.to_dict()} for d in docs]
+        return jsonify(staff)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/staff', methods=['POST'])
+@login_required
+def add_staff():
+    """Add a new teaching staff member linked to a member record."""
+    try:
+        staff_id = str(uuid.uuid4())
+
+        # Get form data with validation
+        member_id = request.form.get('memberId', '').strip()
+        if not member_id:
+            return jsonify({'error': 'Member ID is required'}), 400
+
+        # Verify member exists and is faculty type
+        member_doc = db.collection('members').document(member_id).get()
+        if not member_doc.exists:
+            return jsonify({'error': 'Member not found'}), 404
+
+        member_data = member_doc.to_dict()
+        if not member_data.get('is_faculty', False):
+            return jsonify({'error': 'Selected member is not marked as teaching personnel'}), 400
+
+        # Get full name from form (already constructed from member)
+        full_name = request.form.get('fullName', '').strip()
+        if not full_name:
+            return jsonify({'error': 'Full name is required'}), 400
+
+        subjects_json = request.form.get('subjects', '[]')
+        availability_json = request.form.get('availability', '[]')
+
+        # Parse JSON fields
+        try:
+            subjects = __import__('json').loads(subjects_json)
+            availability = __import__('json').loads(availability_json)
+        except __import__('json').JSONDecodeError as je:
+            return jsonify({'error': f'Invalid JSON data: {str(je)}'}), 400
+
+        # Validate required fields
+        if not subjects:
+            return jsonify({'error': 'At least one subject is required'}), 400
+        if not availability:
+            return jsonify({'error': 'At least one availability day is required'}), 400
+
+        # Build staff data from form fields
+        staff = {
+            'memberId': member_id,  # Link to member record
+            'fullName': full_name,
+            'subjects': subjects,
+            'availability': availability,
+            'photo_url': member_data.get('photo_url'),  # Use photo from member
+            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+        }
+
+        # Save to Firestore
+        db.collection('staff').document(staff_id).set(staff)
+        return jsonify({'status': 'ok', 'id': staff_id, 'staff': staff}), 201
+
+    except Exception as e:
+        print(f"Error adding staff: {str(e)}")  # Log to console
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/staff/<staff_id>', methods=['PUT'])
+@login_required
+def update_staff(staff_id):
+    """Update a teaching staff member."""
+    try:
+        doc = db.collection('staff').document(staff_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Staff not found.'}), 404
+
+        # Get form data
+        subjects_json = request.form.get('subjects', '[]')
+        availability_json = request.form.get('availability', '[]')
+
+        # Parse JSON fields
+        try:
+            subjects = __import__('json').loads(subjects_json)
+            availability = __import__('json').loads(availability_json)
+        except __import__('json').JSONDecodeError as je:
+            return jsonify({'error': f'Invalid JSON data: {str(je)}'}), 400
+
+        # Build updated staff data
+        staff = doc.to_dict()
+        staff['fullName'] = request.form.get(
+            'fullName', staff.get('fullName', ''))
+        staff['subjects'] = subjects
+        staff['availability'] = availability
+
+        # Upload new photo if provided
+        photo = request.files.get('photo')
+        if photo and photo.filename:
+            # Delete old photo if exists
+            if staff.get('photo_url'):
+                delete_member_photo(f'staff_{staff_id}')
+
+            url, err = upload_member_photo(photo.stream, f'staff_{staff_id}')
+            if err:
+                return jsonify({'error': f'Photo upload failed: {err}'}), 500
+            staff['photo_url'] = url
+
+        # Update in Firestore
+        db.collection('staff').document(staff_id).set(staff)
+        return jsonify({'status': 'ok', 'staff': staff})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/staff/<staff_id>', methods=['DELETE'])
+@login_required
+def delete_staff(staff_id):
+    """Delete a teaching staff member."""
+    try:
+        doc = db.collection('staff').document(staff_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Staff not found.'}), 404
+
+        # Delete photo from Cloudinary
+        delete_member_photo(f'staff_{staff_id}')
+
+        # Delete from Firestore
+        db.collection('staff').document(staff_id).delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Members API ───────────────────────────────────────────────
+
+@app.route('/api/members', methods=['GET'])
+def get_members():
+    """Return all members from Firestore (public endpoint for faculty page). 
+    Supports filtering by type via query parameter or faculty status."""
+    try:
+        member_type = request.args.get('type', None)
+        faculty_only = request.args.get('faculty', None)
+
+        if faculty_only and faculty_only.lower() == 'true':
+            # Filter by is_faculty = true (no order_by to avoid index requirement)
+            docs = db.collection('members').where(
+                'is_faculty', '==', True).stream()
+            members = [{'id': d.id, **d.to_dict()} for d in docs]
+            # Sort in Python instead
+            members.sort(key=lambda x: x.get('created_at', ''))
+        elif member_type:
+            # Filter by type
+            docs = db.collection('members').where(
+                'type', '==', member_type).order_by('created_at').stream()
+            members = [{'id': d.id, **d.to_dict()} for d in docs]
+        else:
+            # Return all members
+            docs = db.collection('members').order_by('created_at').stream()
+            members = [{'id': d.id, **d.to_dict()} for d in docs]
+
+        return jsonify(members)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/members', methods=['POST'])
+@login_required
+def add_member():
+    """
+    Add a new member. Accepts multipart/form-data so the photo
+    can be uploaded in the same request.
+    """
+    try:
+        member_id = str(uuid.uuid4())
+
+        # Build member data from form fields
+        member = {
+            'last':      request.form.get('last', '').upper(),
+            'first':     request.form.get('first', ''),
+            'mi':        request.form.get('mi', 'N/A'),
+            'role':      request.form.get('role', ''),
+            'email':     request.form.get('email', ''),
+            'address':   request.form.get('address', ''),
+            'suffix':    request.form.get('suffix', ''),
+            'contact':   request.form.get('contact', ''),
+            'gender':    request.form.get('gender', ''),
+            'dob':       request.form.get('dob', ''),
+            'type':      request.form.get('type', 'admin_staff'),
+            'is_faculty': request.form.get('is_faculty', 'false').lower() == 'true',
+            'availability': request.form.getlist('availability'),
+            'photo_url': None,
+            'user_no':   request.form.get('user_no', ''),
+            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+        }
+
+        # Upload photo to Cloudinary if provided
+        photo = request.files.get('photo')
+        if photo and photo.filename:
+            url, err = upload_member_photo(photo.stream, member_id)
+            if err:
+                return jsonify({'error': f'Photo upload failed: {err}'}), 500
+            member['photo_url'] = url
+
+        # Save to Firestore
+        db.collection('members').document(member_id).set(member)
+        return jsonify({'status': 'ok', 'id': member_id, 'member': member}), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/members/<member_id>', methods=['DELETE'])
+@login_required
+def delete_member(member_id):
+    """Delete a member and their photo."""
+    try:
+        doc = db.collection('members').document(member_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Member not found.'}), 404
+
+        # Delete photo from Cloudinary
+        delete_member_photo(member_id)
+
+        # Delete from Firestore
+        db.collection('members').document(member_id).delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/members/<member_id>/create-account', methods=['POST'])
+@login_required
+def create_member_account(member_id):
+    """
+    Admin assigns an email + password to a member, creating a Firebase Auth
+    account and storing the role in Firestore users collection.
+    """
+    from firebase_admin import auth as fb_auth
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data.'}), 400
+
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required.'}), 400
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+
+    try:
+        # Check member exists
+        doc = db.collection('members').document(member_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Member not found.'}), 404
+        member = doc.to_dict()
+
+        # Create Firebase Auth user
+        try:
+            # Check if user already exists
+            fb_user = fb_auth.get_user_by_email(email)
+            # User exists, update their password
+            fb_user = fb_auth.update_user(
+                fb_user.uid,
+                password=password,
+                display_name=f"{member.get('first', '')} {member.get('last', '')}".strip(
+                )
+            )
+        except fb_auth.UserNotFoundError:
+            # User doesn't exist, create new
+            fb_user = fb_auth.create_user(
+                email=email,
+                password=password,
+                display_name=f"{member.get('first', '')} {member.get('last', '')}".strip(
+                ),
+                email_verified=False
+            )
+
+        # Store user profile in Firestore
+        db.collection('users').document(fb_user.uid).set({
+            'uid':       fb_user.uid,
+            'email':     email,
+            'role':      'user',
+            'member_id': member_id,
+            'display_name': fb_user.display_name,
+        }, merge=True)
+
+        # Link uid back to member doc
+        db.collection('members').document(member_id).update(
+            {'uid': fb_user.uid, 'email': email})
+
+        return jsonify({'status': 'ok', 'uid': fb_user.uid})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Schedule API ──────────────────────────────────────────────
+
+@app.route('/api/schedules', methods=['GET'])
+@login_required
+def get_schedules():
+    """Return all schedule entries from Firestore."""
+    try:
+        docs = db.collection('schedules').order_by('created_at').stream()
+        entries = [{'id': d.id, **d.to_dict()} for d in docs]
+        return jsonify(entries)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedules', methods=['POST'])
+@login_required
+def add_schedule():
+    """Add a single schedule entry (manual mode)."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+        required = ['prof', 'subjCode', 'subjName', 'day',
+                    'start', 'end', 'room', 'units', 'section']
+        for field in required:
+            if not data.get(field):
+                return jsonify({'error': f'Missing field: {field}'}), 400
+        entry_id = str(uuid.uuid4())
+        entry = {
+            'prof':      data['prof'],
+            'subjCode':  data['subjCode'],
+            'subjName':  data['subjName'],
+            # Default to Lecture if not provided
+            'type':      data.get('type', 'Lecture'),
+            'day':       data['day'],
+            'start':     data['start'],
+            'end':       data['end'],
+            'room':      data['room'],
+            'units':     int(data['units']),
+            'section':   data['section'],
+            'year':      data.get('year', '1'),
+            'semester':  data.get('semester', '1'),
+            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+        }
+        db.collection('schedules').document(entry_id).set(entry)
+        return jsonify({'status': 'ok', 'id': entry_id, 'entry': entry}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedules/<entry_id>', methods=['DELETE'])
+@login_required
+def delete_schedule(entry_id):
+    """Delete a single schedule entry."""
+    try:
+        doc = db.collection('schedules').document(entry_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Not found.'}), 404
+        db.collection('schedules').document(entry_id).delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedules/clear', methods=['POST'])
+@login_required
+def clear_schedules():
+    """Delete all schedule entries (used before saving a GA result)."""
+    try:
+        docs = db.collection('schedules').stream()
+        for d in docs:
+            d.reference.delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedules/generate', methods=['POST'])
+@login_required
+def generate_schedule():
+    """Run the genetic algorithm and return the generated schedule."""
+    try:
+        from services.scheduler_service import run_ga
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+
+        subjects = data.get('subjects', [])
+        rooms = data.get('rooms', [])
+        prof_availability = data.get('prof_availability', {})
+        constraints = data.get('constraints', {})
+
+        if not subjects:
+            return jsonify({'error': 'No subjects provided.'}), 400
+
+        result = run_ga(
+            subjects=subjects,
+            rooms=rooms,
+            prof_availability=prof_availability,
+            constraints=constraints,
+        )
+        return jsonify({'status': 'ok', 'schedule': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── AI Chat API ────────────────────────────────────────────────
+
+# ── AI Chat API ────────────────────────────────────────────────
+
+@app.route('/api/news', methods=['GET'])
+def get_news():
+    """Return all news/events from Firestore for public display."""
+    try:
+        docs = db.collection('news').order_by(
+            'created_at', direction='DESCENDING').stream()
+        news = [{'id': d.id, **d.to_dict()} for d in docs]
+        return jsonify(news)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/news', methods=['POST'])
+@login_required
+def add_news():
+    """Add a new news/event entry."""
+    try:
+        from services.cloudinary_service import upload_member_photo
+
+        news_id = str(uuid.uuid4())
+
+        # Get form data
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        media_type = request.form.get('media_type', 'text')
+
+        if not title:
+            return jsonify({'error': 'Title is required'}), 400
+
+        news = {
+            'title': title,
+            'description': description,
+            'media_type': media_type,
+            'media_url': None,
+            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+        }
+
+        # Upload media if provided
+        if media_type == 'image':
+            media = request.files.get('media')
+            if media and media.filename:
+                url, err = upload_member_photo(media.stream, f'news_{news_id}')
+                if err:
+                    return jsonify({'error': f'Media upload failed: {err}'}), 500
+                news['media_url'] = url
+        elif media_type == 'video':
+            # For video, store the URL directly
+            video_url = request.form.get('video_url', '').strip()
+            if video_url:
+                news['media_url'] = video_url
+
+        # Save to Firestore
+        db.collection('news').document(news_id).set(news)
+        return jsonify({'status': 'ok', 'id': news_id, 'news': news}), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/news/<news_id>', methods=['DELETE'])
+@login_required
+def delete_news(news_id):
+    """Delete a news/event entry."""
+    try:
+        doc = db.collection('news').document(news_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'News not found.'}), 404
+
+        news_data = doc.to_dict()
+
+        # Delete media from Cloudinary if it's an image
+        if news_data.get('media_type') == 'image' and news_data.get('media_url'):
+            from services.cloudinary_service import delete_member_photo
+            delete_member_photo(f'news_{news_id}')
+
+        # Delete from Firestore
+        db.collection('news').document(news_id).delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Public Engagements API ───────────────────────────────────
+
+@app.route('/api/engagements', methods=['GET'])
+@login_required
+def get_engagements():
+    """Return all public engagements from Firestore."""
+    try:
+        docs = db.collection('engagements').order_by('created_at').stream()
+        engagements = [{'id': d.id, **d.to_dict()} for d in docs]
+        return jsonify(engagements)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/engagements', methods=['POST'])
+@login_required
+def add_engagement():
+    """Add a new public engagement."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+
+        engagement_id = str(uuid.uuid4())
+        engagement = {
+            'type': data.get('type', '').strip(),
+            'designation': data.get('designation', '').strip(),
+            'event_name': data.get('event_name', '').strip(),
+            'partner': data.get('partner', '').strip(),
+            'person_involved': data.get('person_involved', '').strip(),
+            'period': data.get('period', '').strip(),
+            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+        }
+
+        # Validate required fields
+        if not all([engagement['type'], engagement['designation'], engagement['event_name'],
+                    engagement['partner'], engagement['person_involved'], engagement['period']]):
+            return jsonify({'error': 'All fields are required.'}), 400
+
+        db.collection('engagements').document(engagement_id).set(engagement)
+        return jsonify({'status': 'ok', 'id': engagement_id, 'engagement': engagement}), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/engagements/<engagement_id>', methods=['DELETE'])
+@login_required
+def delete_engagement(engagement_id):
+    """Delete a public engagement."""
+    try:
+        doc = db.collection('engagements').document(engagement_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Engagement not found.'}), 404
+
+        db.collection('engagements').document(engagement_id).delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── TAP-HSP Projects API ─────────────────────────────────────
+
+@app.route('/api/tap-projects', methods=['GET'])
+@login_required
+def get_tap_projects():
+    """Return all TAP-HSP projects from Firestore."""
+    try:
+        docs = db.collection('tap_projects').order_by('created_at').stream()
+        projects = [{'id': d.id, **d.to_dict()} for d in docs]
+        return jsonify(projects)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/tap-projects', methods=['POST'])
+@login_required
+def add_tap_project():
+    """Add a new TAP-HSP project."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+
+        project_id = str(uuid.uuid4())
+        project = {
+            'title': data.get('title', '').strip(),
+            'province': data.get('province', '').strip(),
+            'municipality': data.get('municipality', '').strip(),
+            'period': data.get('period', '').strip(),
+            'partner_agency': data.get('partner_agency', '').strip(),
+            'person_involved': data.get('person_involved', '').strip(),
+            'role': data.get('role', '').strip(),
+            'document_url': data.get('document_url'),
+            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+        }
+
+        # Validate required fields
+        if not all([project['title'], project['province'], project['municipality'],
+                    project['period'], project['partner_agency'], project['person_involved'], project['role']]):
+            return jsonify({'error': 'All required fields must be filled.'}), 400
+
+        db.collection('tap_projects').document(project_id).set(project)
+        return jsonify({'status': 'ok', 'id': project_id, 'project': project}), 201
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/tap-projects/<project_id>', methods=['DELETE'])
+@login_required
+def delete_tap_project(project_id):
+    """Delete a TAP-HSP project."""
+    try:
+        doc = db.collection('tap_projects').document(project_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Project not found.'}), 404
+
+        db.collection('tap_projects').document(project_id).delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── AI Chat API ────────────────────────────────────────────────
+
+@app.route('/api/chat/process', methods=['POST'])
+@login_required
+def process_chat_message():
+    """Process natural language chat message and execute scheduling action"""
+    try:
+        from services.nlp_service import process_message
+        from services.scheduler_service import run_ga
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+
+        message = data.get('message', '').strip()
+        if not message:
+            return jsonify({'error': 'Empty message.'}), 400
+
+        # Get current schedules for context
+        current_schedules = []
+        docs = db.collection('schedules').stream()
+        for d in docs:
+            current_schedules.append({'id': d.id, **d.to_dict()})
+
+        # Process message with NLP
+        intent_data = process_message(message)
+        intent_type = intent_data.get('intent')
+        params = intent_data.get('params', {})
+        confidence = intent_data.get('confidence', 0.0)
+
+        response = {
+            'status': 'ok',
+            'intent': intent_type,
+            'confidence': confidence,
+            'action': None,
+            'message': '',
+            'data': {}
+        }
+
+        # Execute action based on intent
+        if intent_type == 'generate_full':
+            response['action'] = 'generate_full'
+            response['message'] = "I'll generate a full schedule using the Genetic Algorithm. Please provide the subjects, professors, and constraints, or I can work with the existing data."
+            response['data'] = {'requires_input': True}
+
+        elif intent_type == 'add_schedule':
+            response['action'] = 'add_schedule'
+            if params and 'professor' in params:
+                # We have enough info, try to add with GA
+                from services.scheduler_service import add_schedule_smart
+
+                schedule_to_add = {
+                    'subjCode': params.get('subject_code', 'TBA'),
+                    'subjName': params.get('subject_name', params.get('subject_code', 'TBA')),
+                    'prof': params['professor'],
+                    'room': params.get('room', 'TBA'),
+                    'section': params.get('section', 'TBA'),
+                    'units': params.get('units', 1.5)
+                }
+
+                success, msg, result = add_schedule_smart(
+                    schedule_to_add, current_schedules)
+
+                if success:
+                    response['message'] = msg + " Ready to add!"
+                    response['data'] = {'schedule': result, 'should_add': True}
+                else:
+                    response['message'] = msg
+                    response['data'] = {'error': True}
+            else:
+                response['message'] = "I can add a schedule block. Please provide at least: professor name. Optional: subject code, room, section."
+                response['data'] = {'requires_input': True, 'provided': params}
+
+        elif intent_type == 'remove_schedule':
+            response['action'] = 'remove_schedule'
+            # Find matching schedules
+            matches = []
+            for sched in current_schedules:
+                match = True
+                if 'professor' in params and params['professor'].lower() not in sched.get('prof', '').lower():
+                    match = False
+                if 'subject_code' in params and params['subject_code'] not in sched.get('subjCode', ''):
+                    match = False
+                if 'day' in params and params['day'] != sched.get('day'):
+                    match = False
+                if match:
+                    matches.append(sched)
+
+            if matches:
+                response['message'] = f"Found {len(matches)} schedule(s) matching your criteria. I'll remove them."
+                response['data'] = {
+                    'schedules_to_remove': [s['id'] for s in matches]}
+            else:
+                response['message'] = "I couldn't find any schedules matching your criteria. Can you be more specific?"
+                response['data'] = {'requires_clarification': True}
+
+        elif intent_type == 'move_schedule':
+            response['action'] = 'move_schedule'
+            # Find matching schedules
+            matches = []
+            for sched in current_schedules:
+                match = True
+                if 'professor' in params and params['professor'].lower() not in sched.get('prof', '').lower():
+                    match = False
+                if 'subject_code' in params and params['subject_code'] not in sched.get('subjCode', ''):
+                    match = False
+                if match:
+                    matches.append(sched)
+
+            if matches:
+                from services.scheduler_service import move_schedule_smart
+
+                # Move each matching schedule
+                moved_schedules = []
+                for sched in matches:
+                    success, msg, result = move_schedule_smart(
+                        sched['id'],
+                        current_schedules,
+                        target_day=params.get('target_day'),
+                        target_time_period=params.get('target_time_period')
+                    )
+                    if success and result:
+                        moved_schedules.append(result)
+
+                if moved_schedules:
+                    target_info = []
+                    if 'target_day' in params:
+                        target_info.append(f"to {params['target_day']}")
+                    if 'target_time_period' in params:
+                        target_info.append(
+                            f"in the {params['target_time_period']}")
+
+                    response['message'] = f"Successfully moved {len(moved_schedules)} schedule(s) {' '.join(target_info)}!"
+                    response['data'] = {
+                        'schedules_to_move': moved_schedules,
+                        'should_update': True
+                    }
+                else:
+                    response['message'] = "Could not find conflict-free slots for the move. Try a different time or day."
+                    response['data'] = {'error': True}
+            else:
+                response['message'] = "I couldn't find any schedules matching your criteria."
+                response['data'] = {'requires_clarification': True}
+
+        elif intent_type == 'show_conflicts':
+            response['action'] = 'show_conflicts'
+            # Check for conflicts
+            conflicts = []
+            for i, sched1 in enumerate(current_schedules):
+                for sched2 in current_schedules[i+1:]:
+                    if sched1['day'] == sched2['day']:
+                        # Check time overlap
+                        if (sched1['start'] < sched2['end'] and sched1['end'] > sched2['start']):
+                            # Check if same professor or same room
+                            if sched1['prof'] == sched2['prof']:
+                                conflicts.append({
+                                    'type': 'professor',
+                                    'professor': sched1['prof'],
+                                    'schedule1': sched1,
+                                    'schedule2': sched2
+                                })
+                            if sched1['room'] == sched2['room']:
+                                conflicts.append({
+                                    'type': 'room',
+                                    'room': sched1['room'],
+                                    'schedule1': sched1,
+                                    'schedule2': sched2
+                                })
+
+            if conflicts:
+                response['message'] = f"I found {len(conflicts)} conflict(s) in the schedule."
+                response['data'] = {'conflicts': conflicts}
+            else:
+                response['message'] = "Great news! I didn't find any conflicts in the current schedule."
+                response['data'] = {'conflicts': []}
+
+        elif intent_type == 'modify_constraint':
+            response['action'] = 'modify_constraint'
+            response['message'] = f"I'll apply the constraint: {params}"
+            response['data'] = params
+
+        elif intent_type == 'query_info':
+            response['action'] = 'query_info'
+            query_type = params.get('query_type', 'general')
+
+            if query_type == 'conflicts':
+                response['message'] = "Let me check for conflicts..."
+                # Reuse conflict detection logic
+                response['data'] = {'redirect_to': 'show_conflicts'}
+            elif query_type == 'professor_schedule':
+                prof = params.get('professor', '')
+                prof_schedules = [
+                    s for s in current_schedules if prof.lower() in s.get('prof', '').lower()]
+                response['message'] = f"Found {len(prof_schedules)} schedule(s) for {prof}."
+                response['data'] = {'schedules': prof_schedules}
+            else:
+                response['message'] = f"Current schedule has {len(current_schedules)} blocks."
+                response['data'] = {'total_schedules': len(current_schedules)}
+
+        else:
+            response['message'] = "I'm not sure what you want me to do. Try asking me to:\n- Generate a full schedule\n- Add a class\n- Remove a class\n- Move a class\n- Show conflicts"
+            response['data'] = {'suggestions': [
+                'Generate a full schedule',
+                'Add ENRP 101 on Monday at 8am',
+                'Remove Dr. Santos from Tuesday',
+                'Move Dr. Cruz to afternoons',
+                'Show conflicts'
+            ]}
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── User (member) dashboard ────────────────────────────────────
+
+def user_required(f):
+    from functools import wraps
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'uid' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route('/user/dashboard/')
+@user_required
+def user_dashboard():
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'U'
+    return render_template('user_dashboard.html', email=email, initial=initial)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
