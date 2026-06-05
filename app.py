@@ -286,6 +286,7 @@ def get_staff():
     """Return all teaching staff from members collection where is_faculty=true."""
     try:
         # Fetch all members marked as faculty
+        # Note: Firestore doesn't support .order_by() with .where() on different fields without an index
         docs = db.collection('members').where(
             'is_faculty', '==', True).stream()
         staff = []
@@ -307,7 +308,11 @@ def get_staff():
 
             staff.append(staff_member)
 
+        print(f"✅ Found {len(staff)} faculty members")
         return jsonify(staff)
+    except Exception as e:
+        print(f"❌ Error fetching staff: {str(e)}")
+        return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
