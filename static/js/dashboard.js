@@ -458,7 +458,7 @@ async function submitAddStaff(event) {
         return;
     }
 
-    // Get subjects
+    // Get subjects (OPTIONAL - no longer required)
     const subjects = Array.from(document.querySelectorAll('#subject-chips .subject-chip.selected'))
         .map(chip => ({
             code: chip.dataset.code,
@@ -466,10 +466,8 @@ async function submitAddStaff(event) {
             year: chip.dataset.year
         }));
 
-    if (!subjects.length) {
-        errEl.textContent = 'Please select at least one subject.';
-        return;
-    }
+    // REMOVED: Subject validation - no longer required
+    // All faculty can teach any subject
 
     // Get availability from the member (already checked and disabled)
     const availability = Array.from(form.querySelectorAll('input[name="availability"]:checked'))
@@ -488,7 +486,7 @@ async function submitAddStaff(event) {
     const fd = new FormData();
     fd.append('memberId', selectedMemberId);
     fd.append('fullName', fullName);
-    fd.append('subjects', JSON.stringify(subjects));
+    fd.append('subjects', JSON.stringify(subjects)); // Empty array is now allowed
     fd.append('availability', JSON.stringify(availability));
 
     // Photo is already from member, no need to upload new one unless explicitly changed

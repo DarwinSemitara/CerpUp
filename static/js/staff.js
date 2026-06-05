@@ -390,10 +390,12 @@ async function submitAddStaff(event) {
     const errEl = document.getElementById('add-staff-error');
     errEl.textContent = '';
 
-    if (selectedSubjects.length === 0) {
-        errEl.textContent = 'Please select at least one subject.';
-        return;
-    }
+    // REMOVED: Subject validation - no longer required
+    // All faculty can teach any subject
+    // if (selectedSubjects.length === 0) {
+    //     errEl.textContent = 'Please select at least one subject.';
+    //     return;
+    // }
 
     const form = event.target;
 
@@ -436,10 +438,15 @@ function showConfirmStaffModal(form, availability, years) {
         `<span style="padding:4px 10px;background:transparent;color:#6b0f1a;border:1.5px solid #6b0f1a;border-radius:6px;font-size:0.75rem;font-weight:600;">${label}</span>`
     ).join('');
 
-    // Subjects
-    document.getElementById('confirm-subjects').innerHTML = selectedSubjects.map(s =>
-        `<span style="padding:4px 10px;background:transparent;color:#6b0f1a;border:1.5px solid #6b0f1a;border-radius:6px;font-size:0.75rem;font-weight:600;">${s.code}</span>`
-    ).join('');
+    // Subjects (now optional)
+    const subjectContainer = document.getElementById('confirm-subjects');
+    if (selectedSubjects.length > 0) {
+        subjectContainer.innerHTML = selectedSubjects.map(s =>
+            `<span style="padding:4px 10px;background:transparent;color:#6b0f1a;border:1.5px solid #6b0f1a;border-radius:6px;font-size:0.75rem;font-weight:600;">${s.code}</span>`
+        ).join('');
+    } else {
+        subjectContainer.innerHTML = '<span style="color:#9ca3af;font-size:0.8rem;">No subjects selected (can teach any subject)</span>';
+    }
 
     // Open confirmation modal
     document.getElementById('confirm-staff-modal').classList.add('open');

@@ -3677,34 +3677,17 @@
                     nameInput.value = '';
                 }
 
-                // Filter and populate professor dropdown
-                var eligibleStaff = staffData.filter(function (staff) {
-                    return staff.subjects && staff.subjects.some(function (s) {
-                        return s.code === selectedCode;
-                    });
-                });
-
+                // Show ALL faculty members (no filtering by subject)
+                // All faculty can teach any subject
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 console.log('🔍 Subject selected:', selectedCode);
                 console.log('📊 Total staff loaded:', staffData.length);
-                console.log('✅ Eligible professors for', selectedCode + ':', eligibleStaff.length);
-
-                if (eligibleStaff.length > 0) {
-                    console.log('👥 Professors:', eligibleStaff.map(s => s.fullName).join(', '));
-                } else {
-                    console.warn('⚠️ No professors found for subject:', selectedCode);
-                    console.log('💡 Hint: Make sure faculty members have been assigned this subject code in the Faculty section');
-                    if (staffData.length > 0) {
-                        console.log('📝 Available subject codes in staff data:',
-                            [...new Set(staffData.flatMap(s => s.subjects ? s.subjects.map(sub => sub.code) : []))].join(', ')
-                        );
-                    }
-                }
+                console.log('✅ All professors available (no subject filtering)');
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
                 profSelect.innerHTML = '<option value="">Select Professor</option>';
-                if (eligibleStaff.length > 0) {
-                    eligibleStaff.forEach(function (staff) {
+                if (staffData.length > 0) {
+                    staffData.forEach(function (staff) {
                         var opt = document.createElement('option');
                         opt.value = staff.fullName;
                         opt.textContent = staff.fullName;
@@ -3713,7 +3696,7 @@
                 } else {
                     var opt = document.createElement('option');
                     opt.value = '';
-                    opt.textContent = 'No professors available for this subject';
+                    opt.textContent = 'No professors available';
                     opt.disabled = true;
                     profSelect.appendChild(opt);
                 }
@@ -3847,11 +3830,11 @@
                         subjects</p>
                 </div>
 
-                <!-- Subjects -->
+                <!-- Subjects (Optional - for reference only) -->
                 <div class="form-group">
-                    <label class="form-label">Subjects Taught *</label>
-                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 10px;">Select all subjects this staff member
-                        can teach</p>
+                    <label class="form-label">Subjects Taught (Optional)</label>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 10px;">Optional: Select subjects for
+                        reference. All faculty can be assigned to any subject regardless of selection.</p>
                     <div class="subject-chips" id="subject-chips">
                         <div style="text-align:center;padding:20px;color:#9ca3af;font-size:0.8rem;width:100%;">
                             Please select a year level first
