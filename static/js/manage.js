@@ -164,9 +164,9 @@ async function submitAddMember(event) {
     // Add availability
     selectedAvailability.forEach(day => fd.append('availability', day));
 
-    // Add is_faculty checkbox
+    // Add is_faculty checkbox (convert to string 'true'/'false')
     const isFaculty = document.getElementById('is-faculty-checkbox')?.checked || false;
-    fd.append('is_faculty', isFaculty);
+    fd.append('is_faculty', isFaculty ? 'true' : 'false');
 
     // Add photo
     const photoInput = document.getElementById('member-photo-input');

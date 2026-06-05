@@ -402,6 +402,11 @@ def add_member():
     try:
         member_id = str(uuid.uuid4())
 
+        # Debug: Log the is_faculty value received
+        is_faculty_raw = request.form.get('is_faculty', 'false')
+        print(
+            f"🔍 Received is_faculty value: '{is_faculty_raw}' (type: {type(is_faculty_raw)})")
+
         # Build member data from form fields
         member = {
             'last':      request.form.get('last', '').upper(),
@@ -415,12 +420,14 @@ def add_member():
             'gender':    request.form.get('gender', ''),
             'dob':       request.form.get('dob', ''),
             'type':      request.form.get('type', 'admin_staff'),
-            'is_faculty': request.form.get('is_faculty', 'false').lower() == 'true',
+            'is_faculty': is_faculty_raw.lower() == 'true',
             'availability': request.form.getlist('availability'),
             'photo_url': None,
             'user_no':   request.form.get('user_no', ''),
             'created_at': __import__('datetime').datetime.utcnow().isoformat(),
         }
+
+        print(f"✅ Converted is_faculty to boolean: {member['is_faculty']}")
 
         # Upload photo to Cloudinary if provided
         photo = request.files.get('photo')
@@ -432,9 +439,13 @@ def add_member():
 
         # Save to Firestore
         db.collection('members').document(member_id).set(member)
+        print(
+            f"💾 Saved member {member_id} with is_faculty={member['is_faculty']}")
+
         return jsonify({'status': 'ok', 'id': member_id, 'member': member}), 201
 
     except Exception as e:
+        print(f"❌ Error adding member: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
