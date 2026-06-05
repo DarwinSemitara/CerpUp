@@ -283,10 +283,30 @@ def section_other():
 @app.route('/api/staff', methods=['GET'])
 @login_required
 def get_staff():
-    """Return all teaching staff from Firestore."""
+    """Return all teaching staff from members collection where is_faculty=true."""
     try:
-        docs = db.collection('staff').order_by('created_at').stream()
-        staff = [{'id': d.id, **d.to_dict()} for d in docs]
+        # Fetch all members marked as faculty
+        docs = db.collection('members').where(
+            'is_faculty', '==', True).stream()
+        staff = []
+        for d in docs:
+            data = d.to_dict()
+            # Format to match expected staff structure
+            staff_member = {
+                'id': d.id,
+                'memberId': d.id,  # Same as member ID
+                'fullName': f"{data.get('first', '')} {data.get('last', '')}".strip(),
+                'photo_url': data.get('photo_url', ''),
+                'availability': data.get('availability', []),
+                'subjects': [],  # No longer using subject filtering
+                'created_at': data.get('created_at', '')
+            }
+            # Add suffix if present
+            if data.get('suffix'):
+                staff_member['fullName'] += f", {data['suffix']}"
+
+            staff.append(staff_member)
+
         return jsonify(staff)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -295,126 +315,42 @@ def get_staff():
 @app.route('/api/staff', methods=['POST'])
 @login_required
 def add_staff():
-    """Add a new teaching staff member linked to a member record."""
-    try:
-        staff_id = str(uuid.uuid4())
-
-        # Get form data with validation
-        member_id = request.form.get('memberId', '').strip()
-        if not member_id:
-            return jsonify({'error': 'Member ID is required'}), 400
-
-        # Verify member exists and is faculty type
-        member_doc = db.collection('members').document(member_id).get()
-        if not member_doc.exists:
-            return jsonify({'error': 'Member not found'}), 404
-
-        member_data = member_doc.to_dict()
-        if not member_data.get('is_faculty', False):
-            return jsonify({'error': 'Selected member is not marked as teaching personnel'}), 400
-
-        # Get full name from form (already constructed from member)
-        full_name = request.form.get('fullName', '').strip()
-        if not full_name:
-            return jsonify({'error': 'Full name is required'}), 400
-
-        subjects_json = request.form.get('subjects', '[]')
-        availability_json = request.form.get('availability', '[]')
-
-        # Parse JSON fields
-        try:
-            subjects = __import__('json').loads(subjects_json)
-            availability = __import__('json').loads(availability_json)
-        except __import__('json').JSONDecodeError as je:
-            return jsonify({'error': f'Invalid JSON data: {str(je)}'}), 400
-
-        # Validate required fields
-        if not subjects:
-            return jsonify({'error': 'At least one subject is required'}), 400
-        if not availability:
-            return jsonify({'error': 'At least one availability day is required'}), 400
-
-        # Build staff data from form fields
-        staff = {
-            'memberId': member_id,  # Link to member record
-            'fullName': full_name,
-            'subjects': subjects,
-            'availability': availability,
-            'photo_url': member_data.get('photo_url'),  # Use photo from member
-            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
-        }
-
-        # Save to Firestore
-        db.collection('staff').document(staff_id).set(staff)
-        return jsonify({'status': 'ok', 'id': staff_id, 'staff': staff}), 201
-
-    except Exception as e:
-        print(f"Error adding staff: {str(e)}")  # Log to console
-        return jsonify({'error': str(e)}), 500
+    """
+    DEPRECATED: Staff are now auto-synced from members with is_faculty=true.
+    This endpoint is kept for backward compatibility but does nothing.
+    """
+    return jsonify({'error': 'Staff are now managed through the Members section. Mark a member as Teaching Personnel/Faculty to add them to the faculty list.'}), 400
 
 
 @app.route('/api/staff/<staff_id>', methods=['PUT'])
 @login_required
 def update_staff(staff_id):
-    """Update a teaching staff member."""
-    try:
-        doc = db.collection('staff').document(staff_id).get()
-        if not doc.exists:
-            return jsonify({'error': 'Staff not found.'}), 404
-
-        # Get form data
-        subjects_json = request.form.get('subjects', '[]')
-        availability_json = request.form.get('availability', '[]')
-
-        # Parse JSON fields
-        try:
-            subjects = __import__('json').loads(subjects_json)
-            availability = __import__('json').loads(availability_json)
-        except __import__('json').JSONDecodeError as je:
-            return jsonify({'error': f'Invalid JSON data: {str(je)}'}), 400
-
-        # Build updated staff data
-        staff = doc.to_dict()
-        staff['fullName'] = request.form.get(
-            'fullName', staff.get('fullName', ''))
-        staff['subjects'] = subjects
-        staff['availability'] = availability
-
-        # Upload new photo if provided
-        photo = request.files.get('photo')
-        if photo and photo.filename:
-            # Delete old photo if exists
-            if staff.get('photo_url'):
-                delete_member_photo(f'staff_{staff_id}')
-
-            url, err = upload_member_photo(photo.stream, f'staff_{staff_id}')
-            if err:
-                return jsonify({'error': f'Photo upload failed: {err}'}), 500
-            staff['photo_url'] = url
-
-        # Update in Firestore
-        db.collection('staff').document(staff_id).set(staff)
-        return jsonify({'status': 'ok', 'staff': staff})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    """
+    DEPRECATED: Staff are now auto-synced from members.
+    Update the member record in the Manage page instead.
+    """
+    return jsonify({'error': 'Staff are managed through Members. Please update the member in the Manage page.'}), 400
 
 
 @app.route('/api/staff/<staff_id>', methods=['DELETE'])
 @login_required
 def delete_staff(staff_id):
-    """Delete a teaching staff member."""
+    """
+    Remove faculty status from a member (set is_faculty=false).
+    This unlinks them from the faculty list without deleting the member.
+    """
     try:
-        doc = db.collection('staff').document(staff_id).get()
+        # staff_id is the member_id
+        doc = db.collection('members').document(staff_id).get()
         if not doc.exists:
-            return jsonify({'error': 'Staff not found.'}), 404
+            return jsonify({'error': 'Member not found.'}), 404
 
-        # Delete photo from Cloudinary
-        delete_member_photo(f'staff_{staff_id}')
+        # Update member to remove faculty status
+        db.collection('members').document(staff_id).update({
+            'is_faculty': False
+        })
 
-        # Delete from Firestore
-        db.collection('staff').document(staff_id).delete()
-        return jsonify({'status': 'ok'})
+        return jsonify({'status': 'ok', 'message': 'Faculty status removed. Member can be re-added by checking Teaching Personnel checkbox in Manage page.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
