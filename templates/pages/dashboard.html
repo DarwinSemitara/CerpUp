@@ -634,7 +634,7 @@
         background: white;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
-        overflow: hidden;
+        overflow: visible;
         transition: all 0.3s ease;
         cursor: pointer;
         position: relative;
@@ -645,6 +645,7 @@
     .staff-card:hover {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         transform: translateY(-4px);
+        z-index: 10;
     }
 
     .staff-photo-container {
@@ -654,6 +655,7 @@
         position: relative;
         background: #f3f4f6;
         overflow: hidden;
+        border-radius: 8px 8px 0 0;
     }
 
     .staff-photo {
@@ -686,6 +688,7 @@
         transition: all 0.3s ease;
         position: relative;
         background: white;
+        border-radius: 0 0 8px 8px;
     }
 
     .staff-name {
@@ -699,15 +702,13 @@
     .staff-stats {
         max-height: 0;
         overflow: hidden;
-        transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
-        opacity: 0;
+        transition: max-height 0.3s ease, padding 0.3s ease;
         padding: 0 10px;
     }
 
     .staff-card:hover .staff-stats {
-        max-height: 100px;
-        opacity: 1;
-        padding: 10px 10px 0;
+        max-height: 120px;
+        padding: 10px 10px 10px;
     }
 
     .staff-stat-item {
@@ -716,8 +717,26 @@
         align-items: center;
         font-size: 0.75rem;
         color: #6b7280;
-        margin-bottom: 6px;
-        padding: 4px 0;
+        margin-bottom: 8px;
+        padding: 6px 8px;
+        background: #f9fafb;
+        border-radius: 6px;
+        opacity: 0;
+        transform: translateY(-5px);
+        transition: all 0.3s ease;
+    }
+
+    .staff-card:hover .staff-stat-item {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .staff-card:hover .staff-stat-item:nth-child(1) {
+        transition-delay: 0.1s;
+    }
+
+    .staff-card:hover .staff-stat-item:nth-child(2) {
+        transition-delay: 0.15s;
     }
 
     .staff-stat-label {
