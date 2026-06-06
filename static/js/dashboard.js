@@ -551,13 +551,39 @@ function renderStaffGrid(staff) {
             ? `<img src="${s.photo_url}" class="staff-photo" alt="${s.fullName}">`
             : `<div class="staff-photo-placeholder">${initial}</div>`;
 
+        // Sample data for now - will be replaced with real backend data later
+        const extensionCount = Math.floor(Math.random() * 10) + 1;
+        const researchCount = Math.floor(Math.random() * 8) + 1;
+
         html += `
             <div class="staff-card" data-staff-id="${s.id}" onclick="toggleStaffSelection(event, '${s.id}')">
                 <input type="checkbox" class="staff-card-checkbox" data-staff-id="${s.id}" onclick="toggleStaffCheckbox(event, '${s.id}')">
                 <div class="staff-photo-container">
                     ${photoHtml}
                 </div>
-                <div class="staff-name">${s.fullName}</div>
+                <div class="staff-name-container">
+                    <div class="staff-name">${s.fullName}</div>
+                    <div class="staff-stats">
+                        <div class="staff-stat-item">
+                            <span class="staff-stat-label">
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                                </svg>
+                                Extensions
+                            </span>
+                            <span class="staff-stat-value">${extensionCount}</span>
+                        </div>
+                        <div class="staff-stat-item">
+                            <span class="staff-stat-label">
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                Research
+                            </span>
+                            <span class="staff-stat-value">${researchCount}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     });
