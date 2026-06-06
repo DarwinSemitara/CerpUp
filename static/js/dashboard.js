@@ -538,54 +538,41 @@ function renderStaffGrid(staff) {
     if (!grid) return;
 
     if (!staff.length) {
-        grid.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">No faculty members yet.</div>';
+        grid.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;">No faculty members yet. Add members and check "Teaching Personnel" in the Manage page.</div>';
         return;
     }
 
-    // Group by year level
-    const byYear = { '1': [], '2': [], '3': [], '4': [] };
-    staff.forEach(s => {
-        const years = Array.from(new Set(s.subjects.map(sub => sub.year)));
-        years.forEach(y => {
-            if (byYear[y]) byYear[y].push(s);
-        });
-    });
+    console.log('✅ Rendering', staff.length, 'faculty members');
 
     let html = '';
-    ['1', '2', '3', '4'].forEach(year => {
-        const yearStaff = byYear[year];
-        if (!yearStaff.length) return;
+    staff.forEach(s => {
+        const initial = (s.fullName || 'U')[0].toUpperCase();
+        const photoHtml = s.photo_url
+            ? `<img src="${s.photo_url}" class="staff-photo" alt="${s.fullName}">`
+            : `<div class="staff-photo-placeholder">${initial}</div>`;
 
         html += `
-            <div class="staff-year-section">
-                <div class="staff-year-header">${year === '1' ? '1st' : year === '2' ? '2nd' : year === '3' ? '3rd' : '4th'} Year Faculty</div>
-                <div class="staff-grid">
-        `;
-
-        yearStaff.forEach(s => {
-            const initial = (s.fullName || 'U')[0].toUpperCase();
-            const photoHtml = s.photo_url
-                ? `<img src="${s.photo_url}" class="staff-photo" alt="${s.fullName}">`
-                : `<div class="staff-photo-placeholder">${initial}</div>`;
-
-            html += `
-                <div class="staff-card" data-staff-id="${s.id}" onclick="toggleStaffSelection(event, '${s.id}')">
-                    <input type="checkbox" class="staff-card-checkbox" data-staff-id="${s.id}" onclick="toggleStaffCheckbox(event, '${s.id}')">
-                    <div class="staff-photo-container">
-                        ${photoHtml}
-                    </div>
-                    <div class="staff-name">${s.fullName}</div>
+            <div class="staff-card" data-staff-id="${s.id}" onclick="toggleStaffSelection(event, '${s.id}')">
+                <input type="checkbox" class="staff-card-checkbox" data-staff-id="${s.id}" onclick="toggleStaffCheckbox(event, '${s.id}')">
+                <div class="staff-photo-container">
+                    ${photoHtml}
                 </div>
-            `;
-        });
-
-        html += `
-                </div>
+                <div class="staff-name">${s.fullName}</div>
             </div>
         `;
     });
 
     grid.innerHTML = html;
+}
+        });
+
+html += `
+                </div>
+            </div>
+        `;
+    });
+
+grid.innerHTML = html;
 }
 
 // Track selected staff for deletion
