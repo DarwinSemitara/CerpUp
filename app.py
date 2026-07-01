@@ -409,7 +409,7 @@ def add_member():
 
         # Build member data from form fields
         member = {
-            'last':      request.form.get('last', '').upper(),
+            'last':      request.form.get('last', ''),
             'first':     request.form.get('first', ''),
             'mi':        request.form.get('mi', 'N/A'),
             'role':      request.form.get('role', ''),
@@ -593,6 +593,45 @@ def delete_schedule(entry_id):
             return jsonify({'error': 'Not found.'}), 404
         db.collection('schedules').document(entry_id).delete()
         return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedules/<entry_id>', methods=['PUT'])
+@login_required
+def update_schedule(entry_id):
+    """Update an existing schedule entry (for moving blocks)."""
+    try:
+        doc_ref = db.collection('schedules').document(entry_id)
+        doc = doc_ref.get()
+        if not doc.exists:
+            return jsonify({'error': 'Not found.'}), 404
+
+        # Get the update data from request
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+
+        # Update only the provided fields
+        update_data = {}
+        if 'day' in data:
+            update_data['day'] = data['day']
+        if 'start' in data:
+            update_data['start'] = data['start']
+        if 'end' in data:
+            update_data['end'] = data['end']
+        if 'room' in data:
+            update_data['room'] = data['room']
+        if 'units' in data:
+            update_data['units'] = data['units']
+
+        if not update_data:
+            return jsonify({'error': 'No valid fields to update.'}), 400
+
+        # Update the document
+        doc_ref.update(update_data)
+
+        return jsonify({'status': 'ok', 'id': entry_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
