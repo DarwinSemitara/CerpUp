@@ -1,9 +1,177 @@
 {% extends "admin_base.html" %}
 
 {% block content %}
-<!-- Schedule content loaded from partial -->
+<!-- Member Schedule - Includes admin schedule in read-only mode -->
 {% include 'partials/schedule.html' %}
 
-<!-- Dashboard JS for Faculty Management -->
-<script src="/static/js/dashboard.js"></script>
+<script>
+    // Override to make schedule read-only for members
+    (function () {
+        // Wait for page to load
+        window.addEventListener('DOMContentLoaded', function () {
+            // Hide elements that should not be visible to members
+            hideAdminElements();
+
+            // Disable all editing functionality
+            disableAllEditing();
+
+            // Add read-only notice
+            addReadOnlyNotice();
+        });
+
+        function hideAdminElements() {
+            // Hide Save Schedule button
+            const saveBtn = document.getElementById('schedule-save-btn');
+            if (saveBtn) saveBtn.style.display = 'none';
+
+            // Hide Enable Filters toggle
+            const filterToggle = document.getElementById('filter-toggle');
+            if (filterToggle && filterToggle.parentElement && filterToggle.parentElement.parentElement) {
+                filterToggle.parentElement.parentElement.style.display = 'none';
+            }
+
+            // Hide Subject Block Selection section (if exists)
+            const subjectBlocksSection = document.querySelector('.subject-blocks-section');
+            if (subjectBlocksSection) {
+                subjectBlocksSection.style.display = 'none';
+            }
+
+            // Hide Add Subject section
+            const addSubjectCard = document.querySelector('.add-subject-card');
+            if (addSubjectCard) {
+                addSubjectCard.style.display = 'none';
+            }
+
+            // Hide staging blocks container
+            const stagingSection = document.querySelector('.staging-section');
+            if (stagingSection) {
+                stagingSection.style.display = 'none';
+            }
+
+            // Hide unit config section
+            const unitConfigSection = document.querySelector('.unit-config-section');
+            if (unitConfigSection) {
+                unitConfigSection.style.display = 'none';
+            }
+
+            // Hide any buttons in the subject-controls area
+            const subjectControls = document.querySelector('.subject-controls');
+            if (subjectControls) {
+                subjectControls.style.display = 'none';
+            }
+        }
+
+        function disableAllEditing() {
+            // Disable manual hint (editing instructions)
+            const manualHint = document.getElementById('manual-hint');
+            if (manualHint) {
+                manualHint.innerHTML = `
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span><strong>Read-Only View:</strong> This schedule is view-only. You cannot make changes. Contact an administrator to modify the schedule.</span>
+            `;
+                manualHint.style.background = '#eff6ff';
+                manualHint.style.borderColor = '#bfdbfe';
+                manualHint.style.color = '#1e40af';
+            }
+
+            // Disable timetable cell interactions
+            const timetable = document.getElementById('sched-table');
+            if (timetable) {
+                // Remove cursor styles
+                const cells = timetable.querySelectorAll('td:not(:first-child)');
+                cells.forEach(cell => {
+                    cell.style.cursor = 'default';
+                    cell.style.pointerEvents = 'none';
+                });
+
+                // Make schedule blocks non-draggable and remove delete buttons
+                setTimeout(() => {
+                    const blocks = timetable.querySelectorAll('.sched-block');
+                    blocks.forEach(block => {
+                        block.style.cursor = 'default';
+                        block.draggable = false;
+
+                        // Remove delete button
+                        const delBtn = block.querySelector('.sb-del');
+                        if (delBtn) delBtn.style.display = 'none';
+
+                        // Remove resize handle
+                        const resizeHandle = block.querySelector('.sb-resize');
+                        if (resizeHandle) resizeHandle.style.display = 'none';
+                    });
+                }, 1000);
+            }
+
+            // Override delete function
+            window.deleteEntry = function () {
+                alert('You cannot delete schedule entries. This is a read-only view.');
+            };
+
+            // Override functions that modify schedule
+            if (window.confirmClearAll) {
+                window.confirmClearAll = function () {
+                    alert('You cannot clear the schedule. This is a read-only view.');
+                };
+            }
+
+            // Disable drawing on timetable
+            const drawOverlay = document.getElementById('draw-overlay');
+            if (drawOverlay) {
+                drawOverlay.style.display = 'none';
+            }
+        }
+
+        function addReadOnlyNotice() {
+            // Add a subtle badge to the top
+            const schedRoot = document.getElementById('sched-root');
+            if (schedRoot && !document.getElementById('readonly-badge')) {
+                const badge = document.createElement('div');
+                badge.id = 'readonly-badge';
+                badge.innerHTML = `
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:0.875rem;color:#1e40af;">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <span><strong>Read-Only Mode:</strong> You are viewing the schedule as a member. Changes can only be made by administrators.</span>
+                </div>
+            `;
+                const schedMain = document.getElementById('sched-main');
+                if (schedMain) {
+                    schedMain.insertBefore(badge, schedMain.firstChild);
+                }
+            }
+        }
+
+        // Re-apply read-only mode after timetable re-renders
+        if (window.renderTimetable) {
+            const originalRenderTimetable = window.renderTimetable;
+            window.renderTimetable = function () {
+                originalRenderTimetable.apply(this, arguments);
+                // Re-disable editing after render
+                setTimeout(() => {
+                    const timetable = document.getElementById('sched-table');
+                    if (timetable) {
+                        const cells = timetable.querySelectorAll('td:not(:first-child)');
+                        cells.forEach(cell => {
+                            cell.style.cursor = 'default';
+                            cell.style.pointerEvents = 'none';
+                        });
+
+                        const blocks = timetable.querySelectorAll('.sched-block');
+                        blocks.forEach(block => {
+                            block.style.cursor = 'default';
+                            block.draggable = false;
+                            const delBtn = block.querySelector('.sb-del');
+                            if (delBtn) delBtn.style.display = 'none';
+                            const resizeHandle = block.querySelector('.sb-resize');
+                            if (resizeHandle) resizeHandle.style.display = 'none';
+                        });
+                    }
+                }, 100);
+            };
+        }
+    })();
+</script>
 {% endblock %}

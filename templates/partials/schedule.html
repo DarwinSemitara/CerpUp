@@ -102,6 +102,13 @@
         background: white;
         outline: none;
         cursor: pointer;
+        min-width: 150px;
+    }
+
+    .sched-filters select:disabled {
+        background: #f3f4f6;
+        cursor: not-allowed;
+        color: #9ca3af;
     }
 
     .sched-filters select:focus {
@@ -1446,10 +1453,7 @@
             </button>
             <div style="display:flex;gap:8px;align-items:center;">
                 <select id="schoolyear-select" class="year-sem-select" onchange="onFilterChange()">
-                    <option value="2024-2025">SY 2024-2025</option>
-                    <option value="2025-2026">SY 2025-2026</option>
-                    <option value="2026-2027">SY 2026-2027</option>
-                    <option value="2027-2028">SY 2027-2028</option>
+                    <!-- Dynamically populated by JavaScript -->
                 </select>
                 <select id="semester-select" class="year-sem-select" onchange="onFilterChange()">
                     <option value="1">1st Semester</option>
@@ -1466,11 +1470,24 @@
                     <option value="F">Section F</option>
                     <option value="G">Section G</option>
                     <option value="H">Section H</option>
+                    <option value="I">Section I</option>
+                    <option value="J">Section J</option>
+                    <option value="K">Section K</option>
+                    <option value="L">Section L</option>
+                    <option value="M">Section M</option>
+                    <option value="N">Section N</option>
+                    <option value="O">Section O</option>
+                    <option value="P">Section P</option>
+                    <option value="Q">Section Q</option>
+                    <option value="R">Section R</option>
                     <option value="S">Section S</option>
                     <option value="T">Section T</option>
                     <option value="U">Section U</option>
                     <option value="V">Section V</option>
                     <option value="W">Section W</option>
+                    <option value="X">Section X</option>
+                    <option value="Y">Section Y</option>
+                    <option value="Z">Section Z</option>
                     <option value="X">Section X</option>
                     <option value="Y">Section Y</option>
                     <option value="Z">Section Z</option>
@@ -1484,7 +1501,7 @@
 
         <!-- Rooms Tab (Draggable Window) -->
         <div id="rooms-tab"
-            style="display:none;position:fixed;top:80px;left:50%;transform:translateX(-50%);width:90%;max-width:1200px;height:600px;background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);z-index:1000;overflow:hidden;resize:both;">
+            style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);width:700px;height:500px;min-width:700px;min-height:500px;max-width:900px;max-height:650px;background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);z-index:1000;overflow:hidden;resize:both;">
             <div style="display:flex;flex-direction:column;height:100%;">
                 <!-- Tab Header (Draggable) -->
                 <div id="rooms-tab-header"
@@ -1538,8 +1555,7 @@
                             Room:</label>
                         <select id="room-filter"
                             style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.85rem;width:100%;max-width:300px;outline:none;">
-                            <option value="">Select Room</option>
-                            <option value="CERP AVR">CERP AVR</option>
+                            <option value="CERP AVR" selected>CERP AVR</option>
                             <option value="DCERP Conference Room">DCERP Conference Room</option>
                             <option value="CLH">CLH</option>
                             <option value="Geomatics Room">Geomatics Room</option>
@@ -1597,14 +1613,27 @@
             <div class="sched-filters">
                 <label>Filter:</label>
                 <select id="sf-professor" onchange="applySchedFilter()">
+                    <option value="">Loading...</option>
                 </select>
                 <select id="sf-subject" onchange="applySchedFilter()">
+                    <option value="">All Subjects</option>
                 </select>
                 <select id="sf-room" onchange="applySchedFilter()">
+                    <option value="">All Classrooms</option>
                 </select>
 
+                <!-- Save/Edit Button -->
+                <button id="schedule-save-btn" class="nbm-btn-primary" onclick="toggleScheduleLock()"
+                    style="margin-left:auto;padding:8px 16px;font-size:0.875rem;display:flex;align-items:center;gap:6px;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Save Schedule
+                </button>
+
                 <!-- Filter Toggle Button -->
-                <label style="display:flex;align-items:center;gap:8px;margin-left:auto;cursor:pointer;">
+                <label style="display:flex;align-items:center;gap:8px;margin-left:12px;cursor:pointer;">
                     <span style="font-size:0.875rem;color:#374151;font-weight:500;">Enable Filters</span>
                     <div class="toggle-switch">
                         <input type="checkbox" id="filter-toggle" checked onchange="toggleFilters()">
@@ -2195,12 +2224,10 @@
 
             // ═══ Updated Toggle Unit Config ═══
             function toggleUnitConfig() {
-                // Check if "All Sections" is selected or filters are disabled
+                // Check if "All Sections" is selected
                 var sectionEl = document.getElementById('section-select');
-                var filterToggle = document.getElementById('filter-toggle');
-                var filtersEnabled = filterToggle ? filterToggle.checked : true;
 
-                if (sectionEl && (sectionEl.value === '' || !filtersEnabled)) {
+                if (sectionEl && sectionEl.value === '') {
                     showToast('Please select a specific section before configuring subject blocks. "All Sections" view does not support configuration.', 'warning', 6000);
                     return;
                 }
@@ -2689,6 +2716,37 @@
             var currentSemester = '1';
             var currentSection = ''; // Empty means all sections
 
+            // Populate school year dropdown dynamically
+            function populateSchoolYears() {
+                var select = document.getElementById('schoolyear-select');
+                if (!select) return;
+
+                var currentYear = new Date().getFullYear();
+                var startYear = 2024; // Starting from 2024
+                var endYear = currentYear + 5; // 5 years into the future
+
+                // Generate school year options
+                for (var year = startYear; year <= endYear; year++) {
+                    var nextYear = year + 1;
+                    var value = year + '-' + nextYear;
+                    var label = 'SY ' + year + '-' + nextYear;
+
+                    var option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+
+                    // Set default to 2024-2025
+                    if (value === '2024-2025') {
+                        option.selected = true;
+                    }
+
+                    select.appendChild(option);
+                }
+            }
+
+            // Call on page load
+            populateSchoolYears();
+
             async function loadSchedules() {
                 try {
                     var res = await fetch('/api/schedules');
@@ -3016,17 +3074,17 @@
             function refreshFilterOptions() {
                 console.log('refreshFilterOptions called, schedules count:', schedules.length);
 
-                // Get unique professors and remove suffix
-                var profs = [...new Set(schedules.map(function (s) {
-                    var profName = s.prof || '';
+                // Get unique professors from staffData (not schedules)
+                var profs = staffData.map(function (staff) {
+                    var fullName = staff.fullName || '';
                     // Remove suffix if present (e.g., "First Last, Suffix" -> "First Last")
-                    if (profName.indexOf(',') > -1) {
-                        profName = profName.split(',')[0].trim();
+                    if (fullName.indexOf(',') > -1) {
+                        fullName = fullName.split(',')[0].trim();
                     }
-                    return profName;
-                }))].filter(function (p) { return p; }).sort();
+                    return fullName;
+                }).filter(function (p) { return p; }).sort();
 
-                console.log('Unique professors:', profs);
+                console.log('Professors from staff:', profs);
 
                 var subjs = [...new Set(schedules.map(function (s) { return s.subjCode + ' - ' + s.subjName; }))].sort();
                 var rooms = [...new Set(schedules.map(function (s) { return s.room; }))].sort();
@@ -3042,18 +3100,24 @@
                 if (profSel) {
                     var curProf = profSel.value;
                     profSel.innerHTML = '';
-                    profs.forEach(function (o) {
-                        var el = document.createElement('option');
-                        el.value = o; el.textContent = o; profSel.appendChild(el);
-                    });
-                    if (curProf && profs.indexOf(curProf) > -1) {
-                        profSel.value = curProf;
-                    } else if (profs.length > 0) {
-                        profSel.selectedIndex = 0;
+
+                    if (profs.length === 0) {
+                        // No professors found
+                        profSel.innerHTML = '<option value="">No faculty found</option>';
+                    } else {
+                        profs.forEach(function (o) {
+                            var el = document.createElement('option');
+                            el.value = o; el.textContent = o; profSel.appendChild(el);
+                        });
+                        if (curProf && profs.indexOf(curProf) > -1) {
+                            profSel.value = curProf;
+                        } else if (profs.length > 0) {
+                            profSel.selectedIndex = 0;
+                        }
                     }
 
                     // Update FIC status to match the selected professor (only if filters enabled)
-                    if (filtersEnabled && profSel.value) {
+                    if (filtersEnabled && profSel.value && profs.length > 0) {
                         updateFICStatus(profSel.value);
                     } else {
                         clearFICStatus();
@@ -3184,6 +3248,133 @@
                 applySchedFilter();
             };
 
+            // ═══ Schedule Lock/Unlock Toggle ═══
+            var scheduleLockedState = false;
+
+            window.toggleScheduleLock = function () {
+                scheduleLockedState = !scheduleLockedState;
+
+                var saveBtn = document.getElementById('schedule-save-btn');
+                var tbody = document.querySelector('#sched-table tbody');
+
+                if (scheduleLockedState) {
+                    // LOCKED STATE (Edit mode)
+                    saveBtn.innerHTML = `
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit Schedule
+                    `;
+                    saveBtn.classList.remove('nbm-btn-primary');
+                    saveBtn.classList.add('nbm-btn-secondary');
+
+                    // Disable all schedule editing
+                    disableScheduleEditing();
+
+                    showToast('Schedule locked. Click "Edit Schedule" to make changes.', 'success', 4000);
+                } else {
+                    // UNLOCKED STATE (Save mode)
+                    saveBtn.innerHTML = `
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                        </svg>
+                        Save Schedule
+                    `;
+                    saveBtn.classList.remove('nbm-btn-secondary');
+                    saveBtn.classList.add('nbm-btn-primary');
+
+                    // Enable all schedule editing
+                    enableScheduleEditing();
+
+                    showToast('Schedule unlocked. You can now make changes.', 'info', 4000);
+                }
+            };
+
+            function disableScheduleEditing() {
+                // Disable dragging from staging area
+                var stagingBlocks = document.querySelectorAll('.staging-block');
+                stagingBlocks.forEach(function (block) {
+                    block.style.pointerEvents = 'none';
+                    block.style.opacity = '0.5';
+                    block.style.cursor = 'not-allowed';
+                });
+
+                // Disable timetable drop zones
+                var cells = document.querySelectorAll('#sched-table tbody td:not(:first-child)');
+                cells.forEach(function (cell) {
+                    cell.style.pointerEvents = 'none';
+                });
+
+                // Hide delete buttons on schedule blocks
+                var deleteButtons = document.querySelectorAll('.sb-del');
+                deleteButtons.forEach(function (btn) {
+                    btn.style.display = 'none';
+                });
+
+                // Disable resize handles
+                var resizeHandles = document.querySelectorAll('.sb-resize');
+                resizeHandles.forEach(function (handle) {
+                    handle.style.display = 'none';
+                });
+
+                // Disable Add Subject button
+                var addSubjectBtn = document.getElementById('add-subject-toggle-btn');
+                if (addSubjectBtn) {
+                    addSubjectBtn.disabled = true;
+                    addSubjectBtn.style.opacity = '0.5';
+                    addSubjectBtn.style.cursor = 'not-allowed';
+                }
+
+                // Disable Configure Units button
+                var unitConfigBtn = document.getElementById('unit-config-toggle-btn');
+                if (unitConfigBtn) {
+                    unitConfigBtn.disabled = true;
+                    unitConfigBtn.style.opacity = '0.5';
+                    unitConfigBtn.style.cursor = 'not-allowed';
+                }
+            }
+
+            function enableScheduleEditing() {
+                // Enable dragging from staging area
+                var stagingBlocks = document.querySelectorAll('.staging-block');
+                stagingBlocks.forEach(function (block) {
+                    block.style.pointerEvents = 'auto';
+                    block.style.opacity = '1';
+                    block.style.cursor = 'grab';
+                });
+
+                // Enable timetable drop zones
+                enableTimetableDropZones();
+
+                // Show delete buttons on schedule blocks
+                var deleteButtons = document.querySelectorAll('.sb-del');
+                deleteButtons.forEach(function (btn) {
+                    btn.style.display = 'flex';
+                });
+
+                // Show resize handles
+                var resizeHandles = document.querySelectorAll('.sb-resize');
+                resizeHandles.forEach(function (handle) {
+                    handle.style.display = 'block';
+                });
+
+                // Enable Add Subject button
+                var addSubjectBtn = document.getElementById('add-subject-toggle-btn');
+                if (addSubjectBtn) {
+                    addSubjectBtn.disabled = false;
+                    addSubjectBtn.style.opacity = '1';
+                    addSubjectBtn.style.cursor = 'pointer';
+                }
+
+                // Enable Configure Units button
+                var unitConfigBtn = document.getElementById('unit-config-toggle-btn');
+                if (unitConfigBtn) {
+                    unitConfigBtn.disabled = false;
+                    unitConfigBtn.style.opacity = '1';
+                    unitConfigBtn.style.cursor = 'pointer';
+                }
+            }
+
             window.clearSchedFilters = function () {
                 ['sf-professor', 'sf-subject', 'sf-room'].forEach(function (id) {
                     var el = document.getElementById(id); if (el) el.selectedIndex = 0;
@@ -3249,8 +3440,13 @@
                 tbody.innerHTML = rows;
                 attachBlockHandlers();
 
-                // Enable drag and drop zones
-                enableTimetableDropZones();
+                // Enable drag and drop zones (unless schedule is locked)
+                if (!scheduleLockedState) {
+                    enableTimetableDropZones();
+                } else {
+                    // Reapply locked state styling
+                    disableScheduleEditing();
+                }
             }
 
             // Global variable to store FIC load data for modal
@@ -3467,6 +3663,13 @@
 
             window.deleteEntry = async function (id, e) {
                 if (e) e.stopPropagation();
+
+                // Prevent deletion when schedule is locked
+                if (scheduleLockedState) {
+                    showToast('Cannot delete blocks. Schedule is locked. Click "Edit Schedule" to make changes.', 'warning', 4000);
+                    return;
+                }
+
                 if (!confirm('Delete this schedule block?')) return;
                 try {
                     await fetch('/api/schedules/' + id, { method: 'DELETE' });
@@ -4248,10 +4451,27 @@
                 }).join('');
 
                 attachStagingDragHandlers();
+
+                // Reapply lock state if schedule is locked
+                if (scheduleLockedState) {
+                    var stagingBlocks = document.querySelectorAll('.staging-block');
+                    stagingBlocks.forEach(function (block) {
+                        block.style.pointerEvents = 'none';
+                        block.style.opacity = '0.5';
+                        block.style.cursor = 'not-allowed';
+                    });
+                }
             }
 
             window.removeUnscheduledSubject = function (id, e) {
                 if (e) e.stopPropagation();
+
+                // Prevent removal when schedule is locked
+                if (scheduleLockedState) {
+                    showToast('Cannot remove staging blocks. Schedule is locked. Click "Edit Schedule" to make changes.', 'warning', 4000);
+                    return;
+                }
+
                 if (!confirm('Remove this subject from staging?')) return;
                 unscheduledSubjects = unscheduledSubjects.filter(function (s) { return s.id !== id; });
                 renderStagingArea();
@@ -4268,6 +4488,13 @@
                     blk.addEventListener('mousedown', function (e) {
                         if (currentMode !== 'manual') return;
                         if (e.target.classList.contains('stg-del')) return;
+
+                        // Prevent dragging when schedule is locked
+                        if (scheduleLockedState) {
+                            e.preventDefault();
+                            return;
+                        }
+
                         e.preventDefault();
                         stagingDragId = blk.dataset.id;
                         stagingDragEl = blk;
@@ -4365,6 +4592,18 @@
             // Extend existing mouseup handler to support staging blocks
             var stagingMouseUpHandler = async function (e) {
                 if (!stagingDragEl) return;
+
+                // Prevent dropping when schedule is locked
+                if (scheduleLockedState) {
+                    stagingDragEl.classList.remove('dragging');
+                    var ghost = document.getElementById('drag-ghost');
+                    if (ghost) ghost.style.display = 'none';
+                    removeDropPreview();
+                    stagingDragEl = null;
+                    stagingDragId = null;
+                    showToast('Cannot place blocks. Schedule is locked. Click "Edit Schedule" to make changes.', 'warning', 4000);
+                    return;
+                }
 
                 stagingDragEl.classList.remove('dragging');
                 var ghost = document.getElementById('drag-ghost');
@@ -4706,6 +4945,10 @@
             // Initialize staff data and populate dropdowns
             loadStaffData().then(function () {
                 populateSubjectDropdowns();
+                // Refresh filter options now that staff data is loaded
+                if (typeof refreshFilterOptions === 'function') {
+                    refreshFilterOptions();
+                }
             });
 
             // Expose unit configuration functions globally
@@ -5039,10 +5282,12 @@
                 roomsTabState.initialLeft = rect.left;
                 roomsTabState.initialTop = rect.top;
 
-                // Remove center transform if present
-                if (tab.style.transform && tab.style.transform.includes('translateX')) {
+                // Remove any transform (including translate for centering)
+                if (tab.style.transform && tab.style.transform.includes('translate')) {
                     var currentLeft = rect.left;
+                    var currentTop = rect.top;
                     tab.style.left = currentLeft + 'px';
+                    tab.style.top = currentTop + 'px';
                     tab.style.transform = 'none';
                 }
 
@@ -5105,14 +5350,7 @@
                     // Save bubble position
                     roomsTabState.bubblePosition = { top: newTop + 'px', left: newLeft + 'px' };
                 } else {
-                    // Dragging window
-                    var rect = tab.getBoundingClientRect();
-                    var maxLeft = window.innerWidth - rect.width;
-                    var maxTop = window.innerHeight - rect.height;
-
-                    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-                    newTop = Math.max(0, Math.min(newTop, maxTop));
-
+                    // Dragging window - allow free movement
                     tab.style.left = newLeft + 'px';
                     tab.style.top = newTop + 'px';
                 }
@@ -5209,19 +5447,17 @@
                 var newTop = tab.style.top;
 
                 if (roomsTabState.resizeEdge.right) {
-                    newWidth = Math.max(400, roomsTabState.initialWidth + deltaX);
-                    tab.style.maxWidth = 'none'; // Remove max-width constraint during resize
+                    newWidth = Math.max(700, Math.min(900, roomsTabState.initialWidth + deltaX));
                 }
                 if (roomsTabState.resizeEdge.left) {
-                    newWidth = Math.max(400, roomsTabState.initialWidth - deltaX);
+                    newWidth = Math.max(700, Math.min(900, roomsTabState.initialWidth - deltaX));
                     newLeft = (roomsTabState.initialLeft + deltaX) + 'px';
-                    tab.style.maxWidth = 'none';
                 }
                 if (roomsTabState.resizeEdge.bottom) {
-                    newHeight = Math.max(300, roomsTabState.initialHeight + deltaY);
+                    newHeight = Math.max(500, Math.min(650, roomsTabState.initialHeight + deltaY));
                 }
                 if (roomsTabState.resizeEdge.top) {
-                    newHeight = Math.max(300, roomsTabState.initialHeight - deltaY);
+                    newHeight = Math.max(500, Math.min(650, roomsTabState.initialHeight - deltaY));
                     newTop = (roomsTabState.initialTop + deltaY) + 'px';
                 }
 

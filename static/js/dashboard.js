@@ -368,7 +368,7 @@ function populateFacultyDropdown() {
 
     // Populate with faculty members
     facultyMembers.forEach(member => {
-        const name = `${member.first} ${member.last}${member.suffix ? ', ' + member.suffix : ''}`;
+        const name = `${member.first} ${member.last}`;
         console.log('Adding member to dropdown:', name, member);
         const option = document.createElement('option');
         option.value = member.id;
@@ -399,7 +399,7 @@ function onFacultyMemberChange() {
     selectedMemberId = member.id;
 
     // Auto-fill full name
-    const fullName = `${member.first} ${member.last}${member.suffix ? ', ' + member.suffix : ''}`;
+    const fullName = `${member.first} ${member.last}`;
     document.getElementById('staff-fullname').value = fullName;
     document.getElementById('staff-fullname-group').style.display = 'block';
 
@@ -480,7 +480,7 @@ async function submitAddStaff(event) {
         return;
     }
 
-    const fullName = `${member.first} ${member.last}${member.suffix ? ', ' + member.suffix : ''}`;
+    const fullName = `${member.first} ${member.last}`;
 
     // Prepare form data
     const fd = new FormData();
@@ -589,16 +589,6 @@ function renderStaffGrid(staff) {
     });
 
     grid.innerHTML = html;
-}
-        });
-
-html += `
-                </div>
-            </div>
-        `;
-    });
-
-grid.innerHTML = html;
 }
 
 // Track selected staff for deletion

@@ -842,12 +842,187 @@
                 renderPublicEngagementsPage();
             } else if (key === 'tap') {
                 renderTAPHSPPage();
+            } else if (key === 'class-schedule') {
+                renderClassSchedulePage();
             } else {
                 document.getElementById('page-content').innerHTML = `
                 <div class="placeholder-section">
                     <p style="font-size:.95rem;font-weight:600;color:#6b7280;">${title}</p>
                     <p style="font-size:.82rem;color:#9ca3af;">Content coming soon.</p>
                 </div>`;
+            }
+        }
+
+        async function renderClassSchedulePage() {
+            const content = document.getElementById('page-content');
+
+            // Fetch current member data first
+            let currentMember = null;
+            try {
+                const memberRes = await fetch('/api/current-member');
+                if (memberRes.ok) {
+                    currentMember = await memberRes.json();
+                    console.log('Current member:', currentMember);
+                }
+            } catch (err) {
+                console.error('Failed to load current member:', err);
+            }
+
+            // Fetch the schedule partial HTML
+            try {
+                const response = await fetch('/schedule/class/');
+                const html = await response.text();
+
+                // Create a temporary container to parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                // Extract the schedule content (everything inside the body or main content area)
+                const scheduleContent = tempDiv.querySelector('#sched-root') || tempDiv.querySelector('body');
+
+                if (scheduleContent) {
+                    // Set the content
+                    content.innerHTML = scheduleContent.innerHTML;
+
+                    // Extract and execute any scripts from the fetched content
+                    const scripts = tempDiv.querySelectorAll('script');
+                    scripts.forEach(script => {
+                        const newScript = document.createElement('script');
+                        if (script.src) {
+                            newScript.src = script.src;
+                        } else {
+                            newScript.textContent = script.textContent;
+                        }
+                        document.body.appendChild(newScript);
+                    });
+
+                    // Extract and apply styles
+                    const styles = tempDiv.querySelectorAll('style');
+                    styles.forEach(style => {
+                        const newStyle = document.createElement('style');
+                        newStyle.textContent = style.textContent;
+                        document.head.appendChild(newStyle);
+                    });
+
+                    // Apply read-only modifications after content loads
+                    setTimeout(() => {
+                        makeScheduleReadOnly(currentMember);
+                    }, 500);
+                } else {
+                    content.innerHTML = `
+                        <div class="placeholder-section">
+                            <p style="font-size:.95rem;font-weight:600;color:#6b7280;">Unable to load schedule</p>
+                            <p style="font-size:.82rem;color:#9ca3af;">Please try again later.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load schedule:', error);
+                content.innerHTML = `
+                    <div class="placeholder-section">
+                        <p style="font-size:.95rem;font-weight:600;color:#6b7280;">Error loading schedule</p>
+                        <p style="font-size:.82rem;color:#9ca3af;">Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function makeScheduleReadOnly(currentMember) {
+            // Hide admin-only elements
+            const saveBtn = document.getElementById('schedule-save-btn');
+            if (saveBtn) saveBtn.style.display = 'none';
+
+            const filterToggle = document.getElementById('filter-toggle');
+            if (filterToggle && filterToggle.parentElement && filterToggle.parentElement.parentElement) {
+                filterToggle.parentElement.parentElement.style.display = 'none';
+            }
+
+            const addSubjectCard = document.querySelector('.add-subject-card');
+            if (addSubjectCard) addSubjectCard.style.display = 'none';
+
+            const stagingSection = document.querySelector('.staging-section');
+            if (stagingSection) stagingSection.style.display = 'none';
+
+            const unitConfigSection = document.querySelector('.unit-config-section');
+            if (unitConfigSection) unitConfigSection.style.display = 'none';
+
+            const subjectControls = document.querySelector('.subject-controls');
+            if (subjectControls) subjectControls.style.display = 'none';
+
+            const subjectBlocksSection = document.querySelector('.subject-blocks-section');
+            if (subjectBlocksSection) subjectBlocksSection.style.display = 'none';
+
+            // Hide manual hint completely for members
+            const manualHint = document.getElementById('manual-hint');
+            if (manualHint) {
+                manualHint.style.display = 'none';
+            }
+
+            // Filter schedule to current faculty member
+            if (currentMember && currentMember.fullName) {
+                // Replace professor dropdown with display field
+                const profSelect = document.getElementById('sf-professor');
+                if (profSelect) {
+                    // Create a display div to replace the select
+                    const displayDiv = document.createElement('div');
+                    displayDiv.id = 'sf-professor-display';
+                    displayDiv.style.cssText = 'padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.82rem;color:#374151;background:#f9fafb;min-width:150px;font-weight:600;';
+                    displayDiv.textContent = currentMember.fullName;
+
+                    // Replace the select with the display div
+                    profSelect.parentNode.replaceChild(displayDiv, profSelect);
+
+                    // Trigger filter to show only this faculty's schedule
+                    setTimeout(() => {
+                        // Manually filter schedules
+                        if (window.schedules && window.filtered !== undefined) {
+                            const filteredSchedules = window.schedules.filter(s => {
+                                return s.prof && s.prof.includes(currentMember.fullName);
+                            });
+                            window.filtered = filteredSchedules;
+
+                            // Re-render timetable with filtered data
+                            if (typeof window.renderTimetable === 'function') {
+                                window.renderTimetable();
+                            }
+                        }
+                    }, 1000);
+                }
+            }
+
+            // Disable all timetable editing
+            const timetable = document.getElementById('sched-table');
+            if (timetable) {
+                const cells = timetable.querySelectorAll('td:not(:first-child)');
+                cells.forEach(cell => {
+                    cell.style.cursor = 'default';
+                    cell.style.pointerEvents = 'none';
+                });
+
+                const blocks = timetable.querySelectorAll('.sched-block');
+                blocks.forEach(block => {
+                    block.style.cursor = 'default';
+                    block.draggable = false;
+
+                    const delBtn = block.querySelector('.sb-del');
+                    if (delBtn) delBtn.style.display = 'none';
+
+                    const resizeHandle = block.querySelector('.sb-resize');
+                    if (resizeHandle) resizeHandle.style.display = 'none';
+                });
+            }
+
+            // Override editing functions
+            if (typeof window.deleteEntry !== 'undefined') {
+                window.deleteEntry = function () {
+                    alert('You cannot delete schedule entries. This is a read-only view.');
+                };
+            }
+
+            if (typeof window.confirmClearAll !== 'undefined') {
+                window.confirmClearAll = function () {
+                    alert('You cannot clear the schedule. This is a read-only view.');
+                };
             }
         }
 
