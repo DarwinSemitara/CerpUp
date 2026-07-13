@@ -1,6 +1,6 @@
 ﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from dotenv import load_dotenv
-from services.firebase_service import verify_id_token, db
+from services.supabase_service import verify_access_token as verify_id_token, db
 from services.cloudinary_service import upload_member_photo, delete_member_photo
 import os
 import uuid
@@ -58,14 +58,12 @@ def publications():
 def login():
     if 'uid' in session:
         return redirect(url_for('dashboard'))
-    return render_template('login.html', firebase_config={
-        'apiKey':            os.getenv('FIREBASE_API_KEY'),
-        'authDomain':        os.getenv('FIREBASE_AUTH_DOMAIN'),
-        'projectId':         os.getenv('FIREBASE_PROJECT_ID'),
-        'storageBucket':     os.getenv('FIREBASE_STORAGE_BUCKET'),
-        'messagingSenderId': os.getenv('FIREBASE_MESSAGING_SENDER_ID'),
-        'appId':             os.getenv('FIREBASE_APP_ID'),
-    })
+
+    # Serve Supabase login page
+    return render_template('login_supabase.html',
+                           supabase_url=os.getenv('SUPABASE_URL'),
+                           supabase_anon_key=os.getenv('SUPABASE_ANON_KEY')
+                           )
 
 
 # â”€â”€ Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -90,24 +88,26 @@ def api_login():
         else:
             return jsonify({'error': 'Invalid username or password.'}), 401
 
-    # Firebase token-based login
-    id_token = data.get('idToken')
-    if not id_token:
+    # Supabase token-based login
+    access_token = data.get('accessToken')
+    if not access_token:
         return jsonify({'error': 'No token provided.'}), 400
 
-    decoded, error = verify_id_token(id_token)
+    # Verify Supabase access token
+    decoded, error = verify_id_token(access_token)
     if error:
-        print(f"Token verification error: {error}")  # Debug log
+        print(f"Token verification error: {error}")
         return jsonify({'error': error}), 401
 
     uid = decoded['uid']
     email = decoded.get('email', '')
 
-    # Look up role from Firestore users collection
+    # Look up role from Supabase users table
     user_doc = db.collection('users').document(uid).get()
     role = 'user'
     if user_doc.exists:
-        role = user_doc.to_dict().get('role', 'user')
+        user_data = user_doc.to_dict()
+        role = user_data.get('role', 'user')
 
     session['uid'] = uid
     session['email'] = email
@@ -173,6 +173,20 @@ def section_research():
                            initial=initial,
                            page_title='Research',
                            active_page='research')
+
+
+@app.route('/extensions/')
+@login_required
+def section_extensions():
+    if is_partial():
+        return render_template('partials/extensions.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/extensions.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Extensions',
+                           active_page='extensions')
 
 
 @app.route('/extensions/public-engagements/')
@@ -283,12 +297,11 @@ def section_other():
 @app.route('/api/staff', methods=['GET'])
 @login_required
 def get_staff():
-    """Return all teaching staff from members collection where is_faculty=true."""
+    """Return all members from members collection as faculty."""
     try:
-        # Fetch all members marked as faculty
-        # Note: Firestore doesn't support .order_by() with .where() on different fields without an index
-        docs = db.collection('members').where(
-            'is_faculty', '==', True).stream()
+        # Fetch all members from Supabase using the wrapper
+        docs = db.collection('members').stream()
+
         staff = []
         for d in docs:
             data = d.to_dict()
@@ -298,7 +311,7 @@ def get_staff():
                 'memberId': d.id,  # Same as member ID
                 'fullName': f"{data.get('first', '')} {data.get('last', '')}".strip(),
                 'photo_url': data.get('photo_url', ''),
-                'availability': data.get('availability', []),
+                'availability': data.get('availability', []) if data.get('availability') else [],
                 'subjects': [],  # No longer using subject filtering
                 'created_at': data.get('created_at', '')
             }
@@ -308,12 +321,12 @@ def get_staff():
 
             staff.append(staff_member)
 
-        print(f"✅ Found {len(staff)} faculty members")
+        print(f"✅ Found {len(staff)} members (faculty)")
         return jsonify(staff)
     except Exception as e:
         print(f"❌ Error fetching staff: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -472,10 +485,10 @@ def delete_member(member_id):
 @login_required
 def create_member_account(member_id):
     """
-    Admin assigns an email + password to a member, creating a Firebase Auth
-    account and storing the role in Firestore users collection.
+    Admin assigns an email + password to a member, creating a Supabase Auth
+    account and storing the role in Supabase users collection.
     """
-    from firebase_admin import auth as fb_auth
+    from services.supabase_service import supabase
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data.'}), 400
@@ -494,42 +507,323 @@ def create_member_account(member_id):
             return jsonify({'error': 'Member not found.'}), 404
         member = doc.to_dict()
 
-        # Create Firebase Auth user
-        try:
-            # Check if user already exists
-            fb_user = fb_auth.get_user_by_email(email)
-            # User exists, update their password
-            fb_user = fb_auth.update_user(
-                fb_user.uid,
-                password=password,
-                display_name=f"{member.get('first', '')} {member.get('last', '')}".strip(
-                )
-            )
-        except fb_auth.UserNotFoundError:
-            # User doesn't exist, create new
-            fb_user = fb_auth.create_user(
-                email=email,
-                password=password,
-                display_name=f"{member.get('first', '')} {member.get('last', '')}".strip(
-                ),
-                email_verified=False
-            )
+        display_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
+        )
 
-        # Store user profile in Firestore
-        db.collection('users').document(fb_user.uid).set({
-            'uid':       fb_user.uid,
-            'email':     email,
-            'role':      'user',
-            'member_id': member_id,
-            'display_name': fb_user.display_name,
+        # Create Supabase Auth user
+        try:
+            response = supabase.auth.admin.create_user({
+                "email": email,
+                "password": password,
+                "email_confirm": True,  # Auto-confirm email
+                "user_metadata": {
+                    "display_name": display_name
+                }
+            })
+
+            if not response.user:
+                return jsonify({'error': 'Failed to create user account.'}), 500
+
+            user_id = response.user.id
+
+        except Exception as create_error:
+            # If user already exists, try to update
+            error_msg = str(create_error)
+            if 'already registered' in error_msg.lower() or 'already exists' in error_msg.lower():
+                # Try to get existing user and update password
+                try:
+                    # Get user by email
+                    users_response = supabase.auth.admin.list_users()
+                    existing_user = None
+                    for user in users_response:
+                        if hasattr(user, 'email') and user.email == email:
+                            existing_user = user
+                            break
+
+                    if existing_user:
+                        # Update password
+                        supabase.auth.admin.update_user_by_id(
+                            existing_user.id,
+                            {"password": password}
+                        )
+                        user_id = existing_user.id
+                    else:
+                        return jsonify({'error': 'User exists but could not be found.'}), 500
+
+                except Exception as update_error:
+                    return jsonify({'error': f'User exists. {str(update_error)}'}), 500
+            else:
+                return jsonify({'error': str(create_error)}), 500
+
+        # Store user profile in Supabase database
+        db.collection('users').document(user_id).set({
+            'id':          user_id,
+            'uid':         user_id,
+            'email':       email,
+            'role':        'user',
+            'member_id':   member_id,
+            'display_name': display_name,
         }, merge=True)
 
         # Link uid back to member doc
         db.collection('members').document(member_id).update(
-            {'uid': fb_user.uid, 'email': email})
+            {'uid': user_id, 'email': email})
 
-        return jsonify({'status': 'ok', 'uid': fb_user.uid})
+        return jsonify({'status': 'ok', 'uid': user_id})
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Research API ──────────────────────────────────────────────
+
+@app.route('/api/research', methods=['GET'])
+@login_required
+def get_research():
+    """Get all research papers for the current logged-in member."""
+    try:
+        uid = session.get('uid')
+        if not uid:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Get research papers for this member (without order_by to avoid index requirement)
+        docs = db.collection('research').where('uid', '==', uid).stream()
+        research_list = []
+
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            research_list.append(data)
+
+        # Sort in Python instead of Firestore
+        research_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        return jsonify(research_list)
+    except Exception as e:
+        print(f"Error fetching research: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research', methods=['POST'])
+@login_required
+def add_research():
+    """Add a new research paper for the current member."""
+    try:
+        uid = session.get('uid')
+        print(f"🔍 Add research - UID from session: {uid}")
+
+        if not uid:
+            print("❌ No UID in session!")
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        data = request.get_json()
+        print(f"📥 Received data: {data}")
+
+        # Get current member info
+        print(f"🔍 Querying members with UID: {uid}")
+        members = db.collection('members').where(
+            'uid', '==', uid).limit(1).stream()
+        member_list = [{'id': d.id, **d.to_dict()} for d in members]
+
+        if not member_list:
+            print(f"❌ Member not found for UID: {uid}")
+            return jsonify({'error': 'Member not found'}), 404
+
+        member = member_list[0]
+        print(
+            f"✅ Found member: {member.get('first')} {member.get('last')} (ID: {member.get('id')})")
+
+        # Prepare research document
+        from datetime import datetime
+
+        # Get member name properly
+        member_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
+        )
+        print(f"📝 Member name: {member_name}")
+
+        research_doc = {
+            'uid': uid,
+            'member_id': member['id'],
+            'member_name': member_name,
+            'research_type': data.get('research_type'),
+            'title': data.get('title', ''),
+            'role': data.get('role', ''),
+            'co_workers': data.get('co_workers', ''),
+            'co_authors': data.get('co_authors', ''),
+            # Convert empty string to None
+            'start_date': data.get('start_date') or None,
+            # Convert empty string to None
+            'end_date': data.get('end_date') or None,
+            # Convert empty string to None
+            'date_completion': data.get('date_completion') or None,
+            'funding_agency': data.get('funding_agency', ''),
+            'credit_units': data.get('credit_units', ''),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+
+        # Add to database
+        print(f"📄 Creating document reference...")
+        doc_ref = db.collection('research').document()
+        print(f"✅ Doc ref created with ID: {doc_ref.doc_id}")
+
+        print(f"💾 Saving to database...")
+        doc_ref.set(research_doc)
+        print(f"✅ Research saved successfully!")
+
+        research_doc['id'] = doc_ref.doc_id
+
+        return jsonify(research_doc), 201
+    except Exception as e:
+        print(f"❌ ERROR adding research: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/research/<research_id>', methods=['DELETE'])
+@login_required
+def delete_research(research_id):
+    """Delete a research paper."""
+    try:
+        uid = session.get('uid')
+        print(f"🗑️ Delete research - ID: {research_id}, UID: {uid}")
+
+        if not uid:
+            print("❌ Not authenticated")
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Verify ownership
+        print(f"🔍 Checking if research exists...")
+        doc = db.collection('research').document(research_id).get()
+        print(f"📄 Doc exists: {doc.exists}")
+
+        if not doc.exists:
+            print(f"❌ Research not found: {research_id}")
+            return jsonify({'error': 'Research not found'}), 404
+
+        doc_data = doc.to_dict()
+        print(f"📝 Research UID: {doc_data.get('uid')}, Session UID: {uid}")
+
+        if doc_data.get('uid') != uid:
+            print("❌ Unauthorized - UID mismatch")
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        print(f"🗑️ Deleting research...")
+        db.collection('research').document(research_id).delete()
+        print(f"✅ Research deleted successfully")
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        print(f"❌ Error deleting research: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Extensions API ──────────────────────────────────────────────
+
+@app.route('/api/extensions', methods=['GET'])
+@login_required
+def get_extensions():
+    """Get all extension activities for the current logged-in member."""
+    try:
+        uid = session.get('uid')
+        if not uid:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Get extensions for this member (without order_by to avoid index requirement)
+        docs = db.collection('extensions').where('uid', '==', uid).stream()
+        extensions_list = []
+
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            extensions_list.append(data)
+
+        # Sort in Python instead of Firestore
+        extensions_list.sort(
+            key=lambda x: x.get('created_at', ''), reverse=True)
+
+        return jsonify(extensions_list)
+    except Exception as e:
+        print(f"Error fetching extensions: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/extensions', methods=['POST'])
+@login_required
+def add_extension():
+    """Add a new extension activity for the current member."""
+    try:
+        uid = session.get('uid')
+        if not uid:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        data = request.get_json()
+
+        # Get current member info
+        members = db.collection('members').where(
+            'uid', '==', uid).limit(1).stream()
+        member_list = [{'id': d.id, **d.to_dict()} for d in members]
+
+        if not member_list:
+            return jsonify({'error': 'Member not found'}), 404
+
+        member = member_list[0]
+
+        # Prepare extension document
+        from datetime import datetime
+        extension_doc = {
+            'uid': uid,
+            'member_id': member['id'],
+            'member_name': f"{member.get('first', '')} {member.get('last', '')}".strip(),
+            'extension_type': data.get('extension_type'),
+            'title': data.get('title', ''),
+            'role': data.get('role', ''),
+            'co_workers': data.get('co_workers', ''),
+            'participants': data.get('participants', ''),
+            'hours': data.get('hours', ''),
+            'duration': data.get('duration', ''),
+            'start_date': data.get('start_date') or None,
+            'end_date': data.get('end_date') or None,
+            'funding_agency': data.get('funding_agency', ''),
+            'credit_units': data.get('credit_units', ''),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+
+        # Add to database
+        doc_ref = db.collection('extensions').document()
+        doc_ref.set(extension_doc)
+
+        extension_doc['id'] = doc_ref.doc_id
+
+        return jsonify(extension_doc), 201
+    except Exception as e:
+        print(f"Error adding extension: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/extensions/<extension_id>', methods=['DELETE'])
+@login_required
+def delete_extension(extension_id):
+    """Delete an extension activity."""
+    try:
+        uid = session.get('uid')
+        if not uid:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Verify ownership
+        doc = db.collection('extensions').document(extension_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Extension not found'}), 404
+
+        if doc.to_dict().get('uid') != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        db.collection('extensions').document(extension_id).delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        print(f"Error deleting extension: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -538,10 +832,40 @@ def create_member_account(member_id):
 @app.route('/api/schedules', methods=['GET'])
 @login_required
 def get_schedules():
-    """Return all schedule entries from Firestore."""
+    """Return all schedule entries from database."""
     try:
         docs = db.collection('schedules').order_by('created_at').stream()
-        entries = [{'id': d.id, **d.to_dict()} for d in docs]
+        entries = []
+        for d in docs:
+            data = d.to_dict()
+
+            # Helper function to strip seconds from time (12:00:00 → 12:00)
+            def format_time(time_str):
+                if time_str and ':' in str(time_str):
+                    parts = str(time_str).split(':')
+                    return f"{parts[0]}:{parts[1]}"  # Return HH:MM only
+                return time_str
+
+            # Transform snake_case (Supabase) to camelCase (frontend expects)
+            entry = {
+                'id': d.id,
+                'prof': data.get('prof'),
+                # Support both
+                'subjCode': data.get('subj_code', data.get('subjCode')),
+                # Support both
+                'subjName': data.get('subj_name', data.get('subjName')),
+                'type': data.get('type'),
+                'day': data.get('day'),
+                'start': format_time(data.get('start')),  # Strip seconds
+                'end': format_time(data.get('end')),      # Strip seconds
+                'room': data.get('room'),
+                'units': data.get('units'),
+                'section': data.get('section'),
+                'year': data.get('year'),
+                'semester': data.get('semester'),
+                'created_at': data.get('created_at')
+            }
+            entries.append(entry)
         return jsonify(entries)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -561,11 +885,13 @@ def add_schedule():
             if not data.get(field):
                 return jsonify({'error': f'Missing field: {field}'}), 400
         entry_id = str(uuid.uuid4())
-        entry = {
+
+        # Save to database with snake_case (Supabase format)
+        entry_db = {
+            'id':        entry_id,
             'prof':      data['prof'],
-            'subjCode':  data['subjCode'],
-            'subjName':  data['subjName'],
-            # Default to Lecture if not provided
+            'subj_code': data['subjCode'],  # Convert camelCase to snake_case
+            'subj_name': data['subjName'],  # Convert camelCase to snake_case
             'type':      data.get('type', 'Lecture'),
             'day':       data['day'],
             'start':     data['start'],
@@ -577,8 +903,26 @@ def add_schedule():
             'semester':  data.get('semester', '1'),
             'created_at': __import__('datetime').datetime.utcnow().isoformat(),
         }
-        db.collection('schedules').document(entry_id).set(entry)
-        return jsonify({'status': 'ok', 'id': entry_id, 'entry': entry}), 201
+        db.collection('schedules').document(entry_id).set(entry_db)
+
+        # Return with camelCase (frontend expects)
+        entry_response = {
+            'id':        entry_id,
+            'prof':      data['prof'],
+            'subjCode':  data['subjCode'],
+            'subjName':  data['subjName'],
+            'type':      data.get('type', 'Lecture'),
+            'day':       data['day'],
+            'start':     data['start'],
+            'end':       data['end'],
+            'room':      data['room'],
+            'units':     int(data['units']),
+            'section':   data['section'],
+            'year':      data.get('year', '1'),
+            'semester':  data.get('semester', '1'),
+            'created_at': entry_db['created_at'],
+        }
+        return jsonify({'status': 'ok', 'id': entry_id, 'entry': entry_response}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

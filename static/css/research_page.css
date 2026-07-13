@@ -1,0 +1,619 @@
+/* CERP Research Page Styles */
+
+/* ========================================
+   RESEARCH PAGE LAYOUT
+   ======================================== */
+
+.research-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.research-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.research-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* ========================================
+   ADD RESEARCH BUTTON
+   ======================================== */
+
+.btn-add-research {
+    padding: 10px 20px;
+    background: var(--sidebar-color, #014421);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-add-research:hover {
+    filter: brightness(0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   DELETE RESEARCH BUTTON
+   ======================================== */
+
+.btn-delete-research {
+    padding: 10px;
+    width: 42px;
+    height: 42px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-delete-research:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-delete-research:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Spinning animation for loading */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* ========================================
+   CHECKBOX COLUMN
+   ======================================== */
+
+.checkbox-column {
+    width: 40px;
+    text-align: center;
+    padding: 8px !important;
+}
+
+/* ========================================
+   RESEARCH TABLE CARD
+   ======================================== */
+
+.research-table-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.research-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.research-table-header h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+/* ========================================
+   FILTERS (INSIDE TABLE)
+   ======================================== */
+
+.research-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    padding: 14px 20px;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.filter-select {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #374151;
+    background: white;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.filter-select:focus {
+    border-color: var(--sidebar-color, #014421);
+    box-shadow: 0 0 0 3px rgba(1, 68, 33, 0.1);
+}
+
+/* ========================================
+   RESEARCH TABLE
+   ======================================== */
+
+.research-table-wrapper {
+    overflow-x: auto;
+    max-height: calc(100vh - 350px);
+    overflow-y: auto;
+}
+
+.research-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.research-table thead {
+    background: #f9fafb;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.research-table th {
+    padding: 12px;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid #d1d5db;
+    white-space: nowrap;
+    background: #f3f4f6;
+}
+
+.research-table td {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.research-table tbody tr {
+    transition: background 0.15s;
+}
+
+.research-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.research-table tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+.research-table tbody tr:nth-child(even):hover {
+    background: #f3f4f6;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #9ca3af;
+}
+
+/* ========================================
+   RESEARCH TYPE MODAL
+   ======================================== */
+
+.research-type-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.research-type-modal.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.research-type-modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    transform: translateY(10px);
+    transition: transform 0.2s;
+}
+
+.research-type-modal.open .research-type-modal-box {
+    transform: translateY(0);
+}
+
+.research-type-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+}
+
+.research-type-modal-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.research-type-modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 1.5rem;
+    transition: all 0.2s;
+    font-weight: 300;
+}
+
+.research-type-modal-close:hover {
+    color: #ef4444;
+    transform: translateY(-2px);
+}
+
+.research-type-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.research-type-option {
+    padding: 14px 20px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.research-type-option:hover {
+    border-color: var(--sidebar-color, #014421);
+    background: #f9fafb;
+    transform: translateX(4px);
+}
+
+.research-type-option-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--sidebar-color, #014421);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.research-type-option-content {
+    flex: 1;
+}
+
+.research-type-option-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.research-type-option-code {
+    display: none;
+}
+
+
+/* ========================================
+   RESEARCH FORM MODAL
+   ======================================== */
+
+.research-form-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.research-form-modal.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.research-form-modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 24px 28px;
+    width: 100%;
+    max-width: 580px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    transform: translateY(10px);
+    transition: transform 0.2s;
+}
+
+.research-form-modal.open .research-form-modal-box {
+    transform: translateY(0);
+}
+
+.research-form-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.research-form-modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.research-form-modal-subtitle {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+.research-form-modal-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 1.4rem;
+    transition: all 0.2s;
+    font-weight: 300;
+}
+
+.research-form-modal-close:hover {
+    color: #ef4444;
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   FORM ELEMENTS
+   ======================================== */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.form-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-label .required {
+    color: #dc2626;
+    margin-left: 2px;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    font-size: 0.875rem;
+    color: #374151;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: white;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: var(--sidebar-color, #014421);
+    box-shadow: 0 0 0 3px rgba(1, 68, 33, 0.1);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: #9ca3af;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 70px;
+}
+
+.form-help-text {
+    font-size: 0.72rem;
+    color: #6b7280;
+    margin-top: 3px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+/* ========================================
+   FORM ACTIONS
+   ======================================== */
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #f3f4f6;
+    margin-top: 20px;
+}
+
+.btn-cancel {
+    padding: 8px 20px;
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-cancel:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.btn-submit {
+    padding: 8px 20px;
+    background: var(--sidebar-color, #014421);
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-submit:hover {
+    filter: brightness(0.9);
+}
+
+.btn-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   SUCCESS MESSAGE
+   ======================================== */
+
+.success-message {
+    display: none;
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    margin: 18px 0;
+}
+
+.success-message.show {
+    display: block;
+    animation: fadeInScale 0.3s ease;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.success-icon {
+    width: 44px;
+    height: 44px;
+    background: #22c55e;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    color: white;
+    font-size: 1.4rem;
+}
+
+.success-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #166534;
+    margin-bottom: 6px;
+}
+
+.success-text {
+    font-size: 0.875rem;
+    color: #15803d;
+}

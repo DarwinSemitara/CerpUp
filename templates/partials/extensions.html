@@ -1,0 +1,118 @@
+<style>
+    .extensions-container {
+        padding: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .extensions-header {
+        margin-bottom: 32px;
+    }
+
+    .extensions-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 8px 0;
+    }
+
+    .extensions-header p {
+        font-size: 1rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .extensions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
+    }
+
+    .extension-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        transition: all 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .extension-card:hover {
+        border-color: #6b0f1a;
+        box-shadow: 0 4px 12px rgba(107, 15, 26, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .extension-icon {
+        width: 48px;
+        height: 48px;
+        background: #fdf2f3;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        color: #6b0f1a;
+    }
+
+    .extension-card h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 8px 0;
+    }
+
+    .extension-card p {
+        font-size: 0.875rem;
+        color: #6b7280;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .extension-arrow {
+        display: inline-block;
+        margin-left: 8px;
+        transition: transform 0.2s;
+    }
+
+    .extension-card:hover .extension-arrow {
+        transform: translateX(4px);
+    }
+</style>
+
+<div class="extensions-container">
+    <div class="extensions-header">
+        <h1>Extensions</h1>
+        <p>Explore CERP's extension programs and community initiatives</p>
+    </div>
+
+    <div class="extensions-grid">
+        <a href="/extensions/public-engagements/" class="extension-card">
+            <div class="extension-icon">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <h3>Public Engagements <span class="extension-arrow">→</span></h3>
+            <p>Community outreach programs, partnerships, and public service initiatives that connect CERP with local
+                communities.</p>
+        </a>
+
+        <a href="/extensions/tap-hsp/" class="extension-card">
+            <div class="extension-icon">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+            </div>
+            <h3>TAP-HSP <span class="extension-arrow">→</span></h3>
+            <p>Technical Assistance Program for Higher State Institutions - capacity development, model community
+                building, and praxis initiatives.</p>
+        </a>
+    </div>
+</div>

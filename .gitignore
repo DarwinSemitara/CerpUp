@@ -15,3 +15,12 @@ instance/
 *.swp
 *.swo
 *~
+
+# Firebase backups (local only)
+firebase_backup/
+
+# Archived Firebase files
+archive_firebase/
+
+# Test files
+TEST_BLOCKS.js
