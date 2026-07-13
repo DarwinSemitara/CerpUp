@@ -2,11 +2,13 @@ services:
   - type: web
     name: cerpup
     runtime: python
+    region: oregon
+    plan: free
     buildCommand: pip install -r requirements-supabase.txt
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.9
       - key: SECRET_KEY
         generateValue: true
       - key: SUPABASE_URL
