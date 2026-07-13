@@ -4,12 +4,12 @@ Flask-CORS==4.0.0
 python-dotenv==1.0.0
 gunicorn==21.2.0
 
-# Supabase (replaces firebase-admin)
-supabase==2.3.4
-websockets==12.0
+# Supabase - using newer compatible versions
+supabase==2.7.4
+httpx==0.27.0
 
 # Keep Cloudinary
 cloudinary==1.40.0
 
-# Additional dependencies for Supabase
+# Additional dependencies
 PyJWT==2.8.0
