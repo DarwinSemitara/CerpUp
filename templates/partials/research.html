@@ -1,134 +1,744 @@
-<div style="padding:32px;">
-  <!-- Filter and Search Bar -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;gap:20px;">
+<style>
+  .research-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+  }
 
-    <!-- Sort By Dropdown -->
-    <div style="display:flex;align-items:center;gap:12px;">
-      <label style="font-size:0.85rem;color:#374151;font-weight:500;">Sort by:</label>
-      <select class="filter-select" id="res-sort" onchange="resTable.apply()"
-        style="min-width:160px;padding:6px 10px;border:none;border-radius:6px;font-size:0.85rem;background:white;cursor:pointer;outline:none;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-        <option value="">Faculty name</option>
-        <option value="faculty">Faculty name</option>
-        <option value="cat">Category</option>
-        <option value="start">Date</option>
-      </select>
+  .research-main-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .filters-toolbar {
+    padding: 18px 24px;
+    border-bottom: 2px solid #e5e7eb;
+    background: #f9fafb;
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .filters-left {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .filters-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .filter-select {
+    padding: 8px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: white;
+    color: #374151;
+    outline: none;
+    cursor: pointer;
+    min-width: 180px;
+    transition: all 0.15s;
+  }
+
+  .filter-select:focus {
+    border-color: #6b0f1a;
+    box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+  }
+
+  .btn-generate-report {
+    padding: 8px 16px;
+    background: #6b0f1a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-generate-report:hover {
+    background: #850f20;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(107, 15, 26, 0.3);
+  }
+
+  .btn-generate-report svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .research-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .research-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .research-table thead {
+    background: #f9fafb;
+  }
+
+  .research-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+
+  .research-table th:last-child {
+    border-right: none;
+  }
+
+  .research-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .research-table tbody tr:hover {
+    background: #fef2f2;
+  }
+
+  .research-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .research-table td {
+    padding: 13px 16px;
+    color: #374151;
+    vertical-align: middle;
+    border-right: 1px solid #f3f4f6;
+  }
+
+  .research-table td:last-child {
+    border-right: none;
+  }
+
+  .research-title-cell {
+    font-weight: 600;
+    color: #111827;
+    max-width: 350px;
+  }
+
+  .research-type-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-research {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .badge-proposal {
+    background: #fce7f3;
+    color: #831843;
+  }
+
+  .badge-publication {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .badge-project {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #9ca3af;
+  }
+
+  .empty-state svg {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    opacity: 0.3;
+  }
+
+  .empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 8px;
+  }
+
+  .empty-state-text {
+    font-size: 0.875rem;
+  }
+
+  /* Detail View Modal */
+  .research-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .research-modal.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: translateY(20px);
+    transition: transform 0.2s;
+  }
+
+  .research-modal.open .modal-content {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    padding: 32px 36px 24px;
+    border-bottom: 2px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .modal-title-section {
+    flex: 1;
+  }
+
+  .modal-type-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+  }
+
+  .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: #f3f4f6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 1.25rem;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .modal-close:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .modal-body {
+    padding: 32px 36px;
+  }
+
+  .detail-section {
+    margin-bottom: 32px;
+  }
+
+  .detail-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .detail-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b0f1a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .detail-item {
+    background: #f9fafb;
+    padding: 16px 18px;
+    border-radius: 8px;
+    border: 1px solid #f3f4f6;
+  }
+
+  .detail-item-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .detail-item-value {
+    font-size: 0.95rem;
+    color: #111827;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  .detail-item-full {
+    grid-column: 1 / -1;
+  }
+
+  .loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #9ca3af;
+  }
+
+  .spinner-ring {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f4f6;
+    border-top-color: #6b0f1a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+
+<div class="research-container">
+  <div class="research-main-card">
+    <!-- Filters Toolbar -->
+    <div class="filters-toolbar">
+      <div class="filters-left">
+        <div class="filter-group">
+          <label class="filter-label">Type</label>
+          <select class="filter-select" id="filter-type" onchange="applyFilters()">
+            <option value="">All Types</option>
+            <option value="proposal">Proposal</option>
+            <option value="research">Research</option>
+            <option value="publication">Publication</option>
+            <option value="project">Project</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Submitted By</label>
+          <select class="filter-select" id="filter-member" onchange="applyFilters()">
+            <option value="">All Members</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Year Submitted</label>
+          <select class="filter-select" id="filter-year" onchange="applyFilters()">
+            <option value="">All Years</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Generate Report button removed -->
     </div>
 
-    <!-- Search Bar -->
-    <div style="position:relative;width:280px;">
-      <input type="text" id="res-search" placeholder="Search" oninput="resTable.apply()"
-        style="width:100%;padding:8px 36px 8px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;background:white;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-      <button class="search-btn" type="button"
-        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#6b7280" stroke-width="2.5">
-          <circle cx="11" cy="11" r="8" />
-          <path stroke-linecap="round" d="M21 21l-4.35-4.35" />
-        </svg>
-      </button>
-    </div>
-
-  </div>
-
-  <!-- Research Table -->
-  <div class="table-wrap">
-    <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;background:white;">
-      <table style="width:100%;border-collapse:collapse;">
+    <!-- Research Table -->
+    <div class="research-table-wrapper">
+      <table class="research-table">
         <thead>
-          <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Faculty</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Category</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Sub-category</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;min-width:250px;border-right:1px solid #e5e7eb;">
-              Title</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Funding Agency</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              FundCode</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Nature of Project</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Project ID</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              SDG's</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Role</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;min-width:180px;border-right:1px solid #e5e7eb;">
-              Coworkers Involved</th>
-            <th
-              style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;border-right:1px solid #e5e7eb;">
-              Start Date</th>
-            <th style="padding:12px;text-align:left;font-size:0.8rem;font-weight:600;color:#374151;white-space:nowrap;">
-              End Date</th>
+          <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Submitted By</th>
+            <th>Role</th>
+            <th>Start Date</th>
+            <th>Date Submitted</th>
           </tr>
         </thead>
-        <tbody id="res-tbody"></tbody>
+        <tbody id="research-tbody">
+          <tr>
+            <td colspan="6">
+              <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
       </table>
     </div>
-    <div class="pagination" id="res-pg" style="margin-top:24px;"></div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state" style="display: none;">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <div class="empty-state-title">No Research Found</div>
+      <div class="empty-state-text">No research submissions match your filters.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Research Detail Modal -->
+<div class="research-modal" id="research-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title-section">
+        <div class="modal-type-badge" id="modal-type-badge"></div>
+        <h2 class="modal-title" id="modal-title">Research Details</h2>
+      </div>
+      <button class="modal-close" onclick="closeResearchModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- Details will be inserted here -->
+    </div>
   </div>
 </div>
 
 <script>
   (function () {
-    if (window._resTableInit) return; window._resTableInit = true;
+    if (window._researchPageInit) return;
+    window._researchPageInit = true;
 
-    // Sample data with Faculty column - 20 entries
-    const resData = [
-      { faculty: 'Dr. Juan Dela Cruz', cat: 'Applied Research', sub: 'Agriculture', title: 'Soil Nutrient Analysis in Upland Farms', agency: 'DOST', code: 'DOST-2024-001', nature: 'Funded', id: 'PRJ-001', sdg: 'SDG 2', role: 'Lead Researcher', coworkers: 'J. Santos, M. Cruz', start: '2024-01-15', end: '2025-01-14' },
-      { faculty: 'Dr. Maria Santos', cat: 'Basic Research', sub: 'Biology', title: 'Microbial Diversity in Mangrove Ecosystems', agency: 'CHED', code: 'CHED-2023-045', nature: 'Funded', id: 'PRJ-002', sdg: 'SDG 14', role: 'Co-Researcher', coworkers: 'A. Reyes', start: '2023-06-01', end: '2024-12-31' },
-      { faculty: 'Dr. Roberto Reyes', cat: 'Applied Research', sub: 'Engineering', title: 'Low-Cost Water Filtration System Design', agency: 'NRCP', code: 'NRCP-2024-012', nature: 'Funded', id: 'PRJ-003', sdg: 'SDG 6', role: 'Lead Researcher', coworkers: 'R. Dela Cruz, P. Lim', start: '2024-03-01', end: '2025-03-01' },
-      { faculty: 'Dr. Ana Garcia', cat: 'Policy Research', sub: 'Education', title: 'Impact of Modular Learning on Student Performance', agency: 'DepEd', code: 'DEPED-2023-088', nature: 'Unfunded', id: 'PRJ-004', sdg: 'SDG 4', role: 'Lead Researcher', coworkers: 'L. Garcia', start: '2023-08-01', end: '2024-07-31' },
-      { faculty: 'Dr. Carlos Mendoza', cat: 'Applied Research', sub: 'Health', title: 'Herbal Formulation for Wound Healing', agency: 'DOH', code: 'DOH-2024-033', nature: 'Funded', id: 'PRJ-005', sdg: 'SDG 3', role: 'Co-Researcher', coworkers: 'C. Mendoza, T. Bautista', start: '2024-02-01', end: '2025-08-01' },
-      { faculty: 'Dr. Nina Torres', cat: 'Basic Research', sub: 'Chemistry', title: 'Synthesis of Biodegradable Plastics from Cassava', agency: 'DOST', code: 'DOST-2023-077', nature: 'Funded', id: 'PRJ-006', sdg: 'SDG 12', role: 'Lead Researcher', coworkers: 'N. Torres', start: '2023-09-01', end: '2025-09-01' },
-      { faculty: 'Dr. Eduardo Villanueva', cat: 'Applied Research', sub: 'ICT', title: 'AI-Based Crop Disease Detection System', agency: 'DICT', code: 'DICT-2024-019', nature: 'Funded', id: 'PRJ-007', sdg: 'SDG 2', role: 'Lead Researcher', coworkers: 'E. Villanueva, K. Tan', start: '2024-04-01', end: '2025-10-01' },
-      { faculty: 'Dr. Fe Aquino', cat: 'Policy Research', sub: 'Governance', title: 'E-Governance Adoption in Rural LGUs', agency: 'DILG', code: 'DILG-2023-055', nature: 'Unfunded', id: 'PRJ-008', sdg: 'SDG 16', role: 'Co-Researcher', coworkers: 'F. Aquino', start: '2023-11-01', end: '2024-10-31' },
-      { faculty: 'Dr. Gabriel Ramos', cat: 'Basic Research', sub: 'Physics', title: 'Solar Energy Efficiency in Tropical Climates', agency: 'DOE', code: 'DOE-2024-008', nature: 'Funded', id: 'PRJ-009', sdg: 'SDG 7', role: 'Lead Researcher', coworkers: 'G. Ramos, H. Flores', start: '2024-01-01', end: '2026-01-01' },
-      { faculty: 'Dr. Isabel Castillo', cat: 'Applied Research', sub: 'Marine Science', title: 'Coral Reef Restoration Techniques', agency: 'DENR', code: 'DENR-2023-041', nature: 'Funded', id: 'PRJ-010', sdg: 'SDG 14', role: 'Co-Researcher', coworkers: 'I. Castillo', start: '2023-07-01', end: '2025-06-30' },
-      { faculty: 'Dr. Jose Navarro', cat: 'Applied Research', sub: 'Nutrition', title: 'Malnutrition Intervention in Indigenous Communities', agency: 'FNRI', code: 'FNRI-2024-022', nature: 'Funded', id: 'PRJ-011', sdg: 'SDG 3', role: 'Lead Researcher', coworkers: 'J. Navarro, B. Ong', start: '2024-05-01', end: '2025-11-01' },
-      { faculty: 'Dr. Miguel Pascual', cat: 'Basic Research', sub: 'Geology', title: 'Seismic Risk Mapping of Fault Lines', agency: 'PHIVOLCS', code: 'PHI-2023-066', nature: 'Funded', id: 'PRJ-012', sdg: 'SDG 11', role: 'Co-Researcher', coworkers: 'M. Pascual', start: '2023-10-01', end: '2025-04-01' },
-      { faculty: 'Dr. Olivia Soriano', cat: 'Policy Research', sub: 'Economics', title: 'Microfinance Impact on Women Entrepreneurs', agency: 'BSP', code: 'BSP-2024-014', nature: 'Unfunded', id: 'PRJ-013', sdg: 'SDG 8', role: 'Lead Researcher', coworkers: 'O. Soriano, P. Diaz', start: '2024-06-01', end: '2025-05-31' },
-      { faculty: 'Dr. Quintin Hernandez', cat: 'Applied Research', sub: 'Forestry', title: 'Reforestation Strategies for Degraded Watersheds', agency: 'DENR', code: 'DENR-2024-039', nature: 'Funded', id: 'PRJ-014', sdg: 'SDG 15', role: 'Lead Researcher', coworkers: 'Q. Hernandez', start: '2024-07-01', end: '2026-07-01' },
-      { faculty: 'Dr. Rosa Aguilar', cat: 'Basic Research', sub: 'Linguistics', title: 'Endangered Language Documentation in Mindanao', agency: 'NCCA', code: 'NCCA-2023-091', nature: 'Funded', id: 'PRJ-015', sdg: 'SDG 4', role: 'Co-Researcher', coworkers: 'R. Aguilar, S. Macaraeg', start: '2023-12-01', end: '2025-11-30' },
-      { faculty: 'Dr. Samuel Cruz', cat: 'Applied Research', sub: 'Urban Planning', title: 'Sustainable Transport Systems in Metro Manila', agency: 'MMDA', code: 'MMDA-2024-007', nature: 'Funded', id: 'PRJ-016', sdg: 'SDG 11', role: 'Lead Researcher', coworkers: 'T. Lopez, U. Reyes', start: '2024-02-15', end: '2025-08-15' },
-      { faculty: 'Dr. Teresa Bautista', cat: 'Basic Research', sub: 'Botany', title: 'Endemic Plant Species Conservation', agency: 'DENR', code: 'DENR-2023-088', nature: 'Funded', id: 'PRJ-017', sdg: 'SDG 15', role: 'Co-Researcher', coworkers: 'V. Santos', start: '2023-05-01', end: '2025-05-01' },
-      { faculty: 'Dr. Victor Morales', cat: 'Applied Research', sub: 'Renewable Energy', title: 'Biomass Energy Production from Agricultural Waste', agency: 'DOE', code: 'DOE-2024-021', nature: 'Funded', id: 'PRJ-018', sdg: 'SDG 7', role: 'Lead Researcher', coworkers: 'W. Garcia, X. Tan', start: '2024-03-15', end: '2026-03-15' },
-      { faculty: 'Dr. Wendy Flores', cat: 'Policy Research', sub: 'Social Welfare', title: 'Conditional Cash Transfer Program Evaluation', agency: 'DSWD', code: 'DSWD-2023-034', nature: 'Unfunded', id: 'PRJ-019', sdg: 'SDG 1', role: 'Lead Researcher', coworkers: 'Y. Navarro', start: '2023-09-15', end: '2024-09-14' },
-      { faculty: 'Dr. Xavier Lim', cat: 'Applied Research', sub: 'Aquaculture', title: 'Tilapia Breeding Optimization Techniques', agency: 'BFAR', code: 'BFAR-2024-016', nature: 'Funded', id: 'PRJ-020', sdg: 'SDG 2', role: 'Co-Researcher', coworkers: 'Z. Ramos, A. Cruz', start: '2024-04-20', end: '2025-10-20' },
-    ];
+    let allResearch = [];
+    let filteredResearch = [];
 
-    function row(r) {
-      return `<tr style="border-bottom:1px solid #f3f4f6;transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-      <td style="padding:10px 12px;font-size:0.8rem;color:#111827;font-weight:500;border-right:1px solid #f3f4f6;">${r.faculty}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.cat}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.sub}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;max-width:300px;border-right:1px solid #f3f4f6;">${r.title}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.agency}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;font-family:monospace;border-right:1px solid #f3f4f6;">${r.code}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.nature}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;font-family:monospace;border-right:1px solid #f3f4f6;">${r.id}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.sdg}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.role}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;border-right:1px solid #f3f4f6;">${r.coworkers}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;white-space:nowrap;border-right:1px solid #f3f4f6;">${r.start}</td>
-      <td style="padding:10px 12px;font-size:0.8rem;color:#374151;white-space:nowrap;">${r.end}</td>
-    </tr>`;
+    // Fetch research data
+    async function loadResearch() {
+      try {
+        console.log('🔄 Fetching research data from /api/research...');
+        const response = await fetch('/api/research');
+        console.log('📡 Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Response not OK:', errorText);
+          throw new Error('Failed to fetch research');
+        }
+
+        allResearch = await response.json();
+        console.log('✅ Received research data:', allResearch.length, 'items');
+        console.log('📊 Sample data:', allResearch[0]);
+
+        // Sort by submission date (most recent first)
+        allResearch.sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          return dateB - dateA;
+        });
+
+        filteredResearch = [...allResearch];
+
+        populateFilters();
+        renderTable();
+      } catch (error) {
+        console.error('❌ Error loading research:', error);
+        showEmptyState();
+      }
     }
 
-    window.resTable = window.makePagTable('res-tbody', 'res-pg', () => resData, 'res-sort', 'res-search', row);
-    resTable.apply();
+    // Populate filter dropdowns
+    function populateFilters() {
+      // Populate members
+      const members = [...new Set(allResearch.map(r => r.member_name))].filter(Boolean).sort();
+      const memberSelect = document.getElementById('filter-member');
+      members.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member;
+        option.textContent = member;
+        memberSelect.appendChild(option);
+      });
+
+      // Populate years (based on submission date)
+      const years = [...new Set(allResearch.map(r => {
+        const date = r.created_at;
+        return date ? new Date(date).getFullYear() : null;
+      }).filter(y => y))].sort((a, b) => b - a);
+
+      const yearSelect = document.getElementById('filter-year');
+      years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+      });
+    }
+
+    // Apply filters
+    window.applyFilters = function () {
+      const typeFilter = document.getElementById('filter-type').value;
+      const memberFilter = document.getElementById('filter-member').value;
+      const yearFilter = document.getElementById('filter-year').value;
+
+      filteredResearch = allResearch.filter(r => {
+        // Type filter
+        if (typeFilter && r.research_type !== typeFilter) return false;
+
+        // Member filter
+        if (memberFilter && r.member_name !== memberFilter) return false;
+
+        // Year filter (based on submission date)
+        if (yearFilter) {
+          const date = r.created_at;
+          const year = date ? new Date(date).getFullYear() : null;
+          if (year != yearFilter) return false;
+        }
+
+        return true;
+      });
+
+      renderTable();
+    };
+
+    // Render table
+    function renderTable() {
+      const tbody = document.getElementById('research-tbody');
+      const emptyState = document.getElementById('empty-state');
+      const tableWrapper = document.querySelector('.research-table-wrapper');
+
+      if (filteredResearch.length === 0) {
+        tableWrapper.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      tableWrapper.style.display = 'block';
+      emptyState.style.display = 'none';
+
+      tbody.innerHTML = filteredResearch.map(r => {
+        const typeClass = `badge-${r.research_type || 'research'}`;
+        const typeName = (r.research_type || 'research').charAt(0).toUpperCase() + (r.research_type || 'research').slice(1);
+
+        const startDate = r.start_date
+          ? new Date(r.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'Not specified';
+
+        const submittedDate = r.created_at
+          ? new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'Not specified';
+
+        return `
+          <tr onclick="openResearchModal('${r.id}')">
+            <td class="research-title-cell">${r.title || 'Untitled Research'}</td>
+            <td>
+              <span class="research-type-badge ${typeClass}">${typeName}</span>
+            </td>
+            <td>${r.member_name || 'Unknown'}</td>
+            <td>${r.role || 'Not specified'}</td>
+            <td>${startDate}</td>
+            <td>${submittedDate}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Show empty state
+    function showEmptyState() {
+      document.querySelector('.research-table-wrapper').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'block';
+    }
+
+    // Open research detail modal
+    window.openResearchModal = function (researchId) {
+      const research = allResearch.find(r => r.id === researchId);
+      if (!research) return;
+
+      const modal = document.getElementById('research-modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalTypeBadge = document.getElementById('modal-type-badge');
+      const modalBody = document.getElementById('modal-body');
+
+      // Set title and type badge
+      modalTitle.textContent = research.title || 'Untitled Research';
+
+      const typeClass = `badge-${research.research_type || 'research'}`;
+      const typeName = (research.research_type || 'research').charAt(0).toUpperCase() + (research.research_type || 'research').slice(1);
+      modalTypeBadge.className = `modal-type-badge research-type-badge ${typeClass}`;
+      modalTypeBadge.textContent = typeName;
+
+      // Format dates
+      const startDate = research.start_date
+        ? new Date(research.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : 'Not specified';
+
+      const endDate = research.end_date
+        ? new Date(research.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : 'Ongoing';
+
+      const completionDate = research.date_completion
+        ? new Date(research.date_completion).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : 'Not specified';
+
+      const submittedDate = research.created_at
+        ? new Date(research.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'Not specified';
+
+      // Build modal content
+      modalBody.innerHTML = `
+        <div class="detail-section">
+          <div class="detail-section-title">Basic Information</div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="detail-item-label">Submitted By</div>
+              <div class="detail-item-value">${research.member_name || 'Unknown'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-item-label">Role</div>
+              <div class="detail-item-value">${research.role || 'Not specified'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-item-label">Credit Units</div>
+              <div class="detail-item-value">${research.credit_units || 'Not specified'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-item-label">Date Submitted</div>
+              <div class="detail-item-value">${submittedDate}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Project Timeline</div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <div class="detail-item-label">Start Date</div>
+              <div class="detail-item-value">${startDate}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-item-label">End Date</div>
+              <div class="detail-item-value">${endDate}</div>
+            </div>
+            <div class="detail-item detail-item-full">
+              <div class="detail-item-label">Date of Completion</div>
+              <div class="detail-item-value">${completionDate}</div>
+            </div>
+          </div>
+        </div>
+
+        ${research.funding_agency ? `
+          <div class="detail-section">
+            <div class="detail-section-title">Funding</div>
+            <div class="detail-grid">
+              <div class="detail-item detail-item-full">
+                <div class="detail-item-label">Funding Agency</div>
+                <div class="detail-item-value">${research.funding_agency}</div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        ${research.co_authors || research.co_workers ? `
+          <div class="detail-section">
+            <div class="detail-section-title">Collaborators</div>
+            <div class="detail-grid">
+              ${research.co_authors ? `
+                <div class="detail-item detail-item-full">
+                  <div class="detail-item-label">Co-Authors</div>
+                  <div class="detail-item-value">${research.co_authors}</div>
+                </div>
+              ` : ''}
+              ${research.co_workers ? `
+                <div class="detail-item detail-item-full">
+                  <div class="detail-item-label">Co-Workers</div>
+                  <div class="detail-item-value">${research.co_workers}</div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        ` : ''}
+      `;
+
+      modal.classList.add('open');
+    };
+
+    // Close modal
+    window.closeResearchModal = function () {
+      document.getElementById('research-modal').classList.remove('open');
+    };
+
+    // Close modal on outside click
+    document.getElementById('research-modal').addEventListener('click', function (e) {
+      if (e.target === this) {
+        closeResearchModal();
+      }
+    });
+
+    // Initialize
+    loadResearch();
   })();
+
+  // Generate Report function removed
 </script>

@@ -700,76 +700,79 @@ window.closeSuccessModal = closeSuccessModal;
 
 // ── Subject Selection ──────────────────────────────────────────
 
-// All Subjects by Year and Semester
-const ALL_SUBJECTS = {
-    '1-1': [
-        { code: 'HIST/KAS 1', name: 'Philippine History', units: 3 },
-        { code: 'ETHICS 1', name: 'Ethics and Moral Reasoning', units: 3 },
-        { code: 'HFDS 101', name: 'Family and Environment', units: 3 },
-        { code: 'HUME 100', name: 'Introduction to Human Ecology', units: 3 },
-        { code: 'CERP 101', name: 'Fundamentals of Human Settlements', units: 3 },
-        { code: 'SDS 101', name: 'Introduction to Social Development', units: 3 },
-        { code: 'HK 11', name: 'Concept in Wellness and Basic Injury Management', units: 2 }
-    ],
-    '1-2': [
-        { code: 'ARTS 1', name: 'Critical Perspectives in the Arts', units: 3 },
-        { code: 'HUME 112', name: 'Sustainability Science', units: 3 },
-        { code: 'HUME 107', name: 'Principles of Human Development', units: 3 },
-        { code: 'HUME 105', name: 'Humans and their Environment', units: 3 },
-        { code: 'SOC 140', name: 'Introduction to Demography', units: 3 },
-        { code: 'BIO 150', name: 'Principles of Ecology', units: 4 },
-        { code: 'HK 12/13', name: 'Human Kinetics Activities', units: 2 },
-        { code: 'NSTP 1', name: 'National Service Training Program 1', units: 3 }
-    ],
-    '2-1': [
-        { code: 'PI 10', name: 'Life and Works of Rizal', units: 3 },
-        { code: 'HUME 110', name: 'Ecology and Value Systems', units: 3 },
-        { code: 'HUME 111', name: 'Human Ecological Perspective in Development', units: 3 },
-        { code: 'HUME 113', name: 'Community Study in Human Welfare', units: 3 },
-        { code: 'HK 12 or 13', name: 'Human Kinetics Activities', units: 2 },
-        { code: 'NSTP 2', name: 'National Service Training Program 2', units: 3 }
-    ],
-    '2-2': [
-        { code: 'STS 1', name: 'Science, Technology, and Society', units: 3 },
-        { code: 'STAT 166', name: 'Statistics for Social Sciences', units: 3 },
-        { code: 'HUME 114', name: 'Material and Energy Flows', units: 3 },
-        { code: 'CERP 161', name: 'Planning Theory and Practice I', units: 3 },
-        { code: 'HUME 115', name: 'Social Policies', units: 3 },
-        { code: 'HK 12 or 13', name: 'Human Kinetics Activities', units: 2 }
-    ],
-    '3-1': [
-        { code: 'COMM 10', name: 'Critical Perspectives in Communication', units: 3 },
-        { code: 'HUME 195', name: 'Research Methods in Human Ecology', units: 3 },
-        { code: 'HUME 122', name: 'Human Needs and the Built Environment', units: 3 },
-        { code: 'HUME 123', name: 'Climate Change Adaptation and Disaster Risk Reduction in Human Ecosystems', units: 3 },
-        { code: 'CERP 140', name: 'Fundamentals of Environmental Economics', units: 3 },
-        { code: 'CERP 122', name: 'Conservation of Natural Resources', units: 3 },
-        { code: 'SDS 172', name: 'Techniques in Community Organizing', units: 3 }
-    ],
-    '3-2': [
-        { code: 'HUME 125', name: 'Human Ecological Systems Mapping', units: 5 },
-        { code: 'HUME 124', name: 'Environmental Health', units: 3 },
-        { code: 'SDS 173', name: 'Consumer Education', units: 3 },
-        { code: 'HFDS 110', name: 'Migration', units: 3 },
-        { code: 'CERP 162', name: 'Planning Theory and Practice II', units: 3 },
-        { code: 'CERP 163', name: 'Land Use Planning for Human Settlements', units: 5 },
-        { code: 'CERP 165', name: 'Human Settlements Planning I', units: 5 }
-    ],
-    '4-1': [
-        { code: 'HNF 141', name: 'Food and Nutrition Systems', units: 3 },
-        { code: 'CERP 166', name: 'Human Settlements Planning II', units: 7 },
-        { code: 'CERP 170', name: 'Environmental Project Planning & Administration', units: 3 },
-        { code: 'CERP 164', name: 'Spatial Analysis & Planning for Human Settlements', units: 5 },
-        { code: 'CERP 200', name: 'Undergraduate Thesis', units: 3 }
-    ],
-    '4-2': [
-        { code: 'HUME 200a', name: 'Supervised Field Experience', units: 6 },
-        { code: 'HUME 199', name: 'Seminar in Human Ecology', units: 1 },
-        { code: 'CERP 200', name: 'Undergraduate Thesis', units: 3 }
-    ]
-};
+// All Subjects by Year and Semester - Only declare if not already defined
+if (typeof ALL_SUBJECTS === 'undefined') {
+    var ALL_SUBJECTS = {
+        '1-1': [
+            { code: 'HIST/KAS 1', name: 'Philippine History', units: 3 },
+            { code: 'ETHICS 1', name: 'Ethics and Moral Reasoning', units: 3 },
+            { code: 'HFDS 101', name: 'Family and Environment', units: 3 },
+            { code: 'HUME 100', name: 'Introduction to Human Ecology', units: 3 },
+            { code: 'CERP 101', name: 'Fundamentals of Human Settlements', units: 3 },
+            { code: 'SDS 101', name: 'Introduction to Social Development', units: 3 },
+            { code: 'HK 11', name: 'Concept in Wellness and Basic Injury Management', units: 2 }
+        ],
+        '1-2': [
+            { code: 'ARTS 1', name: 'Critical Perspectives in the Arts', units: 3 },
+            { code: 'HUME 112', name: 'Sustainability Science', units: 3 },
+            { code: 'HUME 107', name: 'Principles of Human Development', units: 3 },
+            { code: 'HUME 105', name: 'Humans and their Environment', units: 3 },
+            { code: 'SOC 140', name: 'Introduction to Demography', units: 3 },
+            { code: 'BIO 150', name: 'Principles of Ecology', units: 4 },
+            { code: 'HK 12/13', name: 'Human Kinetics Activities', units: 2 },
+            { code: 'NSTP 1', name: 'National Service Training Program 1', units: 3 }
+        ],
+        '2-1': [
+            { code: 'PI 10', name: 'Life and Works of Rizal', units: 3 },
+            { code: 'HUME 110', name: 'Ecology and Value Systems', units: 3 },
+            { code: 'HUME 111', name: 'Human Ecological Perspective in Development', units: 3 },
+            { code: 'HUME 113', name: 'Community Study in Human Welfare', units: 3 },
+            { code: 'HK 12 or 13', name: 'Human Kinetics Activities', units: 2 },
+            { code: 'NSTP 2', name: 'National Service Training Program 2', units: 3 }
+        ],
+        '2-2': [
+            { code: 'STS 1', name: 'Science, Technology, and Society', units: 3 },
+            { code: 'STAT 166', name: 'Statistics for Social Sciences', units: 3 },
+            { code: 'HUME 114', name: 'Material and Energy Flows', units: 3 },
+            { code: 'CERP 161', name: 'Planning Theory and Practice I', units: 3 },
+            { code: 'HUME 115', name: 'Social Policies', units: 3 },
+            { code: 'HK 12 or 13', name: 'Human Kinetics Activities', units: 2 }
+        ],
+        '3-1': [
+            { code: 'COMM 10', name: 'Critical Perspectives in Communication', units: 3 },
+            { code: 'HUME 195', name: 'Research Methods in Human Ecology', units: 3 },
+            { code: 'HUME 122', name: 'Human Needs and the Built Environment', units: 3 },
+            { code: 'HUME 123', name: 'Climate Change Adaptation and Disaster Risk Reduction in Human Ecosystems', units: 3 },
+            { code: 'CERP 140', name: 'Fundamentals of Environmental Economics', units: 3 },
+            { code: 'CERP 122', name: 'Conservation of Natural Resources', units: 3 },
+            { code: 'SDS 172', name: 'Techniques in Community Organizing', units: 3 }
+        ],
+        '3-2': [
+            { code: 'HUME 125', name: 'Human Ecological Systems Mapping', units: 5 },
+            { code: 'HUME 124', name: 'Environmental Health', units: 3 },
+            { code: 'SDS 173', name: 'Consumer Education', units: 3 },
+            { code: 'HFDS 110', name: 'Migration', units: 3 },
+            { code: 'CERP 162', name: 'Planning Theory and Practice II', units: 3 },
+            { code: 'CERP 163', name: 'Land Use Planning for Human Settlements', units: 5 },
+            { code: 'CERP 165', name: 'Human Settlements Planning I', units: 5 }
+        ],
+        '4-1': [
+            { code: 'HNF 141', name: 'Food and Nutrition Systems', units: 3 },
+            { code: 'CERP 166', name: 'Human Settlements Planning II', units: 7 },
+            { code: 'CERP 170', name: 'Environmental Project Planning & Administration', units: 3 },
+            { code: 'CERP 164', name: 'Spatial Analysis & Planning for Human Settlements', units: 5 },
+            { code: 'CERP 200', name: 'Undergraduate Thesis', units: 3 }
+        ],
+        '4-2': [
+            { code: 'HUME 200a', name: 'Supervised Field Experience', units: 6 },
+            { code: 'HUME 199', name: 'Seminar in Human Ecology', units: 1 },
+            { code: 'CERP 200', name: 'Undergraduate Thesis', units: 3 }
+        ]
+    };
+}
 
-let selectedSubjects = [];
+// Only declare if not already defined
+if (typeof selectedSubjects === 'undefined') var selectedSubjects = [];
 
 // Handle year level checkbox changes
 function onStaffYearCheckChange(mode) {

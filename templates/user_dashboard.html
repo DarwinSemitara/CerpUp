@@ -167,6 +167,16 @@
             opacity: .3;
         }
 
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         #logout-modal {
             position: fixed;
             inset: 0;
@@ -1322,6 +1332,29 @@
         async function renderClassSchedulePage() {
             const content = document.getElementById('page-content');
 
+            // Show loading state
+            content.innerHTML = `
+                <div class="placeholder-section">
+                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="animation: spin 1s linear infinite;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <p style="font-size:.95rem;font-weight:600;color:#6b7280;">Loading schedule...</p>
+                </div>
+            `;
+
+            // Clean up any previously loaded schedule scripts to prevent conflicts
+            const oldScripts = document.querySelectorAll('script[data-schedule-script]');
+            oldScripts.forEach(script => script.remove());
+
+            // Clean up any previously loaded schedule styles
+            const oldStyles = document.querySelectorAll('style[data-schedule-style]');
+            oldStyles.forEach(style => style.remove());
+
+            // Clear global schedule-related variables to prevent conflicts
+            if (window.schedData) delete window.schedData;
+            if (window.globalSchedData) delete window.globalSchedData;
+            if (window.allBlocks) delete window.allBlocks;
+
             // Fetch current member data first
             let currentMember = null;
             try {
@@ -1352,6 +1385,7 @@
                 const styles = tempDiv.querySelectorAll('style');
                 styles.forEach(style => {
                     const newStyle = document.createElement('style');
+                    newStyle.setAttribute('data-schedule-style', 'true');
                     newStyle.textContent = style.textContent;
                     document.head.appendChild(newStyle);
                 });
@@ -1363,22 +1397,52 @@
                     // Set the content
                     content.innerHTML = scheduleContent.innerHTML;
 
+                    // Immediately hide admin-only elements before scripts load
+                    setTimeout(() => {
+                        const saveBtn = document.getElementById('schedule-save-btn');
+                        if (saveBtn) saveBtn.style.display = 'none';
+
+                        const addSubjectCard = document.querySelector('.add-subject-card');
+                        if (addSubjectCard) addSubjectCard.style.display = 'none';
+
+                        const manualHint = document.getElementById('manual-hint');
+                        if (manualHint) manualHint.style.display = 'none';
+
+                        const filterToggle = document.getElementById('filter-toggle');
+                        if (filterToggle) {
+                            const labelParent = filterToggle.closest('label');
+                            if (labelParent) {
+                                labelParent.style.display = 'none';
+                            }
+                        }
+                    }, 0);
+
                     // Extract and execute scripts
                     const scripts = tempDiv.querySelectorAll('script');
-                    scripts.forEach(script => {
-                        const newScript = document.createElement('script');
+
+                    scripts.forEach((script, index) => {
                         if (script.src) {
-                            newScript.src = script.src;
+                            // External script - only load if not already loaded
+                            const existingScript = document.querySelector(`script[src="${script.src}"]`);
+                            if (!existingScript) {
+                                const newScript = document.createElement('script');
+                                newScript.setAttribute('data-schedule-script', 'true');
+                                newScript.src = script.src;
+                                document.body.appendChild(newScript);
+                            }
                         } else {
-                            newScript.textContent = script.textContent;
+                            // Inline script - wrap in IIFE to prevent redeclaration
+                            const newScript = document.createElement('script');
+                            newScript.setAttribute('data-schedule-script', 'true');
+                            newScript.textContent = `(function() { ${script.textContent} })();`;
+                            document.body.appendChild(newScript);
                         }
-                        document.body.appendChild(newScript);
                     });
 
-                    // Apply read-only modifications after content loads
+                    // Apply full read-only modifications after content loads
                     setTimeout(() => {
                         makeScheduleReadOnly(currentMember);
-                    }, 1000);
+                    }, 1500);
                 } else {
                     content.innerHTML = `
                         <div class="placeholder-section">
@@ -1411,9 +1475,15 @@
             const manualHint = document.getElementById('manual-hint');
             if (manualHint) manualHint.style.display = 'none';
 
-            // Hide the "Enable Filters" button
+            // Hide the "Enable Filters" button and its container (the label element)
             const filterToggle = document.getElementById('filter-toggle');
-            if (filterToggle) filterToggle.style.display = 'none';
+            if (filterToggle) {
+                // The toggle is inside a label, which is what we need to hide
+                const labelParent = filterToggle.closest('label');
+                if (labelParent) {
+                    labelParent.style.display = 'none';
+                }
+            }
 
             // Disable all timetable editing
             const timetable = document.getElementById('sched-table');
@@ -1441,15 +1511,17 @@
             if (currentMember && currentMember.fullName) {
                 const profSelect = document.getElementById('sf-professor');
                 if (profSelect) {
-                    // Set the filter to this professor
-                    const option = Array.from(profSelect.options).find(opt => opt.textContent.includes(currentMember.fullName));
-                    if (option) {
-                        profSelect.value = option.value;
-                        profSelect.dispatchEvent(new Event('change'));
-                    }
-                    // Disable the dropdown
-                    profSelect.disabled = true;
-                    profSelect.style.background = '#f9fafb';
+                    // Wait for the professor dropdown to be populated
+                    setTimeout(() => {
+                        const option = Array.from(profSelect.options).find(opt => opt.textContent.includes(currentMember.fullName));
+                        if (option) {
+                            profSelect.value = option.value;
+                            profSelect.dispatchEvent(new Event('change'));
+                        }
+                        // Disable the dropdown
+                        profSelect.disabled = true;
+                        profSelect.style.background = '#f9fafb';
+                    }, 1000);
                 }
             }
 
@@ -1520,6 +1592,83 @@
                                     <span style="margin-left:auto;font-weight:700;color:#111827;">6</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FSR Section -->
+                <div class="chart-card" style="margin-top:24px;">
+                    <div class="chart-header" style="margin-bottom:20px;">
+                        <div>
+                            <div class="chart-title">Faculty Service Record</div>
+                            <div class="chart-subtitle">2nd Semester 2025-2026</div>
+                        </div>
+                    </div>
+                    
+                    <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+                        <!-- FSR Header Table -->
+                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                            <tbody>
+                                <tr>
+                                    <td style="padding:12px;border:1px solid #e5e7eb;width:50%;vertical-align:top;">
+                                        <div style="margin-bottom:12px;">
+                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">PRINTED NAME</div>
+                                            <div style="display:grid;grid-template-columns:2fr 2fr 1fr;gap:8px;">
+                                                <div>
+                                                    <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:2px;">Family Name</label>
+                                                    <input type="text" value="${memberData?.last || ''}" readonly 
+                                                        style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
+                                                </div>
+                                                <div>
+                                                    <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:2px;">Given Name</label>
+                                                    <input type="text" value="${memberData?.first || ''}" readonly 
+                                                        style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
+                                                </div>
+                                                <div>
+                                                    <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:2px;">M.I.</label>
+                                                    <input type="text" value="${memberData?.middle ? memberData.middle.charAt(0) + '.' : ''}" readonly 
+                                                        style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">HOME DEPARTMENT</div>
+                                            <input type="text" value="DCERP" readonly 
+                                                style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
+                                        </div>
+                                    </td>
+                                    <td style="padding:12px;border:1px solid #e5e7eb;width:50%;vertical-align:top;">
+                                        <div style="margin-bottom:12px;">
+                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">RANK</div>
+                                            <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+                                                <input type="text" value="${memberData?.rank || 'Associate Professor 2'}" readonly 
+                                                    style="flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
+                                            </div>
+                                            <div style="display:flex;gap:16px;font-size:0.85rem;">
+                                                <label style="display:flex;align-items:center;gap:6px;cursor:default;">
+                                                    <input type="checkbox" checked disabled style="cursor:default;">
+                                                    <span>Full Time</span>
+                                                </label>
+                                                <label style="display:flex;align-items:center;gap:6px;cursor:default;">
+                                                    <input type="checkbox" disabled style="cursor:default;">
+                                                    <span>Part Time</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">HOME COLLEGE</div>
+                                            <input type="text" value="CHE" readonly 
+                                                style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <!-- FSR Content Placeholder -->
+                        <div style="padding:40px 20px;text-align:center;background:#fafafa;border-top:1px solid #e5e7eb;">
+                            <p style="font-size:0.95rem;font-weight:600;color:#6b7280;margin:0 0 4px;">FSR Table Coming Soon</p>
+                            <p style="font-size:0.82rem;color:#9ca3af;margin:0;">The detailed FSR table will be added here</p>
                         </div>
                     </div>
                 </div>

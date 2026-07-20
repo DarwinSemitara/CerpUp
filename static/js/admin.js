@@ -160,5 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.classList.contains('modal')) {
             e.target.classList.remove('open');
         }
+        // Close logout modal when clicking outside
+        if (e.target.id === 'logout-modal') {
+            closeLogoutModal();
+        }
     });
 });

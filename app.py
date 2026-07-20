@@ -2,6 +2,7 @@
 from dotenv import load_dotenv
 from services.supabase_service import verify_access_token as verify_id_token, db
 from services.cloudinary_service import upload_member_photo, delete_member_photo
+from datetime import datetime
 import os
 import uuid
 
@@ -245,18 +246,33 @@ def section_events():
                            active_page='events')
 
 
-@app.route('/data/')
+@app.route('/fsr/')
 @login_required
-def section_data():
+def section_fsr():
     if is_partial():
-        return render_template('partials/placeholder.html', label='Data')
+        return render_template('partials/placeholder.html', label='FSR')
     email = session.get('email', '')
     initial = email[0].upper() if email else 'A'
     return render_template('pages/placeholder.html',
                            email=email,
                            initial=initial,
-                           page_title='Data',
-                           active_page='data')
+                           page_title='FSR',
+                           active_page='fsr')
+
+
+# Keep old data route for backwards compatibility (redirects to FSR)
+@app.route('/data/')
+@login_required
+def section_data():
+    if is_partial():
+        return render_template('partials/placeholder.html', label='FSR')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/placeholder.html',
+                           email=email,
+                           initial=initial,
+                           page_title='FSR',
+                           active_page='fsr')
 
 
 @app.route('/manage/')
@@ -579,27 +595,61 @@ def create_member_account(member_id):
 @app.route('/api/research', methods=['GET'])
 @login_required
 def get_research():
-    """Get all research papers for the current logged-in member."""
+    """Get all research papers for the current logged-in member OR all research for admin."""
     try:
         uid = session.get('uid')
+        role = session.get('role')  # Get role directly from session
+        print(f"🔍 GET Research - UID from session: {uid}, Role: {role}")
+
         if not uid:
+            print("❌ No UID in session!")
             return jsonify({'error': 'Not authenticated'}), 401
 
-        # Get research papers for this member (without order_by to avoid index requirement)
-        docs = db.collection('research').where('uid', '==', uid).stream()
-        research_list = []
+        # Check if user is admin (check session role first for hardcoded admin)
+        print(f"🔍 Checking if user is admin...")
+        is_admin = False
 
+        if role == 'admin':
+            # Admin from session (hardcoded or from database)
+            is_admin = True
+            print(f"🔐 Is admin (from session): True")
+        else:
+            # For regular users, double-check from database
+            user_doc = db.collection('users').where(
+                'uid', '==', uid).limit(1).stream()
+            user_list = [d.to_dict() for d in user_doc]
+            print(f"👤 User list from DB: {user_list}")
+            is_admin = user_list and user_list[0].get('role') == 'admin'
+            print(f"🔐 Is admin (from DB): {is_admin}")
+
+        if is_admin:
+            # Admin sees ALL research from all members
+            print("📚 Fetching ALL research (admin view)...")
+            docs = db.collection('research').stream()
+        else:
+            # Members see only their own research
+            print(f"📚 Fetching research for UID: {uid} (member view)...")
+            docs = db.collection('research').where('uid', '==', uid).stream()
+
+        research_list = []
         for doc in docs:
             data = doc.to_dict()
             data['id'] = doc.id
             research_list.append(data)
+            print(
+                f"  📄 Added research: {data.get('title', 'N/A')} (ID: {data.get('id')})")
+
+        print(f"✅ Found {len(research_list)} research items")
 
         # Sort in Python instead of Firestore
         research_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
 
+        print(f"📤 Returning {len(research_list)} research items to client")
         return jsonify(research_list)
     except Exception as e:
-        print(f"Error fetching research: {e}")
+        print(f"❌ Error fetching research: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -824,6 +874,109 @@ def delete_extension(extension_id):
         return jsonify({'status': 'ok'})
     except Exception as e:
         print(f"Error deleting extension: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Admin Extensions API ──────────────────────────────────────────────
+
+@app.route('/api/admin/extensions', methods=['GET'])
+@login_required
+def get_all_extensions():
+    """Get all extension activities from all members (admin view)."""
+    try:
+        # Get all extensions without filter
+        docs = db.collection('extensions').stream()
+        extensions_list = []
+
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            extensions_list.append(data)
+
+        # Sort in Python instead of Firestore (by submission date, most recent first)
+        extensions_list.sort(
+            key=lambda x: x.get('created_at', ''), reverse=True)
+
+        return jsonify(extensions_list)
+    except Exception as e:
+        print(f"Error fetching all extensions: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ── FSR Generation API ──────────────────────────────────────────────
+
+@app.route('/api/generate-fsr/<member_id>', methods=['POST'])
+@login_required
+def generate_fsr(member_id):
+    """Generate Faculty Service Record for a member."""
+    try:
+        from services.fsr_generator import generate_member_fsr
+
+        data = request.get_json() or {}
+        semester = data.get('semester', '2nd Semester')
+        academic_year = data.get('academic_year', '2025-2026')
+
+        # Generate FSR
+        output_path = generate_member_fsr(member_id, semester, academic_year)
+
+        # Return file for download
+        from flask import send_file
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name=os.path.basename(output_path),
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        print(f"Error generating FSR: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/generate-fsr-all', methods=['POST'])
+@login_required
+def generate_fsr_all():
+    """Generate FSR for all members (admin only)."""
+    try:
+        from services.fsr_generator import FSRGenerator
+        import zipfile
+        from io import BytesIO
+
+        data = request.get_json() or {}
+        semester = data.get('semester', '2nd Semester')
+        academic_year = data.get('academic_year', '2025-2026')
+
+        # Get all members
+        members = db.collection('members').stream()
+
+        # Create zip file in memory
+        memory_file = BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            generator = FSRGenerator()
+
+            for member_doc in members:
+                member_id = member_doc.id
+                try:
+                    fsr_path = generator.generate_fsr_for_member(
+                        member_id, semester, academic_year)
+                    # Add to zip
+                    zf.write(fsr_path, os.path.basename(fsr_path))
+                    # Clean up individual file
+                    os.remove(fsr_path)
+                except Exception as e:
+                    print(f"Error generating FSR for member {member_id}: {e}")
+                    continue
+
+        memory_file.seek(0)
+
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        return send_file(
+            memory_file,
+            as_attachment=True,
+            download_name=f'FSR_All_Members_{timestamp}.zip',
+            mimetype='application/zip'
+        )
+    except Exception as e:
+        print(f"Error generating FSR for all members: {e}")
         return jsonify({'error': str(e)}), 500
 
 

@@ -1,118 +1,692 @@
 <style>
     .extensions-container {
-        padding: 24px;
-        max-width: 1200px;
+        max-width: 1400px;
         margin: 0 auto;
+        padding: 0;
     }
 
-    .extensions-header {
-        margin-bottom: 32px;
-    }
-
-    .extensions-header h1 {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #111827;
-        margin: 0 0 8px 0;
-    }
-
-    .extensions-header p {
-        font-size: 1rem;
-        color: #6b7280;
-        margin: 0;
-    }
-
-    .extensions-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 24px;
-        margin-top: 24px;
-    }
-
-    .extension-card {
+    .extensions-main-card {
         background: white;
         border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 24px;
-        transition: all 0.2s;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .extensions-filters-toolbar {
+        padding: 18px 24px;
+        border-bottom: 2px solid #e5e7eb;
+        background: #f9fafb;
+        display: flex;
+        gap: 14px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .extensions-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .extensions-filter-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .extensions-filter-select {
+        padding: 8px 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background: white;
+        color: #374151;
+        outline: none;
         cursor: pointer;
-        text-decoration: none;
-        color: inherit;
-        display: block;
+        min-width: 180px;
+        transition: all 0.15s;
     }
 
-    .extension-card:hover {
+    .extensions-filter-select:focus {
         border-color: #6b0f1a;
-        box-shadow: 0 4px 12px rgba(107, 15, 26, 0.1);
-        transform: translateY(-2px);
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
     }
 
-    .extension-icon {
-        width: 48px;
-        height: 48px;
-        background: #fdf2f3;
-        border-radius: 12px;
+    .extensions-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .extensions-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+    }
+
+    .extensions-table thead {
+        background: #f9fafb;
+    }
+
+    .extensions-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid #e5e7eb;
+        border-right: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .extensions-table th:last-child {
+        border-right: none;
+    }
+
+    .extensions-table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        transition: background 0.15s;
+        cursor: pointer;
+    }
+
+    .extensions-table tbody tr:hover {
+        background: #fef2f2;
+    }
+
+    .extensions-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .extensions-table td {
+        padding: 13px 16px;
+        color: #374151;
+        vertical-align: middle;
+        border-right: 1px solid #f3f4f6;
+    }
+
+    .extensions-table td:last-child {
+        border-right: none;
+    }
+
+    .extensions-title-cell {
+        font-weight: 600;
+        color: #111827;
+        max-width: 350px;
+    }
+
+    .extension-type-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .badge-extensions {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-community_service {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-training {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-creative_work {
+        background: #fce7f3;
+        color: #831843;
+    }
+
+    .extensions-empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: #9ca3af;
+    }
+
+    .extensions-empty-state svg {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        opacity: 0.3;
+    }
+
+    .extensions-empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+
+    .extensions-empty-state-text {
+        font-size: 0.875rem;
+    }
+
+    /* Detail View Modal */
+    .extensions-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 16px;
-        color: #6b0f1a;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
     }
 
-    .extension-card h3 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #111827;
-        margin: 0 0 8px 0;
+    .extensions-modal.open {
+        opacity: 1;
+        pointer-events: all;
     }
 
-    .extension-card p {
-        font-size: 0.875rem;
-        color: #6b7280;
-        line-height: 1.5;
-        margin: 0;
-    }
-
-    .extension-arrow {
-        display: inline-block;
-        margin-left: 8px;
+    .extensions-modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 900px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        transform: translateY(20px);
         transition: transform 0.2s;
     }
 
-    .extension-card:hover .extension-arrow {
-        transform: translateX(4px);
+    .extensions-modal.open .extensions-modal-content {
+        transform: translateY(0);
+    }
+
+    .extensions-modal-header {
+        padding: 32px 36px 24px;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .extensions-modal-title-section {
+        flex: 1;
+    }
+
+    .extensions-modal-type-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 12px;
+    }
+
+    .extensions-modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1.4;
+        margin: 0;
+    }
+
+    .extensions-modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: none;
+        background: #f3f4f6;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        font-size: 1.25rem;
+        transition: all 0.15s;
+        flex-shrink: 0;
+    }
+
+    .extensions-modal-close:hover {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .extensions-modal-body {
+        padding: 32px 36px;
+    }
+
+    .extensions-detail-section {
+        margin-bottom: 32px;
+    }
+
+    .extensions-detail-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .extensions-detail-section-title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #6b0f1a;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .extensions-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .extensions-detail-item {
+        background: #f9fafb;
+        padding: 16px 18px;
+        border-radius: 8px;
+        border: 1px solid #f3f4f6;
+    }
+
+    .extensions-detail-item-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+    }
+
+    .extensions-detail-item-value {
+        font-size: 0.95rem;
+        color: #111827;
+        font-weight: 500;
+        line-height: 1.5;
+    }
+
+    .extensions-detail-item-full {
+        grid-column: 1 / -1;
+    }
+
+    .extensions-loading-spinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        color: #9ca3af;
+    }
+
+    .extensions-spinner-ring {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #f3f4f6;
+        border-top-color: #6b0f1a;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
     }
 </style>
 
 <div class="extensions-container">
-    <div class="extensions-header">
-        <h1>Extensions</h1>
-        <p>Explore CERP's extension programs and community initiatives</p>
-    </div>
-
-    <div class="extensions-grid">
-        <a href="/extensions/public-engagements/" class="extension-card">
-            <div class="extension-icon">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
+    <div class="extensions-main-card">
+        <!-- Filters Toolbar -->
+        <div class="extensions-filters-toolbar">
+            <div class="extensions-filter-group">
+                <label class="extensions-filter-label">Type</label>
+                <select class="extensions-filter-select" id="ext-filter-type" onchange="applyExtensionFilters()">
+                    <option value="">All Types</option>
+                    <option value="extensions">Extensions</option>
+                    <option value="community_service">Community Service</option>
+                    <option value="training">Training</option>
+                    <option value="creative_work">Creative Work</option>
+                </select>
             </div>
-            <h3>Public Engagements <span class="extension-arrow">→</span></h3>
-            <p>Community outreach programs, partnerships, and public service initiatives that connect CERP with local
-                communities.</p>
-        </a>
 
-        <a href="/extensions/tap-hsp/" class="extension-card">
-            <div class="extension-icon">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+            <div class="extensions-filter-group">
+                <label class="extensions-filter-label">Submitted By</label>
+                <select class="extensions-filter-select" id="ext-filter-member" onchange="applyExtensionFilters()">
+                    <option value="">All Members</option>
+                </select>
             </div>
-            <h3>TAP-HSP <span class="extension-arrow">→</span></h3>
-            <p>Technical Assistance Program for Higher State Institutions - capacity development, model community
-                building, and praxis initiatives.</p>
-        </a>
+
+            <div class="extensions-filter-group">
+                <label class="extensions-filter-label">Year Submitted</label>
+                <select class="extensions-filter-select" id="ext-filter-year" onchange="applyExtensionFilters()">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Extensions Table -->
+        <div class="extensions-table-wrapper">
+            <table class="extensions-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Submitted By</th>
+                        <th>Role</th>
+                        <th>Co-Workers</th>
+                        <th>Participants</th>
+                        <th>Hours</th>
+                        <th>Duration</th>
+                        <th>Start Date</th>
+                        <th>Funding Agency</th>
+                        <th>Credit Units</th>
+                    </tr>
+                </thead>
+                <tbody id="extensions-tbody">
+                    <tr>
+                        <td colspan="11">
+                            <div class="extensions-loading-spinner">
+                                <div class="extensions-spinner-ring"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty State -->
+        <div class="extensions-empty-state" id="extensions-empty-state" style="display: none;">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            <div class="extensions-empty-state-title">No Extensions Found</div>
+            <div class="extensions-empty-state-text">No extension submissions match your filters.</div>
+        </div>
     </div>
 </div>
+
+<!-- Extension Detail Modal -->
+<div class="extensions-modal" id="extensions-modal">
+    <div class="extensions-modal-content">
+        <div class="extensions-modal-header">
+            <div class="extensions-modal-title-section">
+                <div class="extensions-modal-type-badge" id="ext-modal-type-badge"></div>
+                <h2 class="extensions-modal-title" id="ext-modal-title">Extension Details</h2>
+            </div>
+            <button class="extensions-modal-close" onclick="closeExtensionModal()">✕</button>
+        </div>
+        <div class="extensions-modal-body" id="ext-modal-body">
+            <!-- Details will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        if (window._extensionsAdminPageInit) return;
+        window._extensionsAdminPageInit = true;
+
+        let allExtensions = [];
+        let filteredExtensions = [];
+
+        // Fetch extensions data (admin view - all members)
+        async function loadExtensions() {
+            try {
+                console.log('🔄 Fetching extensions data from /api/admin/extensions...');
+                const response = await fetch('/api/admin/extensions');
+                console.log('📡 Response status:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Response not OK:', errorText);
+                    throw new Error('Failed to fetch extensions');
+                }
+
+                allExtensions = await response.json();
+                console.log('✅ Received extensions data:', allExtensions.length, 'items');
+                console.log('📊 Sample data:', allExtensions[0]);
+
+                // Sort by submission date (most recent first)
+                allExtensions.sort((a, b) => {
+                    const dateA = new Date(a.created_at || 0);
+                    const dateB = new Date(b.created_at || 0);
+                    return dateB - dateA;
+                });
+
+                filteredExtensions = [...allExtensions];
+
+                populateExtensionFilters();
+                renderExtensionTable();
+            } catch (error) {
+                console.error('❌ Error loading extensions:', error);
+                showExtensionEmptyState();
+            }
+        }
+
+        // Populate filter dropdowns
+        function populateExtensionFilters() {
+            // Populate members
+            const members = [...new Set(allExtensions.map(e => e.member_name))].filter(Boolean).sort();
+            const memberSelect = document.getElementById('ext-filter-member');
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member;
+                option.textContent = member;
+                memberSelect.appendChild(option);
+            });
+
+            // Populate years (based on submission date)
+            const years = [...new Set(allExtensions.map(e => {
+                const date = e.created_at;
+                return date ? new Date(date).getFullYear() : null;
+            }).filter(y => y))].sort((a, b) => b - a);
+
+            const yearSelect = document.getElementById('ext-filter-year');
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+        }
+
+        // Apply filters
+        window.applyExtensionFilters = function () {
+            const typeFilter = document.getElementById('ext-filter-type').value;
+            const memberFilter = document.getElementById('ext-filter-member').value;
+            const yearFilter = document.getElementById('ext-filter-year').value;
+
+            filteredExtensions = allExtensions.filter(e => {
+                // Type filter
+                if (typeFilter && e.extension_type !== typeFilter) return false;
+
+                // Member filter
+                if (memberFilter && e.member_name !== memberFilter) return false;
+
+                // Year filter (based on submission date)
+                if (yearFilter) {
+                    const date = e.created_at;
+                    const year = date ? new Date(date).getFullYear() : null;
+                    if (year != yearFilter) return false;
+                }
+
+                return true;
+            });
+
+            renderExtensionTable();
+        };
+
+        // Render table
+        function renderExtensionTable() {
+            const tbody = document.getElementById('extensions-tbody');
+            const emptyState = document.getElementById('extensions-empty-state');
+            const tableWrapper = document.querySelector('.extensions-table-wrapper');
+
+            if (filteredExtensions.length === 0) {
+                tableWrapper.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            tableWrapper.style.display = 'block';
+            emptyState.style.display = 'none';
+
+            tbody.innerHTML = filteredExtensions.map(e => {
+                const typeClass = `badge-${e.extension_type || 'extensions'}`;
+                const typeName = (e.extension_type || 'extensions').replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+                const startDate = e.start_date
+                    ? new Date(e.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : 'Not specified';
+
+                return `
+          <tr onclick="openExtensionModal('${e.id}')">
+            <td>
+              <span class="extension-type-badge ${typeClass}">${typeName}</span>
+            </td>
+            <td class="extensions-title-cell">${e.title || 'Untitled Extension'}</td>
+            <td>${e.member_name || 'Unknown'}</td>
+            <td>${e.role || 'Not specified'}</td>
+            <td>${e.co_workers || 'Not specified'}</td>
+            <td>${e.participants || 'Not specified'}</td>
+            <td>${e.hours || 'Not specified'}</td>
+            <td>${e.duration || 'Not specified'}</td>
+            <td>${startDate}</td>
+            <td>${e.funding_agency || 'Not specified'}</td>
+            <td>${e.credit_units || 'Not specified'}</td>
+          </tr>
+        `;
+            }).join('');
+        }
+
+        // Show empty state
+        function showExtensionEmptyState() {
+            document.querySelector('.extensions-table-wrapper').style.display = 'none';
+            document.getElementById('extensions-empty-state').style.display = 'block';
+        }
+
+        // Open extension detail modal
+        window.openExtensionModal = function (extensionId) {
+            const extension = allExtensions.find(e => e.id === extensionId);
+            if (!extension) return;
+
+            const modal = document.getElementById('extensions-modal');
+            const modalTitle = document.getElementById('ext-modal-title');
+            const modalTypeBadge = document.getElementById('ext-modal-type-badge');
+            const modalBody = document.getElementById('ext-modal-body');
+
+            // Set title and type badge
+            modalTitle.textContent = extension.title || 'Untitled Extension';
+
+            const typeClass = `badge-${extension.extension_type || 'extensions'}`;
+            const typeName = (extension.extension_type || 'extensions').replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            modalTypeBadge.className = `extensions-modal-type-badge extension-type-badge ${typeClass}`;
+            modalTypeBadge.textContent = typeName;
+
+            // Format dates
+            const startDate = extension.start_date
+                ? new Date(extension.start_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                : 'Not specified';
+
+            const endDate = extension.end_date
+                ? new Date(extension.end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                : 'Not specified';
+
+            const submittedDate = extension.created_at
+                ? new Date(extension.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'Not specified';
+
+            // Build modal content
+            modalBody.innerHTML = `
+        <div class="extensions-detail-section">
+          <div class="extensions-detail-section-title">Basic Information</div>
+          <div class="extensions-detail-grid">
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Submitted By</div>
+              <div class="extensions-detail-item-value">${extension.member_name || 'Unknown'}</div>
+            </div>
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Role</div>
+              <div class="extensions-detail-item-value">${extension.role || 'Not specified'}</div>
+            </div>
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Credit Units</div>
+              <div class="extensions-detail-item-value">${extension.credit_units || 'Not specified'}</div>
+            </div>
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Date Submitted</div>
+              <div class="extensions-detail-item-value">${submittedDate}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="extensions-detail-section">
+          <div class="extensions-detail-section-title">Activity Details</div>
+          <div class="extensions-detail-grid">
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Participants</div>
+              <div class="extensions-detail-item-value">${extension.participants || 'Not specified'}</div>
+            </div>
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Hours</div>
+              <div class="extensions-detail-item-value">${extension.hours || 'Not specified'}</div>
+            </div>
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Duration</div>
+              <div class="extensions-detail-item-value">${extension.duration || 'Not specified'}</div>
+            </div>
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">Start Date</div>
+              <div class="extensions-detail-item-value">${startDate}</div>
+            </div>
+            <div class="extensions-detail-item">
+              <div class="extensions-detail-item-label">End Date</div>
+              <div class="extensions-detail-item-value">${endDate}</div>
+            </div>
+            ${extension.funding_agency ? `
+              <div class="extensions-detail-item">
+                <div class="extensions-detail-item-label">Funding Agency</div>
+                <div class="extensions-detail-item-value">${extension.funding_agency}</div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        ${extension.co_workers ? `
+          <div class="extensions-detail-section">
+            <div class="extensions-detail-section-title">Collaborators</div>
+            <div class="extensions-detail-grid">
+              <div class="extensions-detail-item extensions-detail-item-full">
+                <div class="extensions-detail-item-label">Co-Workers</div>
+                <div class="extensions-detail-item-value">${extension.co_workers}</div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      `;
+
+            modal.classList.add('open');
+        };
+
+        // Close modal
+        window.closeExtensionModal = function () {
+            document.getElementById('extensions-modal').classList.remove('open');
+        };
+
+        // Close modal on outside click
+        document.getElementById('extensions-modal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeExtensionModal();
+            }
+        });
+
+        // Initialize
+        loadExtensions();
+    })();
+</script>

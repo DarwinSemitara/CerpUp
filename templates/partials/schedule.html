@@ -2753,7 +2753,9 @@
                     schedules = res.ok ? await res.json() : [];
                     window.schedules = schedules; // Update global reference
                     console.log('📥 Loaded', schedules.length, 'schedules from database');
-                    console.log('Sample schedule:', schedules[0]);
+                    if (schedules.length > 0) {
+                        console.log('Sample schedule:', schedules[0]);
+                    }
                 } catch (e) {
                     console.error('❌ Failed to load schedules:', e);
                     schedules = [];
@@ -2764,6 +2766,7 @@
                 applyFilters();
                 refreshFilterOptions();
                 renderTimetable();
+                renderReport();
                 if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
 
                 // Recalculate allocated units after loading schedules
@@ -2772,6 +2775,11 @@
                     renderDraggableBlocks();
                     populateSubjectDropdowns(); // Update dropdown to show fully allocated subjects
                 }
+
+                // Apply initial filter to trigger FIC status update
+                setTimeout(function () {
+                    applySchedFilter();
+                }, 100);
             }
 
             // Validation function for schedule conflicts and unit limits
@@ -3073,6 +3081,23 @@
 
             function refreshFilterOptions() {
                 console.log('refreshFilterOptions called, schedules count:', schedules.length);
+                console.log('staffData available:', staffData.length, 'faculty members');
+
+                // If staffData is empty, try to reload it
+                if (staffData.length === 0) {
+                    console.warn('⚠️ staffData is empty, attempting to reload...');
+                    loadStaffData().then(function () {
+                        // Recursively call after loading
+                        if (staffData.length > 0) {
+                            refreshFilterOptions();
+                        } else {
+                            console.error('❌ Failed to load staff data, showing "No faculty found"');
+                            // Still populate with empty data to show "No faculty found"
+                            populateFilterDropdowns([]);
+                        }
+                    });
+                    return;
+                }
 
                 // Get unique professors from staffData (not schedules)
                 var profs = staffData.map(function (staff) {
@@ -3084,6 +3109,10 @@
                     return fullName;
                 }).filter(function (p) { return p; }).sort();
 
+                populateFilterDropdowns(profs);
+            }
+
+            function populateFilterDropdowns(profs) {
                 console.log('Professors from staff:', profs);
 
                 var subjs = [...new Set(schedules.map(function (s) { return s.subjCode + ' - ' + s.subjName; }))].sort();
@@ -4379,7 +4408,19 @@
                 }
             }
 
-            loadSchedules();
+            // Initialize: Load staff data first, then schedules
+            (async function initializeSchedulePage() {
+                console.log('🚀 Initializing schedule page...');
+
+                // Step 1: Load staff data first
+                await loadStaffData();
+                populateSubjectDropdowns();
+
+                // Step 2: Then load schedules and render
+                await loadSchedules();
+
+                console.log('✅ Schedule page initialization complete');
+            })();
 
             // ═══ Add Subject & Staging Area ═══
             var unscheduledSubjects = [];
@@ -4851,13 +4892,16 @@
                         } else {
                             console.warn('⚠️ No faculty members found. Please add faculty first in the Faculty section.');
                         }
+                        return true;
                     } else {
                         staffData = [];
                         console.error('❌ Failed to load staff: HTTP', res.status);
+                        return false;
                     }
                 } catch (e) {
                     staffData = [];
                     console.error('❌ Failed to load staff data:', e);
+                    return false;
                 }
             }
 
@@ -4941,15 +4985,6 @@
                     profSelect.innerHTML = '<option value="">Select Subject First</option>';
                 }
             };
-
-            // Initialize staff data and populate dropdowns
-            loadStaffData().then(function () {
-                populateSubjectDropdowns();
-                // Refresh filter options now that staff data is loaded
-                if (typeof refreshFilterOptions === 'function') {
-                    refreshFilterOptions();
-                }
-            });
 
             // Expose unit configuration functions globally
             window.toggleUnitConfig = toggleUnitConfig;
