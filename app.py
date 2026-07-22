@@ -5,6 +5,9 @@ from services.cloudinary_service import upload_member_photo, delete_member_photo
 from datetime import datetime
 import os
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -250,10 +253,10 @@ def section_events():
 @login_required
 def section_fsr():
     if is_partial():
-        return render_template('partials/placeholder.html', label='FSR')
+        return render_template('partials/fsr.html')
     email = session.get('email', '')
     initial = email[0].upper() if email else 'A'
-    return render_template('pages/placeholder.html',
+    return render_template('pages/fsr.html',
                            email=email,
                            initial=initial,
                            page_title='FSR',
@@ -265,10 +268,10 @@ def section_fsr():
 @login_required
 def section_data():
     if is_partial():
-        return render_template('partials/placeholder.html', label='FSR')
+        return render_template('partials/fsr.html')
     email = session.get('email', '')
     initial = email[0].upper() if email else 'A'
-    return render_template('pages/placeholder.html',
+    return render_template('pages/fsr.html',
                            email=email,
                            initial=initial,
                            page_title='FSR',
@@ -297,15 +300,85 @@ def section_instructions():
 @app.route('/other/')
 @login_required
 def section_other():
+    return redirect(url_for('section_che'))
+
+
+@app.route('/che/')
+@login_required
+def section_che():
     if is_partial():
-        return render_template('partials/placeholder.html', label='Other')
+        return render_template('partials/che.html')
     email = session.get('email', '')
     initial = email[0].upper() if email else 'A'
-    return render_template('pages/placeholder.html',
+    return render_template('pages/che.html',
                            email=email,
                            initial=initial,
-                           page_title='Other',
-                           active_page='other')
+                           page_title='CHE Assistant',
+                           active_page='che')
+
+
+# ── CHE AI Chat API ──────────────────────────────────────────
+
+@app.route('/api/che/chat', methods=['POST'])
+@login_required
+def che_chat():
+    """
+    CHE AI chat endpoint.
+    Accepts: { "message": str, "history": [...], "include_context": bool }
+    Returns: { "reply": str, "error": bool }
+    """
+    try:
+        from services.che_service import chat as che_chat_fn
+
+        data = request.get_json(silent=True) or {}
+        message = data.get('message', '').strip()
+        history = data.get('history', [])
+        include_context = data.get('include_context', False)
+
+        if not message:
+            return jsonify({'reply': 'Please send a message.', 'error': True}), 400
+
+        # Optionally inject live system data for context-aware answers
+        context_data = {}
+        if include_context:
+            try:
+                # Members
+                member_docs = db.collection('members').stream()
+                context_data['members'] = [
+                    {'id': d.id, **d.to_dict()} for d in member_docs]
+
+                # Research
+                research_docs = db.collection('research').stream()
+                context_data['research'] = [
+                    {'id': d.id, **d.to_dict()} for d in research_docs]
+
+                # Extensions
+                ext_docs = db.collection('extensions').stream()
+                context_data['extensions'] = [
+                    {'id': d.id, **d.to_dict()} for d in ext_docs]
+
+                # Schedules
+                sched_docs = db.collection('schedules').stream()
+                context_data['schedules'] = [
+                    {'id': d.id, **d.to_dict()} for d in sched_docs]
+
+                # News
+                news_docs = db.collection('news').stream()
+                context_data['news'] = [
+                    {'id': d.id, **d.to_dict()} for d in news_docs]
+            except Exception as ctx_err:
+                logger.warning(f"CHE context fetch partial failure: {ctx_err}")
+
+        result = che_chat_fn(
+            message=message,
+            history=history,
+            context_data=context_data if include_context else None
+        )
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"CHE chat route error: {e}")
+        return jsonify({'reply': 'An unexpected error occurred.', 'error': True}), 500
 
 
 # ── Staff API ────────────────────────────────────────────────
@@ -599,7 +672,10 @@ def get_research():
     try:
         uid = session.get('uid')
         role = session.get('role')  # Get role directly from session
-        print(f"🔍 GET Research - UID from session: {uid}, Role: {role}")
+        # Optional filter by member_id
+        member_id = request.args.get('member_id')
+        print(
+            f"🔍 GET Research - UID from session: {uid}, Role: {role}, Member filter: {member_id}")
 
         if not uid:
             print("❌ No UID in session!")
@@ -623,9 +699,15 @@ def get_research():
             print(f"🔐 Is admin (from DB): {is_admin}")
 
         if is_admin:
-            # Admin sees ALL research from all members
-            print("📚 Fetching ALL research (admin view)...")
-            docs = db.collection('research').stream()
+            # Admin can filter by member_id or see all research
+            if member_id:
+                print(
+                    f"📚 Fetching research for member: {member_id} (admin view)...")
+                docs = db.collection('research').where(
+                    'uid', '==', member_id).stream()
+            else:
+                print("📚 Fetching ALL research (admin view)...")
+                docs = db.collection('research').stream()
         else:
             # Members see only their own research
             print(f"📚 Fetching research for UID: {uid} (member view)...")
@@ -774,16 +856,39 @@ def delete_research(research_id):
 @app.route('/api/extensions', methods=['GET'])
 @login_required
 def get_extensions():
-    """Get all extension activities for the current logged-in member."""
+    """Get all extension activities for the current logged-in member OR filtered by member_id for admin."""
     try:
         uid = session.get('uid')
+        role = session.get('role')
+        # Optional filter by member_id
+        member_id = request.args.get('member_id')
+
         if not uid:
             return jsonify({'error': 'Not authenticated'}), 401
 
-        # Get extensions for this member (without order_by to avoid index requirement)
-        docs = db.collection('extensions').where('uid', '==', uid).stream()
-        extensions_list = []
+        # Check if user is admin
+        is_admin = False
+        if role == 'admin':
+            is_admin = True
+        else:
+            user_doc = db.collection('users').where(
+                'uid', '==', uid).limit(1).stream()
+            user_list = [d.to_dict() for d in user_doc]
+            is_admin = user_list and user_list[0].get('role') == 'admin'
 
+        # Get extensions based on admin status and filter
+        if is_admin and member_id:
+            # Admin filtering by specific member
+            docs = db.collection('extensions').where(
+                'uid', '==', member_id).stream()
+        elif is_admin:
+            # Admin viewing all extensions
+            docs = db.collection('extensions').stream()
+        else:
+            # Regular member viewing own extensions
+            docs = db.collection('extensions').where('uid', '==', uid).stream()
+
+        extensions_list = []
         for doc in docs:
             data = doc.to_dict()
             data['id'] = doc.id

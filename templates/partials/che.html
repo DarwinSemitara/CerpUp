@@ -1,0 +1,755 @@
+<div class="che-chat-container">
+    <!-- Chat Header -->
+    <div class="che-header">
+        <div class="che-header-left">
+            <div class="che-avatar">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.798-1.442 2.798H4.24c-1.47 0-2.443-1.798-1.442-2.798L4.2 15.3" />
+                </svg>
+            </div>
+            <div>
+                <div class="che-name">CHE Assistant</div>
+                <div class="che-status">
+                    <span class="che-status-dot" id="che-status-dot"></span>
+                    <span id="che-status-text">Ready</span>
+                </div>
+            </div>
+        </div>
+        <div class="che-header-right">
+            <!-- Context toggle -->
+            <label class="che-context-toggle" title="Load live system data into context (members, research, schedules)">
+                <input type="checkbox" id="che-context-toggle" />
+                <span class="che-toggle-track">
+                    <span class="che-toggle-thumb"></span>
+                </span>
+                <span class="che-toggle-label">Live data</span>
+            </label>
+            <button class="che-clear-btn" onclick="clearCheChat()" title="Clear conversation">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="che-messages" id="che-messages">
+        <!-- Welcome message injected by JS -->
+    </div>
+
+    <!-- Suggested Prompts -->
+    <div class="che-suggestions" id="che-suggestions">
+        <button class="che-suggestion-chip" onclick="sendSuggestion(this)">Summarize recent research</button>
+        <button class="che-suggestion-chip" onclick="sendSuggestion(this)">How many members are registered?</button>
+        <button class="che-suggestion-chip" onclick="sendSuggestion(this)">What is an FSR?</button>
+        <button class="che-suggestion-chip" onclick="sendSuggestion(this)">What extension activities are
+            active?</button>
+    </div>
+
+    <!-- Input Area -->
+    <div class="che-input-area">
+        <div class="che-input-wrap" id="che-input-wrap">
+            <textarea id="che-input" class="che-textarea" placeholder="Ask CHE anything about CERP..." rows="1"
+                onkeydown="handleCheKeydown(event)" oninput="autoResizeChe(this)"></textarea>
+            <button class="che-send-btn" id="che-send-btn" onclick="sendCheMessage()" disabled>
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+            </button>
+        </div>
+        <div class="che-input-hint">
+            <kbd>Enter</kbd> to send &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> for new line
+        </div>
+    </div>
+</div>
+
+<style>
+    .che-chat-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 108px);
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .che-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid #f3f4f6;
+        background: white;
+        flex-shrink: 0;
+    }
+
+    .che-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .che-header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .che-avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .che-avatar svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .che-name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .che-status {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .che-status-dot {
+        width: 7px;
+        height: 7px;
+        background: #22c55e;
+        border-radius: 50%;
+        animation: pulse-dot 2.5s ease-in-out infinite;
+        transition: background 0.3s;
+    }
+
+    .che-status-dot.busy {
+        background: #f59e0b;
+        animation: none;
+    }
+
+    .che-status-dot.error {
+        background: #ef4444;
+        animation: none;
+    }
+
+    @keyframes pulse-dot {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.35;
+        }
+    }
+
+    /* Live data toggle */
+    .che-context-toggle {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .che-context-toggle input {
+        display: none;
+    }
+
+    .che-toggle-track {
+        width: 34px;
+        height: 18px;
+        background: #d1d5db;
+        border-radius: 999px;
+        position: relative;
+        transition: background 0.2s;
+        flex-shrink: 0;
+    }
+
+    .che-context-toggle input:checked~.che-toggle-track {
+        background: #6b0f1a;
+    }
+
+    .che-toggle-thumb {
+        width: 14px;
+        height: 14px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        transition: left 0.2s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    .che-context-toggle input:checked~.che-toggle-track .che-toggle-thumb {
+        left: 18px;
+    }
+
+    .che-toggle-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .che-clear-btn {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 11px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        color: #6b7280;
+        background: white;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .che-clear-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .che-clear-btn:hover {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #dc2626;
+    }
+
+    /* ── Messages ── */
+    .che-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        scroll-behavior: smooth;
+    }
+
+    .che-messages::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .che-messages::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .che-messages::-webkit-scrollbar-thumb {
+        background: #e5e7eb;
+        border-radius: 4px;
+    }
+
+    .che-msg {
+        display: flex;
+        gap: 10px;
+        animation: msg-in 0.2s ease;
+    }
+
+    .che-msg-user {
+        flex-direction: row-reverse;
+    }
+
+    @keyframes msg-in {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .che-msg-avatar {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .che-msg-avatar svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .che-msg-user-avatar {
+        width: 32px;
+        height: 32px;
+        background: #374151;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 700;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .che-msg-content {
+        max-width: 72%;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .che-msg-user .che-msg-content {
+        align-items: flex-end;
+    }
+
+    .che-msg-bubble {
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        color: #374151;
+        background: #f3f4f6;
+        border-bottom-left-radius: 4px;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
+
+    .che-msg-user .che-msg-bubble {
+        background: #6b0f1a;
+        color: white;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 4px;
+    }
+
+    .che-msg-bubble.error-bubble {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .che-msg-time {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        padding: 0 2px;
+    }
+
+    /* Typing dots */
+    .che-typing-dots {
+        display: flex;
+        gap: 4px;
+        padding: 12px 14px;
+        background: #f3f4f6;
+        border-radius: 12px;
+        border-bottom-left-radius: 4px;
+        width: fit-content;
+    }
+
+    .che-typing-dots span {
+        width: 7px;
+        height: 7px;
+        background: #9ca3af;
+        border-radius: 50%;
+        animation: typing-bounce 1.2s ease-in-out infinite;
+    }
+
+    .che-typing-dots span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .che-typing-dots span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typing-bounce {
+
+        0%,
+        60%,
+        100% {
+            transform: translateY(0);
+        }
+
+        30% {
+            transform: translateY(-6px);
+        }
+    }
+
+    /* ── Suggestions ── */
+    .che-suggestions {
+        padding: 0 20px 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        flex-shrink: 0;
+    }
+
+    .che-suggestion-chip {
+        padding: 5px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        color: #6b7280;
+        background: white;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
+
+    .che-suggestion-chip:hover {
+        background: #fdf2f3;
+        border-color: #6b0f1a;
+        color: #6b0f1a;
+    }
+
+    /* ── Input ── */
+    .che-input-area {
+        padding: 14px 20px;
+        border-top: 1px solid #f3f4f6;
+        background: white;
+        flex-shrink: 0;
+    }
+
+    .che-input-wrap {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 10px 12px;
+        transition: border-color 0.15s;
+    }
+
+    .che-input-wrap:focus-within {
+        border-color: #6b0f1a;
+        background: white;
+    }
+
+    .che-input-wrap.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .che-textarea {
+        flex: 1;
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 0.875rem;
+        color: #374151;
+        font-family: inherit;
+        resize: none;
+        max-height: 120px;
+        line-height: 1.5;
+    }
+
+    .che-textarea::placeholder {
+        color: #9ca3af;
+    }
+
+    .che-send-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: #6b0f1a;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.15s;
+    }
+
+    .che-send-btn:disabled {
+        background: #d1d5db;
+        cursor: default;
+    }
+
+    .che-send-btn:not(:disabled):hover {
+        background: #850f20;
+        transform: scale(1.05);
+    }
+
+    .che-send-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .che-input-hint {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 6px;
+        text-align: right;
+    }
+
+    .che-input-hint kbd {
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 3px;
+        padding: 1px 4px;
+        font-size: 0.65rem;
+        font-family: inherit;
+    }
+
+    /* Markdown-like formatting in AI bubbles */
+    .che-msg-bubble b,
+    .che-msg-bubble strong {
+        font-weight: 700;
+    }
+
+    .che-msg-bubble ul {
+        margin: 6px 0;
+        padding-left: 18px;
+    }
+
+    .che-msg-bubble li {
+        margin: 2px 0;
+    }
+
+    .che-msg-bubble code {
+        background: rgba(0, 0, 0, 0.06);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.82em;
+    }
+</style>
+
+<script>
+    (function () {
+        /* ── State ── */
+        const MAX_HISTORY = 40; // store up to 40 turns in memory
+        let chatHistory = [];   // [{role, content}]
+        let isLoading = false;
+
+        /* ── DOM refs ── */
+        const messagesEl = document.getElementById('che-messages');
+        const inputEl = document.getElementById('che-input');
+        const sendBtn = document.getElementById('che-send-btn');
+        const suggestEl = document.getElementById('che-suggestions');
+        const statusDot = document.getElementById('che-status-dot');
+        const statusText = document.getElementById('che-status-text');
+        const inputWrap = document.getElementById('che-input-wrap');
+        const ctxToggle = document.getElementById('che-context-toggle');
+
+        /* ── Init ── */
+        appendMessage('ai', 'Hello! I\'m **CHE**, your CERP AI Assistant. I can help you with research projects, members, schedules, FSR reports, extension activities, and anything else related to the system. What can I do for you today?');
+
+        inputEl.addEventListener('input', function () {
+            sendBtn.disabled = this.value.trim() === '' || isLoading;
+        });
+
+        /* ── Public handlers (called from HTML) ── */
+        window.handleCheKeydown = function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendBtn.disabled) sendCheMessage();
+            }
+        };
+
+        window.autoResizeChe = function (el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        };
+
+        window.sendSuggestion = function (btn) {
+            if (isLoading) return;
+            inputEl.value = btn.textContent.trim();
+            sendBtn.disabled = false;
+            suggestEl.style.display = 'none';
+            sendCheMessage();
+        };
+
+        window.clearCheChat = function () {
+            chatHistory = [];
+            messagesEl.innerHTML = '';
+            suggestEl.style.display = 'flex';
+            setStatus('ready');
+            appendMessage('ai', 'Conversation cleared. How can I help you?');
+        };
+
+        window.sendCheMessage = async function () {
+            const text = inputEl.value.trim();
+            if (!text || isLoading) return;
+
+            suggestEl.style.display = 'none';
+
+            // Add user bubble
+            appendMessage('user', text);
+            chatHistory.push({ role: 'user', content: text });
+
+            // Reset input
+            inputEl.value = '';
+            inputEl.style.height = 'auto';
+            sendBtn.disabled = true;
+            setLoading(true);
+
+            // Typing indicator
+            const typingId = showTyping();
+
+            try {
+                const payload = {
+                    message: text,
+                    history: chatHistory.slice(-MAX_HISTORY),
+                    include_context: ctxToggle.checked
+                };
+
+                const res = await fetch('/api/che/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                removeTyping(typingId);
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.reply || `Server error ${res.status}`);
+                }
+
+                const data = await res.json();
+                const reply = data.reply || 'No response received.';
+                const isErr = data.error === true;
+
+                appendMessage('ai', reply, isErr);
+                chatHistory.push({ role: 'assistant', content: reply });
+
+            } catch (err) {
+                removeTyping(typingId);
+                appendMessage('ai', `⚠️ ${err.message || 'Could not reach CHE. Please try again.'}`, true);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        /* ── Helpers ── */
+        function setLoading(state) {
+            isLoading = state;
+            sendBtn.disabled = state || inputEl.value.trim() === '';
+            if (state) {
+                inputWrap.classList.add('disabled');
+                setStatus('busy');
+            } else {
+                inputWrap.classList.remove('disabled');
+                setStatus('ready');
+            }
+        }
+
+        function setStatus(state) {
+            statusDot.className = 'che-status-dot';
+            if (state === 'busy') {
+                statusDot.classList.add('busy');
+                statusText.textContent = 'Thinking...';
+            } else if (state === 'error') {
+                statusDot.classList.add('error');
+                statusText.textContent = 'Error';
+            } else {
+                statusText.textContent = 'Ready';
+            }
+        }
+
+        function appendMessage(role, rawText, isError) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const html = formatText(rawText);
+
+            const msgEl = document.createElement('div');
+            msgEl.className = 'che-msg' + (role === 'user' ? ' che-msg-user' : '');
+
+            if (role === 'ai') {
+                msgEl.innerHTML = `
+                <div class="che-msg-avatar">${aiIcon()}</div>
+                <div class="che-msg-content">
+                    <div class="che-msg-bubble${isError ? ' error-bubble' : ''}">${html}</div>
+                    <div class="che-msg-time">${timeStr}</div>
+                </div>`;
+            } else {
+                msgEl.innerHTML = `
+                <div class="che-msg-content">
+                    <div class="che-msg-bubble">${escHtml(rawText)}</div>
+                    <div class="che-msg-time">${timeStr}</div>
+                </div>
+                <div class="che-msg-user-avatar">A</div>`;
+            }
+
+            messagesEl.appendChild(msgEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function showTyping() {
+            const id = 'typing-' + Date.now();
+            const el = document.createElement('div');
+            el.className = 'che-msg';
+            el.id = id;
+            el.innerHTML = `
+            <div class="che-msg-avatar">${aiIcon()}</div>
+            <div class="che-typing-dots"><span></span><span></span><span></span></div>`;
+            messagesEl.appendChild(el);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return id;
+        }
+
+        function removeTyping(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        /* Basic markdown → HTML: bold, bullet lists, inline code */
+        function formatText(text) {
+            let t = escHtml(text);
+            // **bold**
+            t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // `code`
+            t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // convert lines starting with "- " or "• " to <ul>
+            t = t.replace(/((?:^|\n)[•\-]\s+.+)+/g, function (block) {
+                const items = block.trim().split('\n').map(function (line) {
+                    return '<li>' + line.replace(/^[•\-]\s+/, '') + '</li>';
+                });
+                return '<ul>' + items.join('') + '</ul>';
+            });
+            // newlines to <br> (outside lists)
+            t = t.replace(/\n/g, '<br>');
+            return t;
+        }
+
+        function escHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function aiIcon() {
+            return `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.798-1.442 2.798H4.24c-1.47 0-2.443-1.798-1.442-2.798L4.2 15.3" />
+        </svg>`;
+        }
+    })();
+</script>

@@ -14,3 +14,6 @@ cloudinary==1.40.0
 # Additional dependencies
 PyJWT==2.8.0
 openpyxl==3.1.5
+
+# AI - CHE Assistant (Groq API, free tier, Llama 3.3 70B)
+groq==0.11.0
