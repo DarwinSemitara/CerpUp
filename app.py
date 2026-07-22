@@ -1,6 +1,6 @@
 ﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from dotenv import load_dotenv
-from services.supabase_service import verify_access_token as verify_id_token, db
+from services.supabase_service import verify_access_token as verify_id_token, db, supabase
 from services.cloudinary_service import upload_member_photo, delete_member_photo
 from datetime import datetime
 import os
@@ -315,6 +315,138 @@ def section_che():
                            initial=initial,
                            page_title='CHE Assistant',
                            active_page='che')
+
+
+# ── CHE Conversation History API ─────────────────────────────
+
+MAX_CHE_CONVERSATIONS = 7
+
+
+@app.route('/api/che/conversations', methods=['GET'])
+@login_required
+def che_list_conversations():
+    """List all saved CHE conversations for the current admin (max 7, newest first)."""
+    try:
+        user_id = session.get('uid', '')
+        response = (
+            supabase.table('che_conversations')
+            .select('id, title, created_at, updated_at')
+            .eq('user_id', user_id)
+            .order('updated_at', desc=True)
+            .limit(MAX_CHE_CONVERSATIONS)
+            .execute()
+        )
+        return jsonify({'conversations': response.data or []})
+    except Exception as e:
+        logger.error(f"CHE list conversations error: {e}")
+        return jsonify({'conversations': [], 'error': str(e)}), 500
+
+
+@app.route('/api/che/conversations', methods=['POST'])
+@login_required
+def che_create_conversation():
+    """
+    Create a new conversation. If already at limit (7), delete the oldest first.
+    Body: { "title": str }  (optional — defaults to 'New Conversation')
+    """
+    try:
+        user_id = session.get('uid', '')
+        data = request.get_json(silent=True) or {}
+        title = data.get(
+            'title', 'New Conversation').strip() or 'New Conversation'
+
+        # Check count and prune if at limit
+        count_resp = (
+            supabase.table('che_conversations')
+            .select('id, updated_at')
+            .eq('user_id', user_id)
+            .order('updated_at', desc=True)
+            .execute()
+        )
+        existing = count_resp.data or []
+        if len(existing) >= MAX_CHE_CONVERSATIONS:
+            # Delete the oldest (last in desc-sorted list)
+            oldest_id = existing[-1]['id']
+            supabase.table('che_conversations').delete().eq(
+                'id', oldest_id).execute()
+
+        now = datetime.utcnow().isoformat()
+        new_id = str(uuid.uuid4())
+        supabase.table('che_conversations').insert({
+            'id': new_id,
+            'user_id': user_id,
+            'title': title,
+            'messages': [],
+            'created_at': now,
+            'updated_at': now,
+        }).execute()
+
+        return jsonify({'id': new_id, 'title': title, 'created_at': now, 'updated_at': now})
+    except Exception as e:
+        logger.error(f"CHE create conversation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/che/conversations/<conv_id>', methods=['GET'])
+@login_required
+def che_get_conversation(conv_id):
+    """Load all messages for a conversation."""
+    try:
+        user_id = session.get('uid', '')
+        resp = (
+            supabase.table('che_conversations')
+            .select('*')
+            .eq('id', conv_id)
+            .eq('user_id', user_id)
+            .single()
+            .execute()
+        )
+        if not resp.data:
+            return jsonify({'error': 'Not found'}), 404
+        return jsonify(resp.data)
+    except Exception as e:
+        logger.error(f"CHE get conversation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/che/conversations/<conv_id>', methods=['PATCH'])
+@login_required
+def che_update_conversation(conv_id):
+    """
+    Save messages and optionally update the title.
+    Body: { "messages": [...], "title": str (optional) }
+    """
+    try:
+        user_id = session.get('uid', '')
+        data = request.get_json(silent=True) or {}
+
+        update_payload = {'updated_at': datetime.utcnow().isoformat()}
+        if 'messages' in data:
+            update_payload['messages'] = data['messages']
+        if 'title' in data and data['title'].strip():
+            update_payload['title'] = data['title'].strip()
+
+        supabase.table('che_conversations').update(update_payload).eq(
+            'id', conv_id).eq('user_id', user_id).execute()
+
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        logger.error(f"CHE update conversation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/che/conversations/<conv_id>', methods=['DELETE'])
+@login_required
+def che_delete_conversation(conv_id):
+    """Delete a conversation."""
+    try:
+        user_id = session.get('uid', '')
+        supabase.table('che_conversations').delete().eq(
+            'id', conv_id).eq('user_id', user_id).execute()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        logger.error(f"CHE delete conversation error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 # ── CHE AI Chat API ──────────────────────────────────────────
