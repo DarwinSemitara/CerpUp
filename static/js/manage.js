@@ -145,6 +145,20 @@ function toggleAvailability(chip, day) {
     }
 }
 
+let selectedRoles = [];
+
+function toggleRole(chip, role) {
+    chip.classList.toggle('selected');
+    if (chip.classList.contains('selected')) {
+        if (!selectedRoles.includes(role)) selectedRoles.push(role);
+    } else {
+        selectedRoles = selectedRoles.filter(r => r !== role);
+    }
+    // Update hidden input with comma-separated roles
+    const hidden = document.getElementById('role-hidden-input');
+    if (hidden) hidden.value = selectedRoles.join(',');
+}
+
 async function submitAddMember(event) {
     event.preventDefault();
     const errEl = document.getElementById('add-member-error');

@@ -275,14 +275,15 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Role *</label>
-                        <select name="type" class="form-select" required>
-                            <option value="faculty">Faculty</option>
-                            <option value="staff">Staff</option>
-                            <option value="student">Student</option>
-                            <option value="chairperson">Chairperson</option>
-                            <option value="reps">Representatives</option>
-                            <option value="admin_staff">Admin Staff</option>
-                        </select>
+                        <div class="availability-chips" id="role-chips">
+                            <div class="avail-chip" onclick="toggleRole(this, 'faculty')">Faculty</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'staff')">Staff</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'student')">Student</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'chairperson')">Chairperson</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'reps')">Representatives</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'admin_staff')">Admin Staff</div>
+                        </div>
+                        <input type="hidden" name="type" id="role-hidden-input">
                     </div>
                     <div class="form-group">
                         <label class="form-label">User Number</label>
