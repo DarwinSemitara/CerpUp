@@ -130,6 +130,76 @@
         color: white;
         border-color: #6b0f1a;
     }
+
+    /* Role Dropdown with Checkboxes */
+    .role-dropdown {
+        position: relative;
+    }
+
+    .role-dropdown-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: #374151;
+        background: white;
+        cursor: pointer;
+        transition: border-color 0.15s;
+    }
+
+    .role-dropdown-trigger:hover {
+        border-color: #9ca3af;
+    }
+
+    .role-dropdown.open .role-dropdown-trigger {
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+    }
+
+    .role-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 100;
+        padding: 6px 0;
+    }
+
+    .role-dropdown.open .role-dropdown-menu {
+        display: block;
+    }
+
+    .role-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        font-size: 0.84rem;
+        color: #374151;
+        cursor: pointer;
+        transition: background 0.1s;
+    }
+
+    .role-dropdown-item:hover {
+        background: #f9fafb;
+    }
+
+    .role-dropdown-item input[type="checkbox"] {
+        accent-color: #6b0f1a;
+        width: 15px;
+        height: 15px;
+        cursor: pointer;
+    }
 </style>
 
 <div class="card">
@@ -255,18 +325,41 @@
                 <div class="modal-grid">
                     <div class="form-group modal-grid-full">
                         <label class="form-label">Role *</label>
-                        <div class="availability-chips" id="title-chips">
-                            <div class="avail-chip" onclick="toggleRole(this, 'Chairperson')">Chairperson</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Associate Professor')">Associate Professor</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Assistant Professor')">Assistant Professor</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Instructor')">Instructor</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Teaching Associate')">Teaching Associate</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'University Research Associate 1')">University Research Associate 1</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Junior Project Assistant')">Junior Project Assistant</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Senior ICT Assistant')">Senior ICT Assistant</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Administrative Aide 6')">Administrative Aide 6</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Junior Office Aide')">Junior Office Aide</div>
-                            <div class="avail-chip" onclick="toggleRole(this, 'Assistant Utility Worker')">Assistant Utility Worker</div>
+                        <div class="role-dropdown" id="role-dropdown">
+                            <div class="role-dropdown-trigger" onclick="toggleRoleDropdown()">
+                                <span id="role-dropdown-text">Select roles...</span>
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                            <div class="role-dropdown-menu" id="role-dropdown-menu">
+                                <label class="role-dropdown-item"><input type="checkbox" value="Chairperson"
+                                        onchange="updateRoleSelection()"> Chairperson</label>
+                                <label class="role-dropdown-item"><input type="checkbox" value="Associate Professor"
+                                        onchange="updateRoleSelection()"> Associate Professor</label>
+                                <label class="role-dropdown-item"><input type="checkbox" value="Assistant Professor"
+                                        onchange="updateRoleSelection()"> Assistant Professor</label>
+                                <label class="role-dropdown-item"><input type="checkbox" value="Instructor"
+                                        onchange="updateRoleSelection()"> Instructor</label>
+                                <label class="role-dropdown-item"><input type="checkbox" value="Teaching Associate"
+                                        onchange="updateRoleSelection()"> Teaching Associate</label>
+                                <label class="role-dropdown-item"><input type="checkbox"
+                                        value="University Research Associate 1" onchange="updateRoleSelection()">
+                                    University Research Associate 1</label>
+                                <label class="role-dropdown-item"><input type="checkbox"
+                                        value="Junior Project Assistant" onchange="updateRoleSelection()"> Junior
+                                    Project Assistant</label>
+                                <label class="role-dropdown-item"><input type="checkbox" value="Senior ICT Assistant"
+                                        onchange="updateRoleSelection()"> Senior ICT Assistant</label>
+                                <label class="role-dropdown-item"><input type="checkbox" value="Administrative Aide 6"
+                                        onchange="updateRoleSelection()"> Administrative Aide 6</label>
+                                <label class="role-dropdown-item"><input type="checkbox" value="Junior Office Aide"
+                                        onchange="updateRoleSelection()"> Junior Office Aide</label>
+                                <label class="role-dropdown-item"><input type="checkbox"
+                                        value="Assistant Utility Worker" onchange="updateRoleSelection()"> Assistant
+                                    Utility Worker</label>
+                            </div>
                         </div>
                         <input type="hidden" name="role" id="role-hidden-input">
                     </div>

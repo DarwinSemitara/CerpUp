@@ -147,17 +147,34 @@ function toggleAvailability(chip, day) {
 
 let selectedRoles = [];
 
-function toggleRole(chip, role) {
-    chip.classList.toggle('selected');
-    if (chip.classList.contains('selected')) {
-        if (!selectedRoles.includes(role)) selectedRoles.push(role);
-    } else {
-        selectedRoles = selectedRoles.filter(r => r !== role);
+function toggleRoleDropdown() {
+    const dd = document.getElementById('role-dropdown');
+    if (dd) dd.classList.toggle('open');
+}
+
+function updateRoleSelection() {
+    const checkboxes = document.querySelectorAll('#role-dropdown-menu input[type="checkbox"]');
+    selectedRoles = [];
+    checkboxes.forEach(cb => {
+        if (cb.checked) selectedRoles.push(cb.value);
+    });
+    // Update display text
+    const textEl = document.getElementById('role-dropdown-text');
+    if (textEl) {
+        textEl.textContent = selectedRoles.length > 0 ? selectedRoles.join(', ') : 'Select roles...';
     }
-    // Update hidden input with comma-separated roles
+    // Update hidden input
     const hidden = document.getElementById('role-hidden-input');
     if (hidden) hidden.value = selectedRoles.join(',');
 }
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function (e) {
+    const dd = document.getElementById('role-dropdown');
+    if (dd && !dd.contains(e.target)) {
+        dd.classList.remove('open');
+    }
+});
 
 async function submitAddMember(event) {
     event.preventDefault();
