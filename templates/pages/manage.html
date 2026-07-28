@@ -245,10 +245,6 @@
                             <option value="Other">Other</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Contact Number</label>
-                        <input type="hidden" name="contact" class="form-input">
-                    </div>
                     <div class="form-group modal-grid-full">
                         <label class="form-label">Email *</label>
                         <input type="email" name="email" class="form-input" required>
@@ -258,16 +254,34 @@
                 <!-- Department Info -->
                 <div class="modal-grid">
                     <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <select name="role" class="form-select">
+                            <option value="">Select</option>
+                            <option value="Engr.">Engr.</option>
+                            <option value="Dr.">Dr.</option>
+                            <option value="Chairperson">Chairperson</option>
+                            <option value="Associate Professor">Associate Professor</option>
+                            <option value="Assistant Professor">Assistant Professor</option>
+                            <option value="Instructor">Instructor</option>
+                            <option value="Teaching Associate">Teaching Associate</option>
+                            <option value="University Research Associate 1">University Research Associate 1</option>
+                            <option value="Junior Project Assistant">Junior Project Assistant</option>
+                            <option value="Senior ICT Assistant">Senior ICT Assistant</option>
+                            <option value="Administrative Aide 6">Administrative Aide 6</option>
+                            <option value="Junior Office Aide">Junior Office Aide</option>
+                            <option value="Assistant Utility Worker">Assistant Utility Worker</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Suffix</label>
                         <input type="text" name="suffix" class="form-input" placeholder="e.g., PhD, MSc">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Role</label>
-                        <input type="text" name="role" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Type *</label>
+                        <label class="form-label">Role *</label>
                         <select name="type" class="form-select" required>
+                            <option value="faculty">Faculty</option>
+                            <option value="staff">Staff</option>
+                            <option value="student">Student</option>
                             <option value="chairperson">Chairperson</option>
                             <option value="reps">Representatives</option>
                             <option value="admin_staff">Admin Staff</option>
