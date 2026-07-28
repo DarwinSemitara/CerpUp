@@ -253,85 +253,83 @@
 
                 <!-- Department Info -->
                 <div class="modal-grid">
-                    <div class="form-group">
-                        <label class="form-label">Title</label>
-                        <div class="form-group">
-                            <label class="form-label">Title *</label>
-                            <div class="availability-chips" id="title-chips">
-                                <div class="avail-chip" onclick="toggleRole(this, 'Chairperson')">Chairperson</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Associate Professor')">Associate
-                                    Professor</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Assistant Professor')">Assistant
-                                    Professor</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Instructor')">Instructor</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Teaching Associate')">Teaching
-                                    Associate</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'University Research Associate 1')">
-                                    University Research Associate 1</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Junior Project Assistant')">Junior
-                                    Project Assistant</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Senior ICT Assistant')">Senior ICT
-                                    Assistant</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Administrative Aide 6')">
-                                    Administrative Aide 6</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Junior Office Aide')">Junior Office
-                                    Aide</div>
-                                <div class="avail-chip" onclick="toggleRole(this, 'Assistant Utility Worker')">Assistant
-                                    Utility Worker</div>
-                            </div>
-                            <input type="hidden" name="role" id="role-hidden-input">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Suffix</label>
-                            <input type="text" name="suffix" class="form-input" placeholder="e.g., PhD, MSc">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Role *</label>
-                            <select name="type" class="form-select" required>
-                                <option value="faculty">Faculty</option>
-                                <option value="staff">Staff</option>
-                                <option value="student">Student</option>
-                                <option value="chairperson">Chairperson</option>
-                                <option value="reps">Representatives</option>
-                                <option value="admin_staff">Admin Staff</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">User Number</label>
-                            <input type="text" name="user_no" class="form-input">
-                        </div>
-                    </div>
-
-                    <!-- Teaching Personnel Checkbox -->
                     <div class="form-group modal-grid-full">
-                        <label class="availability-checkbox" style="cursor:pointer;user-select:none;">
-                            <input type="checkbox" name="is_faculty" id="is-faculty-checkbox" value="true">
-                            <span style="font-weight:600;">Teaching Personnel/Faculty Member</span>
-                        </label>
-                        <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Check this if the member is a
-                            teaching
-                            personnel. They will be available for assignment in the Faculty section.</p>
-                    </div>
-
-                    <!-- Availability -->
-                    <div class="form-group">
-                        <label class="form-label">Availability</label>
-                        <div class="availability-chips">
-                            <div class="avail-chip" onclick="toggleAvailability(this, 'Monday')">Monday</div>
-                            <div class="avail-chip" onclick="toggleAvailability(this, 'Tuesday')">Tuesday</div>
-                            <div class="avail-chip" onclick="toggleAvailability(this, 'Wednesday')">Wednesday</div>
-                            <div class="avail-chip" onclick="toggleAvailability(this, 'Thursday')">Thursday</div>
-                            <div class="avail-chip" onclick="toggleAvailability(this, 'Friday')">Friday</div>
-                            <div class="avail-chip" onclick="toggleAvailability(this, 'Saturday')">Saturday</div>
+                        <label class="form-label">Title *</label>
+                        <div class="availability-chips" id="title-chips">
+                            <div class="avail-chip" onclick="toggleRole(this, 'Chairperson')">Chairperson</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Associate Professor')">Associate
+                                Professor</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Assistant Professor')">Assistant
+                                Professor</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Instructor')">Instructor</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Teaching Associate')">Teaching Associate
+                            </div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'University Research Associate 1')">
+                                University Research Associate 1</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Junior Project Assistant')">Junior
+                                Project Assistant</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Senior ICT Assistant')">Senior ICT
+                                Assistant</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Administrative Aide 6')">Administrative
+                                Aide 6</div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Junior Office Aide')">Junior Office Aide
+                            </div>
+                            <div class="avail-chip" onclick="toggleRole(this, 'Assistant Utility Worker')">Assistant
+                                Utility Worker</div>
                         </div>
+                        <input type="hidden" name="role" id="role-hidden-input">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Suffix</label>
+                        <input type="text" name="suffix" class="form-input" placeholder="e.g., PhD, MSc">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role *</label>
+                        <select name="type" class="form-select" required>
+                            <option value="faculty">Faculty</option>
+                            <option value="staff">Staff</option>
+                            <option value="student">Student</option>
+                            <option value="chairperson">Chairperson</option>
+                            <option value="reps">Representatives</option>
+                            <option value="admin_staff">Admin Staff</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">User Number</label>
+                        <input type="text" name="user_no" class="form-input">
+                    </div>
+                </div>
 
-                    <div class="form-error" id="add-member-error"></div>
+                <!-- Teaching Personnel Checkbox -->
+                <div class="form-group modal-grid-full">
+                    <label class="availability-checkbox" style="cursor:pointer;user-select:none;">
+                        <input type="checkbox" name="is_faculty" id="is-faculty-checkbox" value="true">
+                        <span style="font-weight:600;">Teaching Personnel/Faculty Member</span>
+                    </label>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Check this if the member is a
+                        teaching
+                        personnel. They will be available for assignment in the Faculty section.</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeAddMemberModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Add Member</button>
+
+                <!-- Availability -->
+                <div class="form-group">
+                    <label class="form-label">Availability</label>
+                    <div class="availability-chips">
+                        <div class="avail-chip" onclick="toggleAvailability(this, 'Monday')">Monday</div>
+                        <div class="avail-chip" onclick="toggleAvailability(this, 'Tuesday')">Tuesday</div>
+                        <div class="avail-chip" onclick="toggleAvailability(this, 'Wednesday')">Wednesday</div>
+                        <div class="avail-chip" onclick="toggleAvailability(this, 'Thursday')">Thursday</div>
+                        <div class="avail-chip" onclick="toggleAvailability(this, 'Friday')">Friday</div>
+                        <div class="avail-chip" onclick="toggleAvailability(this, 'Saturday')">Saturday</div>
+                    </div>
                 </div>
+
+                <div class="form-error" id="add-member-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeAddMemberModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Add Member</button>
+            </div>
         </form>
     </div>
 </div>
