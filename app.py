@@ -235,6 +235,20 @@ def section_class_schedule():
                            active_page='schedule')
 
 
+@app.route('/schedule/section/')
+@login_required
+def section_schedule_section():
+    if is_partial():
+        return render_template('partials/placeholder.html', label='Section')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/placeholder.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Section',
+                           active_page='section')
+
+
 @app.route('/schedule/events/')
 @login_required
 def section_events():
@@ -455,12 +469,12 @@ def che_delete_conversation(conv_id):
 @login_required
 def che_chat():
     """
-    CHE AI chat endpoint.
+    CHE AI chat endpoint with GA scheduling integration.
     Accepts: { "message": str, "history": [...], "include_context": bool }
-    Returns: { "reply": str, "error": bool }
+    Returns: { "reply": str, "error": bool, "action": dict|null, "action_result": dict|null }
     """
     try:
-        from services.che_service import chat as che_chat_fn
+        from services.che_service import chat as che_chat_fn, extract_action, execute_schedule_action
 
         data = request.get_json(silent=True) or {}
         message = data.get('message', '').strip()
@@ -470,31 +484,46 @@ def che_chat():
         if not message:
             return jsonify({'reply': 'Please send a message.', 'error': True}), 400
 
-        # Optionally inject live system data for context-aware answers
+        # Always inject schedule context for scheduling awareness
         context_data = {}
+        try:
+            # Schedules (always loaded for GA awareness)
+            sched_docs = db.collection('schedules').stream()
+            schedules_raw = []
+            for d in sched_docs:
+                data = d.to_dict()
+                # Normalize to camelCase for consistency with GA functions
+                schedules_raw.append({
+                    'id': d.id,
+                    'prof': data.get('prof', ''),
+                    'subjCode': data.get('subj_code', data.get('subjCode', '')),
+                    'subjName': data.get('subj_name', data.get('subjName', '')),
+                    'day': data.get('day', ''),
+                    'start': str(data.get('start', '')).rsplit(':', 1)[0] if data.get('start') and str(data.get('start')).count(':') > 1 else data.get('start', ''),
+                    'end': str(data.get('end', '')).rsplit(':', 1)[0] if data.get('end') and str(data.get('end')).count(':') > 1 else data.get('end', ''),
+                    'room': data.get('room', ''),
+                    'section': data.get('section', ''),
+                    'units': data.get('units', ''),
+                })
+            context_data['schedules'] = schedules_raw
+        except Exception as ctx_err:
+            logger.warning(f"CHE schedule context fetch: {ctx_err}")
+            context_data['schedules'] = []
+
         if include_context:
             try:
-                # Members
                 member_docs = db.collection('members').stream()
                 context_data['members'] = [
                     {'id': d.id, **d.to_dict()} for d in member_docs]
 
-                # Research
                 research_docs = db.collection('research').stream()
                 context_data['research'] = [
                     {'id': d.id, **d.to_dict()} for d in research_docs]
 
-                # Extensions
                 ext_docs = db.collection('extensions').stream()
                 context_data['extensions'] = [
                     {'id': d.id, **d.to_dict()} for d in ext_docs]
 
-                # Schedules
-                sched_docs = db.collection('schedules').stream()
-                context_data['schedules'] = [
-                    {'id': d.id, **d.to_dict()} for d in sched_docs]
-
-                # News
                 news_docs = db.collection('news').stream()
                 context_data['news'] = [
                     {'id': d.id, **d.to_dict()} for d in news_docs]
@@ -504,13 +533,225 @@ def che_chat():
         result = che_chat_fn(
             message=message,
             history=history,
-            context_data=context_data if include_context else None
+            context_data=context_data
         )
+
+        # If CHE returned a scheduling action, pre-execute it for preview
+        if result.get('action') and not result.get('error'):
+            action_data = result['action']
+            # For non-confirm actions (queries), execute immediately
+            if not action_data.get('confirm', False):
+                action_result = execute_schedule_action(
+                    action_data, context_data.get('schedules', []))
+                result['action_result'] = action_result
+            else:
+                # For confirm actions, just pass the action to frontend
+                # Frontend will call /api/che/execute-action after user confirms
+                result['action_result'] = None
+
         return jsonify(result)
 
     except Exception as e:
         logger.error(f"CHE chat route error: {e}")
         return jsonify({'reply': 'An unexpected error occurred.', 'error': True}), 500
+
+
+@app.route('/api/che/execute-action', methods=['POST'])
+@login_required
+def che_execute_action():
+    """
+    Execute a confirmed scheduling action from CHE.
+    Called after user confirms via the chat UI.
+    """
+    try:
+        from services.che_service import execute_schedule_action
+
+        data = request.get_json(silent=True) or {}
+        action_data = data.get('action', {})
+
+        if not action_data or 'action' not in action_data:
+            return jsonify({'success': False, 'message': 'No action provided.'}), 400
+
+        # Get current schedules (normalized to camelCase)
+        sched_docs = db.collection('schedules').stream()
+        existing_schedules = []
+        for d in sched_docs:
+            data = d.to_dict()
+            existing_schedules.append({
+                'id': d.id,
+                'prof': data.get('prof', ''),
+                'subjCode': data.get('subj_code', data.get('subjCode', '')),
+                'subjName': data.get('subj_name', data.get('subjName', '')),
+                'day': data.get('day', ''),
+                'start': str(data.get('start', '')).rsplit(':', 1)[0] if data.get('start') and str(data.get('start')).count(':') > 1 else data.get('start', ''),
+                'end': str(data.get('end', '')).rsplit(':', 1)[0] if data.get('end') and str(data.get('end')).count(':') > 1 else data.get('end', ''),
+                'room': data.get('room', ''),
+                'section': data.get('section', ''),
+                'units': data.get('units', ''),
+            })
+
+        # Execute the action
+        result = execute_schedule_action(action_data, existing_schedules)
+
+        # If action was successful and modifies data, apply changes to DB
+        if result.get('success'):
+            action_type = action_data.get('action', '')
+
+            if action_type == 'add_schedule' and result['data'].get('schedule'):
+                sched = result['data']['schedule']
+                new_id = str(uuid.uuid4())
+
+                # Auto-detect school year: current year to next year (matches frontend default)
+                now = datetime.utcnow()
+                school_year = f"{now.year}-{now.year + 1}"
+                # Default to 1st semester (admin changes this on the schedule page)
+                semester = '1'
+
+                db.collection('schedules').document(new_id).set({
+                    'id': new_id,
+                    'subj_code': sched.get('subjCode', ''),
+                    'subj_name': sched.get('subjName', ''),
+                    'prof': sched.get('prof', ''),
+                    'room': sched.get('room', ''),
+                    'section': sched.get('section', ''),
+                    'units': int(float(sched.get('units', 0))) if sched.get('units') else 0,
+                    'day': sched.get('day', ''),
+                    'start': sched.get('start', ''),
+                    'end': sched.get('end', ''),
+                    'type': 'Lecture',
+                    'year': '1',
+                    'semester': semester,
+                    'school_year': school_year,
+                    'created_at': datetime.utcnow().isoformat(),
+                })
+                result['message'] += f" Added as ID: {new_id[:8]}..."
+
+            elif action_type == 'move_schedule' and result['data'].get('moved_schedules'):
+                for moved in result['data']['moved_schedules']:
+                    sid = moved.get('id')
+                    if sid:
+                        db.collection('schedules').document(sid).update({
+                            'day': moved.get('day', ''),
+                            'start': moved.get('start', ''),
+                            'end': moved.get('end', ''),
+                        })
+
+            elif action_type == 'delete_schedule' and result['data'].get('schedules_to_delete'):
+                for sid in result['data']['schedules_to_delete']:
+                    db.collection('schedules').document(sid).delete()
+                result['message'] = f"Deleted {len(result['data']['schedules_to_delete'])} schedule(s)."
+
+            elif action_type == 'generate_full_schedule' and result['data'].get('redirect_to_endpoint'):
+                # Execute full generation directly here
+                from services.scheduler_service import run_full_ga, FullGAConfig, SubjectInput
+
+                gen_params = result['data']['params']
+
+                # Load reference semester
+                reference_schedules = []
+                ref_sem = gen_params.get('reference_semester')
+                ref_sy = gen_params.get('reference_school_year')
+                if ref_sem and ref_sy:
+                    try:
+                        ref_docs = db.collection('schedules').stream()
+                        for d in ref_docs:
+                            rd = d.to_dict()
+                            if rd.get('semester') == ref_sem and rd.get('school_year') == ref_sy:
+                                reference_schedules.append({
+                                    'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
+                                    'subjName': rd.get('subj_name', rd.get('subjName', '')),
+                                    'prof': rd.get('prof', ''),
+                                    'room': rd.get('room', ''),
+                                    'section': rd.get('section', ''),
+                                    'units': rd.get('units', 3),
+                                    'day': rd.get('day', ''),
+                                    'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
+                                    'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
+                                })
+                    except Exception as e:
+                        logger.warning(f"Ref semester load error: {e}")
+
+                # Load faculty data
+                prof_availability = {}
+                teaching_loads_map = {}
+                try:
+                    member_docs = db.collection('members').where(
+                        'is_faculty', '==', True).stream()
+                    for d in member_docs:
+                        md = d.to_dict()
+                        full_name = f"{md.get('first', '')} {md.get('last', '')}".strip(
+                        )
+                        if md.get('suffix'):
+                            full_name += f", {md['suffix']}"
+                        avail = md.get('availability', [])
+                        if avail:
+                            prof_availability[full_name] = avail
+                        load = md.get('teaching_load')
+                        if load:
+                            teaching_loads_map[full_name] = int(load)
+                except Exception:
+                    pass
+
+                # Parse subjects
+                subjects_input = []
+                for s in gen_params.get('subjects', []):
+                    subjects_input.append(SubjectInput(
+                        code=s.get('code', s.get('subjCode', '')),
+                        name=s.get('name', s.get('subjName', '')),
+                        section=s.get('section', 'A'),
+                        units=int(s.get('units', 3)),
+                        weekly_hours=float(
+                            s.get('weekly_hours', s.get('units', 3))),
+                        allocated_professors=s.get('professors', []),
+                    ))
+
+                config = FullGAConfig(
+                    subjects=subjects_input,
+                    rooms=gen_params.get('rooms', []),
+                    prof_availability=prof_availability,
+                    teaching_loads=teaching_loads_map,
+                    subject_allocations=gen_params.get(
+                        'subject_allocations', {}),
+                    reference_schedules=reference_schedules,
+                    faculty_overrides=gen_params.get('faculty_overrides', {}),
+                )
+
+                ga_result = run_full_ga(config)
+                result = ga_result
+
+                # Save if requested
+                if gen_params.get('save_to_db', False) and ga_result.get('success'):
+                    target_sem = gen_params.get('target_semester', '1')
+                    target_sy = gen_params.get('target_school_year',
+                                               f"{datetime.utcnow().year}-{datetime.utcnow().year + 1}")
+                    saved = 0
+                    for sched in ga_result['schedules']:
+                        new_id = str(uuid.uuid4())
+                        db.collection('schedules').document(new_id).set({
+                            'id': new_id,
+                            'subj_code': sched.get('subjCode', ''),
+                            'subj_name': sched.get('subjName', ''),
+                            'prof': sched.get('prof', ''),
+                            'room': sched.get('room', ''),
+                            'section': sched.get('section', ''),
+                            'units': int(sched.get('units', 0)),
+                            'day': sched.get('day', ''),
+                            'start': sched.get('start', ''),
+                            'end': sched.get('end', ''),
+                            'type': 'generated',
+                            'year': '1',
+                            'semester': target_sem,
+                            'school_year': target_sy,
+                            'created_at': datetime.utcnow().isoformat(),
+                        })
+                        saved += 1
+                    result['message'] += f" | Saved {saved} entries to database."
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"CHE execute-action error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ── Staff API ────────────────────────────────────────────────
@@ -1222,39 +1463,45 @@ def generate_fsr_all():
 @app.route('/api/schedules', methods=['GET'])
 @login_required
 def get_schedules():
-    """Return all schedule entries from database."""
+    """Return all schedule entries from database. Optionally filter by professor name."""
     try:
         docs = db.collection('schedules').order_by('created_at').stream()
         entries = []
+        prof_filter = request.args.get('prof', '').strip().lower()
+
         for d in docs:
             data = d.to_dict()
 
-            # Helper function to strip seconds from time (12:00:00 → 12:00)
             def format_time(time_str):
                 if time_str and ':' in str(time_str):
                     parts = str(time_str).split(':')
-                    return f"{parts[0]}:{parts[1]}"  # Return HH:MM only
+                    return f"{parts[0]}:{parts[1]}"
                 return time_str
 
-            # Transform snake_case (Supabase) to camelCase (frontend expects)
             entry = {
                 'id': d.id,
                 'prof': data.get('prof'),
-                # Support both
                 'subjCode': data.get('subj_code', data.get('subjCode')),
-                # Support both
                 'subjName': data.get('subj_name', data.get('subjName')),
                 'type': data.get('type'),
                 'day': data.get('day'),
-                'start': format_time(data.get('start')),  # Strip seconds
-                'end': format_time(data.get('end')),      # Strip seconds
+                'start': format_time(data.get('start')),
+                'end': format_time(data.get('end')),
                 'room': data.get('room'),
                 'units': data.get('units'),
                 'section': data.get('section'),
                 'year': data.get('year'),
                 'semester': data.get('semester'),
+                'schoolYear': data.get('school_year', data.get('schoolYear')),
                 'created_at': data.get('created_at')
             }
+
+            # Optional professor filter (case-insensitive partial match)
+            if prof_filter:
+                entry_prof = (entry.get('prof') or '').lower()
+                if prof_filter not in entry_prof:
+                    continue
+
             entries.append(entry)
         return jsonify(entries)
     except Exception as e:
@@ -1291,6 +1538,7 @@ def add_schedule():
             'section':   data['section'],
             'year':      data.get('year', '1'),
             'semester':  data.get('semester', '1'),
+            'school_year': data.get('schoolYear', ''),
             'created_at': __import__('datetime').datetime.utcnow().isoformat(),
         }
         db.collection('schedules').document(entry_id).set(entry_db)
@@ -1410,6 +1658,133 @@ def generate_schedule():
         return jsonify({'status': 'ok', 'schedule': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedule/generate-full', methods=['POST'])
+@login_required
+def api_generate_full_schedule():
+    """
+    Full semester schedule generation using enhanced GA.
+    Considers: faculty availability, teaching loads, subject allocation,
+    room conflicts, block spreading, reference semester seeding.
+    """
+    try:
+        from services.scheduler_service import run_full_ga, FullGAConfig, SubjectInput
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No data provided.'}), 400
+
+        # Load reference semester if specified
+        reference_schedules = []
+        ref_semester = data.get('reference_semester')
+        ref_school_year = data.get('reference_school_year')
+        if ref_semester and ref_school_year:
+            try:
+                ref_docs = db.collection('schedules').stream()
+                for d in ref_docs:
+                    rd = d.to_dict()
+                    if rd.get('semester') == ref_semester and rd.get('school_year') == ref_school_year:
+                        reference_schedules.append({
+                            'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
+                            'subjName': rd.get('subj_name', rd.get('subjName', '')),
+                            'prof': rd.get('prof', ''),
+                            'room': rd.get('room', ''),
+                            'section': rd.get('section', ''),
+                            'units': rd.get('units', 3),
+                            'day': rd.get('day', ''),
+                            'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
+                            'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
+                        })
+            except Exception as e:
+                logger.warning(f"Failed to load reference semester: {e}")
+
+        # Load faculty data (availability + teaching loads)
+        prof_availability = {}
+        teaching_loads = {}
+        try:
+            member_docs = db.collection('members').where(
+                'is_faculty', '==', True).stream()
+            for d in member_docs:
+                md = d.to_dict()
+                full_name = f"{md.get('first', '')} {md.get('last', '')}".strip(
+                )
+                if md.get('suffix'):
+                    full_name += f", {md['suffix']}"
+                avail = md.get('availability', [])
+                if avail:
+                    prof_availability[full_name] = avail
+                load = md.get('teaching_load')
+                if load:
+                    teaching_loads[full_name] = int(load)
+        except Exception as e:
+            logger.warning(f"Failed to load faculty data: {e}")
+
+        # Parse subjects
+        subjects_input = []
+        raw_subjects = data.get('subjects', [])
+        for s in raw_subjects:
+            subjects_input.append(SubjectInput(
+                code=s.get('code', s.get('subjCode', '')),
+                name=s.get('name', s.get('subjName', '')),
+                section=s.get('section', 'A'),
+                units=int(s.get('units', 3)),
+                weekly_hours=float(s.get('weekly_hours', s.get('units', 3))),
+                allocated_professors=s.get(
+                    'professors', s.get('allocated_professors', [])),
+            ))
+
+        # Build config
+        config = FullGAConfig(
+            subjects=subjects_input,
+            rooms=data.get('rooms', []),
+            prof_availability=prof_availability,
+            teaching_loads=teaching_loads,
+            subject_allocations=data.get('subject_allocations', {}),
+            reference_schedules=reference_schedules,
+            faculty_overrides=data.get('faculty_overrides', {}),
+            pop_size=data.get('pop_size', 100),
+            max_generations=data.get('max_generations', 500),
+            time_limit_seconds=data.get('time_limit', 10.0),
+        )
+
+        # Run GA
+        result = run_full_ga(config)
+
+        # Optionally save to database
+        target_semester = data.get('target_semester', '1')
+        target_school_year = data.get('target_school_year',
+                                      f"{datetime.utcnow().year}-{datetime.utcnow().year + 1}")
+
+        if data.get('save_to_db', False) and result.get('success'):
+            saved_count = 0
+            for sched in result['schedules']:
+                new_id = str(uuid.uuid4())
+                db.collection('schedules').document(new_id).set({
+                    'id': new_id,
+                    'subj_code': sched.get('subjCode', ''),
+                    'subj_name': sched.get('subjName', ''),
+                    'prof': sched.get('prof', ''),
+                    'room': sched.get('room', ''),
+                    'section': sched.get('section', ''),
+                    'units': int(sched.get('units', 0)),
+                    'day': sched.get('day', ''),
+                    'start': sched.get('start', ''),
+                    'end': sched.get('end', ''),
+                    'type': 'generated',
+                    'year': '1',
+                    'semester': target_semester,
+                    'school_year': target_school_year,
+                    'created_at': datetime.utcnow().isoformat(),
+                })
+                saved_count += 1
+            result['message'] += f" | Saved {saved_count} entries to DB."
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Full schedule generation error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ── AI Chat API ────────────────────────────────────────────────
@@ -1838,6 +2213,64 @@ def process_chat_message():
 
 
 # ── User (member) dashboard ────────────────────────────────────
+
+@app.route('/api/member-fsr-data')
+def member_fsr_data():
+    """Return FSR data (research, extensions, schedules) for the logged-in member."""
+    if 'uid' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    try:
+        uid = session['uid']
+        email = session.get('email', '')
+
+        # Member profile
+        member_doc = db.collection('members').document(uid).get()
+        if not member_doc.exists:
+            # Try finding by email
+            docs = list(db.collection('members').where(
+                'email', '==', email).stream())
+            member_data = docs[0].to_dict() if docs else {}
+        else:
+            member_data = member_doc.to_dict()
+
+        # Research
+        research_docs = db.collection(
+            'research').where('uid', '==', uid).stream()
+        research = [d.to_dict() for d in research_docs]
+
+        # Extensions
+        ext_docs = db.collection('extensions').where('uid', '==', uid).stream()
+        extensions = [d.to_dict() for d in ext_docs]
+
+        # Schedules — match by last name
+        last_name = (member_data.get('last') or '').strip().lower()
+        schedules = []
+        if last_name:
+            all_sched = supabase.table('schedules').select('*').execute()
+            for s in (all_sched.data or []):
+                prof = (s.get('prof') or '').lower()
+                if last_name in prof:
+                    schedules.append({
+                        'subjCode': s.get('subj_code') or s.get('subjCode', ''),
+                        'subjName': s.get('subj_name') or s.get('subjName', ''),
+                        'room':     s.get('room', ''),
+                        'day':      s.get('day', ''),
+                        'start':    s.get('start', ''),
+                        'end':      s.get('end', ''),
+                        'section':  s.get('section', ''),
+                        'units':    s.get('units', ''),
+                    })
+
+        return jsonify({
+            'member':     member_data,
+            'research':   research,
+            'extensions': extensions,
+            'schedules':  schedules,
+        })
+    except Exception as e:
+        logger.error(f"member_fsr_data error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 def user_required(f):
     from functools import wraps

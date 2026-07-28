@@ -741,13 +741,6 @@
                         Schedule</button>
                     <button class="sub-link" onclick="showSection('events','Events',this)">Events</button>
                 </div>
-                <button class="nav-link" onclick="showSection('data','Data',this)">
-                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7c0-2 1-3 3-3h10c2 0 3 1 3 3M4 7h16M10 11v4M14 11v4" />
-                    </svg>
-                    Data
-                </button>
                 <button class="nav-link" onclick="showSection('instructions','Instructions',this)">
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -1030,19 +1023,7 @@
                                 <div class="research-type-option" onclick="selectExtensionType('extensions')">
                                     <div class="research-type-option-icon">1</div>
                                     <div class="research-type-option-content">
-                                        <div class="research-type-option-title">Extensions</div>
-                                    </div>
-                                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </div>
-                                
-                                <div style="height: 12px;"></div>
-
-                                <div class="research-type-option" onclick="selectExtensionType('community_service')">
-                                    <div class="research-type-option-icon">2</div>
-                                    <div class="research-type-option-content">
-                                        <div class="research-type-option-title">Community Service</div>
+                                        <div class="research-type-option-title">Extension / Community Service</div>
                                     </div>
                                     <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -1052,7 +1033,7 @@
                                 <div style="height: 12px;"></div>
 
                                 <div class="research-type-option" onclick="selectExtensionType('training')">
-                                    <div class="research-type-option-icon">3</div>
+                                    <div class="research-type-option-icon">2</div>
                                     <div class="research-type-option-content">
                                         <div class="research-type-option-title">Training</div>
                                     </div>
@@ -1064,9 +1045,45 @@
                                 <div style="height: 12px;"></div>
 
                                 <div class="research-type-option" onclick="selectExtensionType('information_dissemination')">
-                                    <div class="research-type-option-icon">4</div>
+                                    <div class="research-type-option-icon">3</div>
                                     <div class="research-type-option-content">
                                         <div class="research-type-option-title">Information Dissemination</div>
+                                    </div>
+                                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+
+                                <div style="height: 12px;"></div>
+
+                                <div class="research-type-option" onclick="selectExtensionType('workshop')">
+                                    <div class="research-type-option-icon">4</div>
+                                    <div class="research-type-option-content">
+                                        <div class="research-type-option-title">Workshop</div>
+                                    </div>
+                                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+
+                                <div style="height: 12px;"></div>
+
+                                <div class="research-type-option" onclick="selectExtensionType('symposium')">
+                                    <div class="research-type-option-icon">5</div>
+                                    <div class="research-type-option-content">
+                                        <div class="research-type-option-title">Symposium</div>
+                                    </div>
+                                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+
+                                <div style="height: 12px;"></div>
+
+                                <div class="research-type-option" onclick="selectExtensionType('others')">
+                                    <div class="research-type-option-icon">6</div>
+                                    <div class="research-type-option-content">
+                                        <div class="research-type-option-title">Others</div>
                                     </div>
                                     <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -1597,87 +1614,808 @@
                 </div>
 
                 <!-- FSR Section -->
-                <div class="chart-card" style="margin-top:24px;">
-                    <div class="chart-header" style="margin-bottom:20px;">
-                        <div>
-                            <div class="chart-title">Faculty Service Record</div>
-                            <div class="chart-subtitle">2nd Semester 2025-2026</div>
-                        </div>
-                    </div>
-                    
-                    <div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-                        <!-- FSR Header Table -->
-                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-                            <tbody>
-                                <tr>
-                                    <td style="padding:12px;border:1px solid #e5e7eb;width:50%;vertical-align:top;">
-                                        <div style="margin-bottom:12px;">
-                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">PRINTED NAME</div>
-                                            <div style="display:grid;grid-template-columns:2fr 2fr 1fr;gap:8px;">
-                                                <div>
-                                                    <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:2px;">Family Name</label>
-                                                    <input type="text" value="${memberData?.last || ''}" readonly 
-                                                        style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
-                                                </div>
-                                                <div>
-                                                    <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:2px;">Given Name</label>
-                                                    <input type="text" value="${memberData?.first || ''}" readonly 
-                                                        style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
-                                                </div>
-                                                <div>
-                                                    <label style="font-size:0.75rem;color:#6b7280;display:block;margin-bottom:2px;">M.I.</label>
-                                                    <input type="text" value="${memberData?.middle ? memberData.middle.charAt(0) + '.' : ''}" readonly 
-                                                        style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">HOME DEPARTMENT</div>
-                                            <input type="text" value="DCERP" readonly 
-                                                style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
-                                        </div>
-                                    </td>
-                                    <td style="padding:12px;border:1px solid #e5e7eb;width:50%;vertical-align:top;">
-                                        <div style="margin-bottom:12px;">
-                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">RANK</div>
-                                            <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
-                                                <input type="text" value="${memberData?.rank || 'Associate Professor 2'}" readonly 
-                                                    style="flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
-                                            </div>
-                                            <div style="display:flex;gap:16px;font-size:0.85rem;">
-                                                <label style="display:flex;align-items:center;gap:6px;cursor:default;">
-                                                    <input type="checkbox" checked disabled style="cursor:default;">
-                                                    <span>Full Time</span>
-                                                </label>
-                                                <label style="display:flex;align-items:center;gap:6px;cursor:default;">
-                                                    <input type="checkbox" disabled style="cursor:default;">
-                                                    <span>Part Time</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight:600;color:#374151;margin-bottom:6px;">HOME COLLEGE</div>
-                                            <input type="text" value="CHE" readonly 
-                                                style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;font-size:0.85rem;">
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        
-                        <!-- FSR Content Placeholder -->
-                        <div style="padding:40px 20px;text-align:center;background:#fafafa;border-top:1px solid #e5e7eb;">
-                            <p style="font-size:0.95rem;font-weight:600;color:#6b7280;margin:0 0 4px;">FSR Table Coming Soon</p>
-                            <p style="font-size:0.82rem;color:#9ca3af;margin:0;">The detailed FSR table will be added here</p>
-                        </div>
+                <div class="chart-card" style="margin-top:24px;" id="dashboard-fsr-card">
+                    <div style="display:flex;align-items:center;justify-content:center;padding:48px 0;gap:12px;color:#6b7280;">
+                        <div style="width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:#014421;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                        <span style="font-size:.875rem;">Loading FSR...</span>
                     </div>
                 </div>
             `;
 
-            // Initialize charts after rendering
+            // Initialize charts, then load FSR data async
             setTimeout(() => {
                 initUserCharts();
             }, 100);
+
+            // Load FSR async into the dashboard card
+            loadDashboardFSR();
+        }
+
+        async function loadDashboardFSR() {
+            let fsrData;
+            let staffList = [];
+            try {
+                const [fsrRes, staffRes] = await Promise.all([
+                    fetch('/api/member-fsr-data'),
+                    fetch('/api/staff')
+                ]);
+                if (!fsrRes.ok) throw new Error('Failed to load FSR data');
+                fsrData = await fsrRes.json();
+                if (staffRes.ok) staffList = await staffRes.json();
+            } catch (e) {
+                const card = document.getElementById('dashboard-fsr-card');
+                if (card) card.innerHTML = `
+                    <div style="padding:32px;text-align:center;color:#dc2626;">
+                        <p style="font-weight:600;margin:0 0 8px;">Could not load FSR data</p>
+                        <button onclick="loadDashboardFSR()" style="padding:6px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;font-size:.8rem;">Retry</button>
+                    </div>`;
+                return;
+            }
+
+            const member = fsrData.member || {};
+            const research = fsrData.research || [];
+            const extensions = fsrData.extensions || [];
+            const schedules = fsrData.schedules || [];
+
+            // Build FIC options HTML for footnote dropdowns (exclude self)
+            const myLast = (member.last || '').trim().toLowerCase();
+            const myFirst = (member.first || '').trim().toLowerCase();
+            const ficOptions = staffList
+                .filter(s => {
+                    const fn = (s.fullName || '').toLowerCase();
+                    // Exclude if both first AND last name match
+                    return !(myLast && myFirst && fn.includes(myFirst) && fn.includes(myLast));
+                })
+                .map(s => '<option value="' + (s.fullName || '') + '">' + (s.fullName || 'Unknown') + '</option>').join('');
+
+            // Store for download and footnote save
+            window._fsrMemberId = member.uid || (memberData && memberData.uid) || null;
+            window._fsrStaffList = staffList;
+
+            // ── Helpers ──
+            function fmtRange(s, e) {
+                if (!s || !e) return '';
+                const [hs, ms] = String(s).split(':').map(Number);
+                const [he, me] = String(e).split(':').map(Number);
+                const ps = hs >= 12 ? 'PM' : 'AM', pe = he >= 12 ? 'PM' : 'AM';
+                const hs12 = hs > 12 ? hs - 12 : (hs === 0 ? 12 : hs);
+                const he12 = he > 12 ? he - 12 : (he === 0 ? 12 : he);
+                if (ps === pe) return `${hs12}:${String(ms).padStart(2, '0')}-${he12}:${String(me).padStart(2, '0')} ${pe}`;
+                return `${hs12}:${String(ms).padStart(2, '0')} ${ps}-${he12}:${String(me).padStart(2, '0')} ${pe}`;
+            }
+            function fmtDate(d) {
+                if (!d) return '—';
+                try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
+                catch { return d; }
+            }
+            const DAY = { Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'TH', Friday: 'F', Saturday: 'S' };
+
+            // Consolidate schedule rows
+            const consolidated = {};
+            schedules.forEach(s => {
+                const key = `${s.subjCode}||${s.room}||${s.start}||${s.end}`;
+                if (!consolidated[key]) consolidated[key] = { ...s, days: [] };
+                const abbr = DAY[s.day] || (s.day || '').slice(0, 2).toUpperCase();
+                if (abbr && !consolidated[key].days.includes(abbr)) consolidated[key].days.push(abbr);
+            });
+            const teachingRows = Object.values(consolidated).sort((a, b) => (a.subjCode || '').localeCompare(b.subjCode || ''));
+
+            // Teaching load rows
+            let teachHtml = '';
+            if (teachingRows.length) {
+                teachingRows.forEach(r => {
+                    teachHtml += `<tr>
+                        <td colspan="2" style="font-weight:600;">${r.subjCode || ''}</td>
+                        <td style="text-align:center;color:#9ca3af;font-style:italic;">—</td>
+                        <td style="text-align:center;">${r.room || ''}</td>
+                        <td style="text-align:center;">${r.days.join('/')}</td>
+                        <td style="text-align:center;">${fmtRange(r.start, r.end)}</td>
+                        <td style="text-align:center;color:#9ca3af;">—</td>
+                        <td style="text-align:center;color:#9ca3af;">—</td>
+                        <td style="text-align:center;color:#9ca3af;">—</td>
+                        <td style="text-align:center;color:#9ca3af;">—</td>
+                        <td style="text-align:center;color:#9ca3af;">—</td>
+                    </tr>`;
+                });
+            } else {
+                teachHtml = `<tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:1rem;">No schedule entries found. Schedule is managed by the admin.</td></tr>`;
+            }
+
+            // Research Implementation rows (only type 'implementation' or untyped)
+            let researchHtml = '';
+            const implItems = researchImpl;
+            if (implItems.length) {
+                let total = 0;
+                implItems.forEach((r, i) => {
+                    const c = parseFloat(r.credit_units) || 3; total += c;
+                    researchHtml += `<tr>
+                        <td colspan="4">${r.project_id ? `(${i + 1}) OVCRE Project ID: ${r.project_id}<br>` : ''}<strong>${r.title || 'Untitled'}</strong></td>
+                        <td>${r.role || 'Study Leader'}</td>
+                        <td colspan="2">${r.co_authors || '—'}</td>
+                        <td>${fmtDate(r.start_date)}</td>
+                        <td>${fmtDate(r.end_date)}</td>
+                        <td>${r.funding_agency || 'Core Funded'}</td>
+                        <td style="text-align:center;">${c}</td>
+                    </tr>`;
+                });
+                researchHtml += `<tr style="background:#ffffcc;font-weight:700;">
+                    <td colspan="10" style="text-align:right;padding:8px 14px;">Total Research Work Load Credits (RLC)</td>
+                    <td style="text-align:center;">${total}</td>
+                </tr>`;
+            } else {
+                researchHtml = `<tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.75rem;">No research implementation recorded</td></tr>`;
+            }
+
+            // Research Proposal rows (II.A1)
+            let proposalHtml = '';
+            if (researchProposals.length) {
+                let total = 0;
+                researchProposals.forEach((r, i) => {
+                    const c = parseFloat(r.credit_units) || 0; total += c;
+                    proposalHtml += `<tr>
+                        <td colspan="4"><strong>${r.title || 'Untitled'}</strong></td>
+                        <td>${r.role || 'Study Leader'}</td>
+                        <td colspan="2">${r.co_authors || '—'}</td>
+                        <td colspan="2">${r.funding_agency || '—'}</td>
+                        <td colspan="2" style="text-align:center;">${c}</td>
+                    </tr>`;
+                });
+                proposalHtml += `<tr style="background:#ffffcc;font-weight:700;">
+                    <td colspan="9" style="text-align:right;padding:8px 14px;">Total Research Work Load Credits (RLC)</td>
+                    <td colspan="2" style="text-align:center;">${total}</td>
+                </tr>`;
+            } else {
+                proposalHtml = `<tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.6rem;">No research proposals recorded</td></tr>`;
+            }
+
+            // Extension builder
+            const buildExtRows = (list) => {
+                if (!list.length) return `<tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.75rem;">None recorded</td></tr>`;
+                let t = 0;
+                let rows = list.map(item => {
+                    const c = parseFloat(item.credit_units) || 2; t += c;
+                    return `<tr>
+                        <td colspan="4">${item.project_id ? `Project ID: ${item.project_id}<br>` : ''}<strong>${item.title || 'Untitled'}</strong></td>
+                        <td>${item.role || 'Project Leader'}</td>
+                        <td colspan="2">${item.co_workers || '—'}</td>
+                        <td>${fmtDate(item.start_date)}</td>
+                        <td>${fmtDate(item.end_date)}</td>
+                        <td>${item.funding_agency || '—'}</td>
+                        <td style="text-align:center;">${c}</td>
+                    </tr>`;
+                }).join('');
+                rows += `<tr style="background:#ffffcc;font-weight:700;">
+                    <td colspan="10" style="text-align:right;padding:8px 14px;">Total Extension Credits</td>
+                    <td style="text-align:center;">${t}</td>
+                </tr>`;
+                return rows;
+            };
+
+            const buildTrainingRows = (list) => {
+                if (!list.length) return `<tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.75rem;">None recorded</td></tr>`;
+                let t = 0;
+                let rows = list.map(item => {
+                    const c = parseFloat(item.credit_units) || 0.1; t += c;
+                    return `<tr>
+                        <td colspan="4">${item.title || 'Untitled'}</td>
+                        <td colspan="2" style="text-align:center;">${item.hours || '—'}</td>
+                        <td style="text-align:center;">${item.participants || '—'}</td>
+                        <td>${item.duration || fmtDate(item.start_date)}</td>
+                        <td>${item.role || 'Participant'}</td>
+                        <td>${item.funding_agency || '—'}</td>
+                        <td style="text-align:center;">${c}</td>
+                    </tr>`;
+                }).join('');
+                rows += `<tr style="background:#ffffcc;font-weight:700;">
+                    <td colspan="10" style="text-align:right;padding:8px 14px;">Total Extension and Community Credits (ELC)</td>
+                    <td style="text-align:center;">${t.toFixed(2)}</td>
+                </tr>`;
+                return rows;
+            };
+
+            // Classify extensions by type
+            const mainExt = extensions.filter(e => e.type === 'extensions' || e.type === 'community_service' || !e.type);
+            const trainings = extensions.filter(e => e.type === 'training');
+            const workshops = extensions.filter(e => e.type === 'workshop');
+            const infoDissemination = extensions.filter(e => e.type === 'information_dissemination');
+            const symposium = extensions.filter(e => e.type === 'symposium');
+            const othersExt = extensions.filter(e => e.type === 'others');
+
+            // Classify research by research_type field
+            const researchProposals = research.filter(r => r.research_type === 'proposal');
+            const researchImpl = research.filter(r => r.research_type === 'implementation' || (!r.research_type));
+            const creative_b1 = research.filter(r => r.research_type === 'oral_poster');
+            const creative_b2 = research.filter(r => r.research_type === 'proceedings');
+            const creative_b3 = research.filter(r => r.research_type === 'monographs' || r.research_type === 'monograph');
+            const creative_b4 = research.filter(r => r.research_type === 'journals' || r.research_type === 'journal_article');
+            const creative_b5 = research.filter(r => r.research_type === 'chapters' || r.research_type === 'book_chapter');
+            const creative_b6 = research.filter(r => r.research_type === 'books' || r.research_type === 'book');
+            const creative_b7 = research.filter(r => r.research_type === 'other_creative');
+
+            // Builder for creative work rows (II.B sections)
+            const buildCreativeRows = (list) => {
+                if (!list.length) return '<tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.6rem;">None recorded</td></tr>';
+                let t = 0;
+                let rows = list.map(item => {
+                    const c = parseFloat(item.credit_units) || 0; t += c;
+                    return '<tr>' +
+                        '<td colspan="4">' + (item.title || 'Untitled') + '</td>' +
+                        '<td colspan="3">' + (item.co_authors || '—') + '</td>' +
+                        '<td colspan="2">' + fmtDate(item.date_published || item.start_date) + '</td>' +
+                        '<td colspan="2" style="text-align:center;">' + c + '</td>' +
+                        '</tr>';
+                }).join('');
+                rows += '<tr style="background:#ffffcc;font-weight:700;"><td colspan="9" style="text-align:right;padding:8px 14px;">Total Creative Work Load Credits (RLC)</td><td colspan="2" style="text-align:center;">' + t + '</td></tr>';
+                return rows;
+            };
+
+            const card = document.getElementById('dashboard-fsr-card');
+            if (!card) return;
+
+            card.innerHTML = `
+                <style>
+                    .mfsr-table{width:100%;border-collapse:collapse;font-size:.78rem;background:white;}
+                    .mfsr-table th,.mfsr-table td{border:1px solid #a0a0a0;padding:.35rem .55rem;text-align:left;vertical-align:top;}
+                    .mfsr-table th{background:#e8e8e8;font-weight:600;font-size:.73rem;}
+                    .mfsr-hdr th{background:white!important;font-size:.95rem;text-align:center;font-weight:700;border:2px solid #000;}
+                    .mfsr-lbl{background:#f5f5f5!important;font-weight:600;}
+                    .mfsr-sec td{background:#d9d9d9!important;font-weight:700;border:1px solid #808080;}
+                    .mfsr-subsec td{background:#e8e8e8!important;font-weight:600;border:1px solid #808080;}
+                    .mfsr-col-hdr th{background:#bfbfbf!important;font-weight:600;text-align:center;border:1px solid #808080;}
+                    .mfsr-table tbody tr:hover td{background:#fffacd;}
+
+                    /* Footnote interactive rows */
+                    .fsr-footnote-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;transition:background .15s;font-size:.78rem;color:#374151;}
+                    .fsr-footnote-row:hover{background:#f3f4f6;}
+                    .fn-label{font-weight:700;color:#6b0f1a;min-width:14px;}
+                    .fn-value{flex:1;color:#6b7280;font-style:italic;}
+                    .fn-value.fn-set{color:#111827;font-style:normal;font-weight:500;}
+                    .fsr-fn-dropdown{padding:8px 12px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-top:4px;}
+                    .fn-dd-label{font-size:.72rem;font-weight:600;color:#6b7280;display:block;margin-bottom:5px;}
+                    .fn-dd-opt{padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:.78rem;background:white;cursor:pointer;transition:all .15s;margin-right:6px;}
+                    .fn-dd-opt:hover{background:#014421;color:white;border-color:#014421;}
+                    .fn-dd-clear{border-color:#fca5a5;color:#dc2626;}
+                    .fn-dd-clear:hover{background:#fee2e2;color:#dc2626;border-color:#dc2626;}
+                    .fn-dd-select{padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:.8rem;width:100%;max-width:280px;outline:none;margin-top:4px;}
+                    .fn-dd-select:focus{border-color:#014421;}
+
+                    /* Editable cells */
+                    .fsr-editable-cell{width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:.8rem;text-align:center;font-weight:600;color:#374151;background:white;transition:border-color .15s;outline:none;}
+                    .fsr-editable-cell:focus{border-color:#014421;background:#f0fdf4;}
+                    .fsr-editable-cell::placeholder{color:#9ca3af;font-weight:400;font-style:italic;}
+                </style>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <div>
+                        <div class="chart-title">Faculty Service Record</div>
+                        <div class="chart-subtitle">2nd Semester 2025–2026</div>
+                    </div>
+                    <button onclick="downloadMemberFSR()" id="mfsr-dl-btn"
+                        style="display:flex;align-items:center;gap:6px;padding:8px 18px;background:#014421;color:white;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Download Excel
+                    </button>
+                </div>
+                <div style="overflow:auto;max-height:600px;border:1px solid #e5e7eb;border-radius:8px;">
+                    <table class="mfsr-table">
+                        <tr class="mfsr-hdr"><th colspan="11">FACULTY SERVICE RECORD — 2nd Semester 2025–2026</th></tr>
+                        <tr>
+                            <th class="mfsr-lbl">PRINTED NAME:</th>
+                            <th class="mfsr-lbl" style="font-size:.68rem;">(Family)</th>
+                            <td colspan="2">${member.last || ''}</td>
+                            <th class="mfsr-lbl" style="font-size:.68rem;">(Given)</th>
+                            <td colspan="2">${member.first || ''}</td>
+                            <th class="mfsr-lbl" style="font-size:.68rem;">(MI)</th>
+                            <td>${member.middle || ''}</td>
+                            <th class="mfsr-lbl">RANK:</th>
+                            <td>${member.rank || '—'}</td>
+                        </tr>
+                        <tr>
+                            <th class="mfsr-lbl">HOME DEPARTMENT:</th>
+                            <td colspan="5">${member.department || 'DCERP'}</td>
+                            <th class="mfsr-lbl">HOME COLLEGE:</th>
+                            <td colspan="4">${member.college || 'CHE'}</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:8px;"></td></tr>
+
+                        <tr class="mfsr-sec"><td colspan="11">I. TEACHING LOAD in the COLLEGE</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="2">SUBJECT</th><th>SECTION CODE</th><th>ROOM</th>
+                            <th>DAYS</th><th>TIME</th><th>HOURS PER WEEK</th>
+                            <th>NO. OF STUDENTS</th><th>COURSE CREDIT</th>
+                            <th>STUDENT CREDIT UNITS</th><th>TEACHING LOAD CREDITS</th>
+                        </tr>
+                        ${teachHtml}
+
+                        <!-- Rows 23-41: Total + Interactive Footnotes + Editable Concurrent Load + Registrar -->
+                        <tr style="background:#ffffcc;font-weight:700;">
+                            <td colspan="6" style="padding:6px 10px;">TOTAL Teaching Load Credits</td>
+                            <td style="text-align:center;">—</td>
+                            <td style="text-align:center;">—</td>
+                            <td style="text-align:center;">—</td>
+                            <td colspan="2" style="text-align:center;">—</td>
+                        </tr>
+
+                        <!-- Interactive Footnote Rows (clickable dropdowns) -->
+                        <tr><td colspan="11" style="border:none;padding:3px 8px;">
+                            <div class="fsr-footnote-row" id="fsr-fn-1" onclick="toggleFootnoteDropdown(1)">
+                                <span class="fn-label">¹</span>
+                                <span class="fn-value" id="fsr-fn-val-1">Click to set teaching arrangement...</span>
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="opacity:.4;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                            <div class="fsr-fn-dropdown" id="fsr-fn-dd-1" style="display:none;">
+                                <div class="fn-step" id="fsr-fn-step1-1">
+                                    <label class="fn-dd-label">Type:</label>
+                                    <button class="fn-dd-opt" onclick="selectFootnoteType(1,'Team teaching')">Team teaching</button>
+                                    <button class="fn-dd-opt" onclick="selectFootnoteType(1,'Relay teaching')">Relay teaching</button>
+                                    <button class="fn-dd-opt fn-dd-clear" onclick="clearFootnote(1)">Clear</button>
+                                </div>
+                                <div class="fn-step" id="fsr-fn-step2-1" style="display:none;">
+                                    <label class="fn-dd-label">FIC:</label>
+                                    <select class="fn-dd-select" id="fsr-fn-fic-1" onchange="confirmFootnote(1)">
+                                        <option value="">Select faculty...</option>
+                                        ${ficOptions}
+                                    </select>
+                                </div>
+                            </div>
+                        </td></tr>
+                        <tr><td colspan="11" style="border:none;padding:3px 8px;">
+                            <div class="fsr-footnote-row" id="fsr-fn-2" onclick="toggleFootnoteDropdown(2)">
+                                <span class="fn-label">²</span>
+                                <span class="fn-value" id="fsr-fn-val-2">Click to set teaching arrangement...</span>
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="opacity:.4;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                            <div class="fsr-fn-dropdown" id="fsr-fn-dd-2" style="display:none;">
+                                <div class="fn-step" id="fsr-fn-step1-2">
+                                    <label class="fn-dd-label">Type:</label>
+                                    <button class="fn-dd-opt" onclick="selectFootnoteType(2,'Team teaching')">Team teaching</button>
+                                    <button class="fn-dd-opt" onclick="selectFootnoteType(2,'Relay teaching')">Relay teaching</button>
+                                    <button class="fn-dd-opt fn-dd-clear" onclick="clearFootnote(2)">Clear</button>
+                                </div>
+                                <div class="fn-step" id="fsr-fn-step2-2" style="display:none;">
+                                    <label class="fn-dd-label">FIC:</label>
+                                    <select class="fn-dd-select" id="fsr-fn-fic-2" onchange="confirmFootnote(2)">
+                                        <option value="">Select faculty...</option>
+                                        ${ficOptions}
+                                    </select>
+                                </div>
+                            </div>
+                        </td></tr>
+                        <tr><td colspan="11" style="border:none;padding:3px 8px;">
+                            <div class="fsr-footnote-row" id="fsr-fn-3" onclick="toggleFootnoteDropdown(3)">
+                                <span class="fn-label">³</span>
+                                <span class="fn-value" id="fsr-fn-val-3">Click to set teaching arrangement...</span>
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="opacity:.4;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                            <div class="fsr-fn-dropdown" id="fsr-fn-dd-3" style="display:none;">
+                                <div class="fn-step" id="fsr-fn-step1-3">
+                                    <label class="fn-dd-label">Type:</label>
+                                    <button class="fn-dd-opt" onclick="selectFootnoteType(3,'Team teaching')">Team teaching</button>
+                                    <button class="fn-dd-opt" onclick="selectFootnoteType(3,'Relay teaching')">Relay teaching</button>
+                                    <button class="fn-dd-opt fn-dd-clear" onclick="clearFootnote(3)">Clear</button>
+                                </div>
+                                <div class="fn-step" id="fsr-fn-step2-3" style="display:none;">
+                                    <label class="fn-dd-label">FIC:</label>
+                                    <select class="fn-dd-select" id="fsr-fn-fic-3" onchange="confirmFootnote(3)">
+                                        <option value="">Select faculty...</option>
+                                        ${ficOptions}
+                                    </select>
+                                </div>
+                            </div>
+                        </td></tr>
+
+                        <!-- Concurrent teaching load (editable) -->
+                        <tr><td colspan="11" style="border:none;padding:6px 8px;font-size:.78rem;">
+                            <strong>Concurrent teaching load outside the college.</strong>&nbsp;
+                            Write NONE whenever applicable. Please do not leave any blank.
+                        </td></tr>
+                        <tr><td colspan="11" style="border:none;height:4px;"></td></tr>
+                        <tr>
+                            <td colspan="3"><input type="text" class="fsr-editable-cell" id="fsr-conc-college" value="(NONE)" placeholder="Institution name"></td>
+                            <td colspan="4"><input type="text" class="fsr-editable-cell" id="fsr-conc-subj" value="(NONE)" placeholder="No. of subjects"></td>
+                            <td colspan="4"><input type="text" class="fsr-editable-cell" id="fsr-conc-units" value="(NONE)" placeholder="No. of units"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="font-weight:700;border-top:1px solid #888;">COLLEGE OUTSIDE U.P. SYSTEM</td>
+                            <td colspan="4" style="text-align:center;border-top:1px solid #888;">No. of subjects</td>
+                            <td colspan="4" style="text-align:center;border-top:1px solid #888;">No. of units (w/o multipliers)</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:4px;"></td></tr>
+                        <tr>
+                            <td colspan="3"><input type="text" class="fsr-editable-cell" id="fsr-conc-updept" value="(NONE)" placeholder="UP College/Dept name"></td>
+                            <td colspan="4"><input type="text" class="fsr-editable-cell" id="fsr-conc-updept-subj" value="(NONE)" placeholder="No. of subjects"></td>
+                            <td colspan="4"><input type="text" class="fsr-editable-cell" id="fsr-conc-updept-units" value="(NONE)" placeholder="No. of units"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="font-weight:700;border-top:1px solid #888;">U.P. COLLEGE/DEPT.</td>
+                            <td colspan="4" style="text-align:center;border-top:1px solid #888;">No. of subjects</td>
+                            <td colspan="4" style="text-align:center;border-top:1px solid #888;">No. of units (w/o multipliers)</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;padding:4px 8px;font-size:.75rem;">
+                            <strong>NOTE:</strong> A faculty member teaching in another college and/or another Constituent University (CU) should file a separate Form 67 (FSR) in that institution.
+                        </td></tr>
+                        <tr><td colspan="11" style="border:none;height:6px;"></td></tr>
+                        <tr>
+                            <td colspan="6" style="border:none;"></td>
+                            <td colspan="5" style="border:none;font-weight:600;padding:2px 6px;">Certified Correct:</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:20px;"></td></tr>
+                        <tr>
+                            <td colspan="6" style="border:none;"></td>
+                            <td colspan="5" style="text-align:center;font-weight:700;font-size:.82rem;padding:4px;">MARGARITA CARMEN S. PATERNO</td>
+                        </tr>
+                        <tr>
+                            <td colspan="6" style="border:none;"></td>
+                            <td colspan="5" style="border-top:1px solid #000;text-align:center;font-weight:700;font-size:.8rem;padding:4px;">University Registrar</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:10px;"></td></tr>
+
+                        <tr class="mfsr-sec"><td colspan="11">II. RESEARCH / TEXTBOOK WRITING / CREATIVE WORK:</td></tr>
+
+                        <!-- II.A RESEARCH -->
+                        <tr class="mfsr-subsec"><td colspan="11">II.A RESEARCH</td></tr>
+
+                        <!-- II.A1 Research Proposal -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.A1 RESEARCH PROPOSAL</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE)</th><th>ROLE</th>
+                            <th colspan="2">CO WORKERS INVOLVED</th><th colspan="2">FUNDING AGENCY</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${proposalHtml}
+
+                        <tr><td colspan="11" style="border:none;height:6px;"></td></tr>
+
+                        <!-- II.A2 Research Implementation -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.A2 RESEARCH IMPLEMENTATION (Please attach Progress Report)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE)</th><th>ROLE</th>
+                            <th colspan="2">CO WORKERS INVOLVED</th><th>START DATE</th><th>END DATE</th><th>FUNDING AGENCY</th><th>APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${researchHtml}
+
+                        <tr><td colspan="11" style="border:none;height:6px;"></td></tr>
+
+                        <!-- II.B CREATIVE WORK -->
+                        <tr class="mfsr-subsec"><td colspan="11">II.B CREATIVE WORK</td></tr>
+
+                        <!-- II.B1 Oral/Poster Papers -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.B1 ORAL/POSTER PAPERS PRESENTED IN CONFERENCES (Please attach first page)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE, PLACE, PUBLICATION)</th>
+                            <th colspan="3">CO-AUTHORS</th><th colspan="2">DATE OF PUBLICATION/COMPLETION</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildCreativeRows(creative_b1)}
+
+                        <!-- II.B2 Papers in Proceedings -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.B2 PAPERS PUBLISHED IN PROCEEDINGS OF CONFERENCES (Please attach first page)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE, PLACE, PUBLICATION)</th>
+                            <th colspan="3">CO-AUTHORS</th><th colspan="2">DATE OF PUBLICATION/COMPLETION</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildCreativeRows(creative_b2)}
+
+                        <!-- II.B3 Monographs -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.B3 MONOGRAPHS: manuals, training modules (Please attach first page)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE, PLACE, PUBLICATION)</th>
+                            <th colspan="3">CO-AUTHORS</th><th colspan="2">DATE OF PUBLICATION/COMPLETION</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildCreativeRows(creative_b3)}
+
+                        <!-- II.B4 Articles in Refereed Journals -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.B4 ARTICLES IN REFEREED JOURNALS (Please attach first page)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE, PLACE, PUBLICATION)</th>
+                            <th colspan="3">CO-AUTHORS</th><th colspan="2">DATE OF PUBLICATION/COMPLETION</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildCreativeRows(creative_b4)}
+
+                        <!-- II.B5 Chapters in a Book -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.B5 CHAPTERS IN A BOOK (Please attach first page)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE, PLACE, PUBLICATION)</th>
+                            <th colspan="3">CO-AUTHORS</th><th colspan="2">DATE OF PUBLICATION/COMPLETION</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildCreativeRows(creative_b5)}
+
+                        <!-- II.B6 Books -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.B6 BOOKS (Please attach first page)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE, PLACE, PUBLICATION)</th>
+                            <th colspan="3">CO-AUTHORS</th><th colspan="2">DATE OF PUBLICATION/COMPLETION</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildCreativeRows(creative_b6)}
+
+                        <!-- II.B7 Others -->
+                        <tr class="mfsr-subsec"><td colspan="11" style="padding-left:20px;">II.B7 OTHERS (e.g. plays, poetry, musical arrangements, etc.)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE, PLACE, PUBLICATION)</th>
+                            <th colspan="3">CO-AUTHORS</th><th colspan="2">DATE OF PUBLICATION/COMPLETION</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildCreativeRows(creative_b7)}
+
+                        <tr><td colspan="11" style="border:none;height:8px;"></td></tr>
+
+                        <!-- III. ADMINISTRATIVE WORK -->
+                        <tr class="mfsr-sec"><td colspan="11">III. ADMINISTRATIVE WORK:</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="6">POSITION / NATURE OF ADMINISTRATIVE WORK</th>
+                            <th colspan="3">OFFICE / UNIT</th><th colspan="2">APPROVED CREDIT UNITS</th>
+                        </tr>
+                        <tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.75rem;">No administrative work recorded</td></tr>
+                        <tr><td colspan="11" style="border:none;height:8px;"></td></tr>
+
+                        <!-- IV. EXTENSION AND COMMUNITY SERVICE -->
+                        <tr class="mfsr-sec"><td colspan="11">IV. EXTENSION AND COMMUNITY SERVICE</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE (SPECIFY COMPLETE TITLE)</th><th>ROLE</th>
+                            <th colspan="2">CO WORKERS INVOLVED</th><th>START DATE</th><th>END DATE</th><th>FUNDING AGENCY</th><th>APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildExtRows(mainExt)}
+                        <tr><td colspan="11" style="border:none;height:4px;"></td></tr>
+
+                        <!-- IV.A TRAININGS -->
+                        <tr class="mfsr-subsec"><td colspan="11">IV.A TRAININGS</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE OF ACTIVITY / PROGRAM</th>
+                            <th colspan="2">NO. OF HOURS</th><th>NO. OF PARTICIPANTS</th>
+                            <th>DURATION</th><th>ROLE</th><th>FUNDING AGENCY</th><th>APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildTrainingRows(trainings)}
+                        <tr><td colspan="11" style="border:none;height:4px;"></td></tr>
+
+                        <!-- IV.B INFORMATION DISSEMINATION -->
+                        <tr class="mfsr-subsec"><td colspan="11">IV.B INFORMATION DISSEMINATION (e.g. print, broadcast T.V., on-line)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE OF ACTIVITY / PROGRAM</th>
+                            <th colspan="2">NO. OF HOURS</th><th>NO. OF PARTICIPANTS</th>
+                            <th>DURATION</th><th>ROLE</th><th>FUNDING AGENCY</th><th>APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildTrainingRows(infoDissemination)}
+                        <tr><td colspan="11" style="border:none;height:4px;"></td></tr>
+
+                        <!-- IV.C WORKSHOPS -->
+                        <tr class="mfsr-subsec"><td colspan="11">IV.C WORKSHOPS</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE OF ACTIVITY / PROGRAM</th>
+                            <th colspan="2">NO. OF HOURS</th><th>NO. OF PARTICIPANTS</th>
+                            <th>DURATION</th><th>ROLE</th><th>FUNDING AGENCY</th><th>APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildTrainingRows(workshops)}
+                        <tr><td colspan="11" style="border:none;height:4px;"></td></tr>
+
+                        <!-- IV.D SYMPOSIUM -->
+                        <tr class="mfsr-subsec"><td colspan="11">IV.D SYMPOSIUM</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE OF ACTIVITY / PROGRAM</th>
+                            <th colspan="2">NO. OF HOURS</th><th>NO. OF PARTICIPANTS</th>
+                            <th>DURATION</th><th>ROLE</th><th>FUNDING AGENCY</th><th>APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildTrainingRows(symposium)}
+                        <tr><td colspan="11" style="border:none;height:4px;"></td></tr>
+
+                        <!-- IV.E OTHERS -->
+                        <tr class="mfsr-subsec"><td colspan="11">IV.E OTHERS (e.g. community action services)</td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="4">TITLE OF ACTIVITY / PROGRAM</th>
+                            <th colspan="2">NO. OF HOURS</th><th>NO. OF PARTICIPANTS</th>
+                            <th>DURATION</th><th>ROLE</th><th>FUNDING AGENCY</th><th>APPROVED CREDIT UNITS</th>
+                        </tr>
+                        ${buildTrainingRows(othersExt)}
+
+                        <!-- Total Extension Credits (all IV subsections) -->
+                        <tr><td colspan="11" style="border:none;height:10px;"></td></tr>
+
+                        <!-- Extension/Research In-Charge signatures -->
+                        <tr><td colspan="11" style="border:none;height:30px;"></td></tr>
+                        <tr>
+                            <td colspan="5" style="border:none;text-align:center;font-weight:700;font-size:.82rem;">____________________________</td>
+                            <td style="border:none;"></td>
+                            <td colspan="5" style="border:none;text-align:center;font-weight:700;font-size:.82rem;">____________________________</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5" style="border:none;text-align:center;font-size:.75rem;color:#6b7280;">In-Charge, Extension, DCERP</td>
+                            <td style="border:none;"></td>
+                            <td colspan="5" style="border:none;text-align:center;font-size:.75rem;color:#6b7280;">In-Charge, Research, DCERP</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:10px;"></td></tr>
+
+                        <!-- V. STUDY LOAD -->
+                        <tr class="mfsr-sec"><td colspan="11">V. STUDY LOAD:</td></tr>
+                        <tr>
+                            <td colspan="2" style="font-weight:600;">Status:</td>
+                            <td colspan="9">N/A</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td colspan="4">Degree enrolled in:</td>
+                            <td colspan="5">University enrolled in:</td>
+                        </tr>
+                        <tr>
+                            <td colspan="6">On full study leave with pay? Yes ___ No ___</td>
+                            <td colspan="5">Recipient of faculty fellowship? Yes ___ No ___</td>
+                        </tr>
+                        <tr><td colspan="11" style="font-size:.75rem;color:#6b7280;padding:4px 8px;">
+                            FOR FACULTY MEMBERS WITH SOME TEACHING LOAD BUT ALSO HAVE STUDY LOADS:
+                        </td></tr>
+                        <tr><td colspan="11" style="font-size:.75rem;color:#6b7280;padding:2px 8px;">
+                            Study Load CREDITS (i.e. study load counted as part of normal 12-unit faculty load)
+                        </td></tr>
+                        <tr><td colspan="11" style="font-size:.75rem;color:#6b7280;padding:2px 8px;">
+                            Study Load Units (i.e. study load done above a full teaching load)
+                        </td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="2">Course Number</th><th colspan="2">Course Credit</th>
+                            <th colspan="2">Day/s</th><th colspan="2">Time</th><th colspan="3">School</th>
+                        </tr>
+                        <tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.6rem;">—</td></tr>
+                        <tr style="background:#ffffcc;font-weight:700;">
+                            <td colspan="11" style="padding:6px 10px;">Total Study Load Credits (SLC): —</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:6px;"></td></tr>
+
+                        <!-- TOTAL FACULTY LOAD -->
+                        <tr style="background:#d9d9d9;font-weight:700;">
+                            <td colspan="11" style="padding:8px 10px;font-size:.85rem;border:2px solid #000;">
+                                TOTAL FACULTY LOAD IN CREDIT UNITS: —
+                            </td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:8px;"></td></tr>
+
+                        <!-- VI. LIMITED PRACTICE OF PROFESSION -->
+                        <tr class="mfsr-sec"><td colspan="11">VI. LIMITED PRACTICE OF PROFESSION</td></tr>
+                        <tr>
+                            <td colspan="7">Have you applied for official permission for limited practice of profession?</td>
+                            <td colspan="4">N/A</td>
+                        </tr>
+                        <tr>
+                            <td colspan="7" style="font-size:.75rem;">If yes, indicate date (MM/DD/YY) permission was submitted</td>
+                            <td colspan="4" style="font-size:.75rem;">or approved: ___</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:6px;"></td></tr>
+
+                        <!-- VII. PROFESSORIAL CHAIR -->
+                        <tr class="mfsr-sec"><td colspan="11">VII. PROFESSORIAL CHAIR or FACULTY GRANT RECIPIENT or NOMINEE:</td></tr>
+                        <tr>
+                            <td colspan="8" style="font-size:.78rem;">Please write NA on the space on the right if neither a recipient nor a nominee</td>
+                            <td colspan="3">N/A</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">PROFESSORIAL CHAIR ___</td>
+                            <td colspan="2">GRANT ___</td>
+                            <td colspan="6">CHAIR/GRANT TITLE: ___</td>
+                        </tr>
+                        <tr>
+                            <td colspan="5">APPROVED START DATE (MM/DD/YY): ___</td>
+                            <td colspan="6">END DATE (MM/DD/YY): ___</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:6px;"></td></tr>
+
+                        <!-- VIII. CONSULTATION HOURS -->
+                        <tr class="mfsr-sec"><td colspan="11">VIII. CONSULTATION HOURS:</td></tr>
+                        <tr><td colspan="11" style="font-size:.75rem;color:#6b7280;padding:4px 8px;">
+                            (From the U.P. Faculty Manual: "At least 10 hours per week." Please specify definite days and hours; avoid "By appointment.")
+                        </td></tr>
+                        <tr class="mfsr-col-hdr">
+                            <th colspan="3">Days</th><th colspan="4">Time</th><th colspan="4">Place</th>
+                        </tr>
+                        <tr><td colspan="11" style="text-align:center;color:#9ca3af;font-style:italic;padding:.6rem;">—</td></tr>
+                        <tr>
+                            <td colspan="7" style="border:none;"></td>
+                            <td colspan="2" style="font-weight:600;">Total hours per week:</td>
+                            <td colspan="2" style="font-weight:700;">—</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:8px;"></td></tr>
+
+                        <!-- IX. CERTIFICATION -->
+                        <tr class="mfsr-sec"><td colspan="11">IX. CERTIFICATION:</td></tr>
+                        <tr><td colspan="11" style="font-size:.78rem;padding:8px;">
+                            The faculty member certifies that all the information provided in this record are true and correct to the best of his/her knowledge.
+                        </td></tr>
+                        <tr><td colspan="11" style="border:none;height:30px;"></td></tr>
+                        <tr>
+                            <td colspan="3" style="border:none;text-align:center;font-weight:700;">____________________________</td>
+                            <td colspan="4" style="border:none;text-align:center;font-weight:700;">____________________________</td>
+                            <td colspan="4" style="border:none;text-align:center;font-weight:700;">____________________________</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="border:none;text-align:center;font-size:.72rem;color:#6b7280;">Faculty Member</td>
+                            <td colspan="4" style="border:none;text-align:center;font-size:.72rem;color:#6b7280;">Chair, Department</td>
+                            <td colspan="4" style="border:none;text-align:center;font-size:.72rem;color:#6b7280;">Dean</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="border:none;text-align:center;font-size:.72rem;color:#9ca3af;">Date: ___</td>
+                            <td colspan="4" style="border:none;text-align:center;font-size:.72rem;color:#9ca3af;">Date: ___</td>
+                            <td colspan="4" style="border:none;text-align:center;font-size:.72rem;color:#9ca3af;">Date: ___</td>
+                        </tr>
+                        <tr><td colspan="11" style="border:none;height:10px;"></td></tr>
+                        <tr><td colspan="11" style="border:none;font-size:.72rem;color:#6b7280;padding:6px 8px;">
+                            NOTE: Every faculty member in residence (i.e. receiving salary from U.P.), including those on detail/secondment to other agencies, must fill out this report form.
+                        </td></tr>
+                    </table>
+                </div>`;
+        }
+
+        async function downloadMemberFSR() {
+            const uid = window._fsrMemberId;
+            if (!uid) { alert('Member ID not found. Please reload and try again.'); return; }
+            const btn = document.getElementById('mfsr-dl-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+            try {
+                const res = await fetch(`/api/generate-fsr/${uid}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ semester: '2nd Semester', academic_year: '2025-2026' })
+                });
+                if (!res.ok) throw new Error('Failed to generate FSR');
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `FSR_${(memberData && memberData.last) || 'Member'}_2nd_Semester_2025-2026.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                alert('Failed to download FSR: ' + e.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Download Excel';
+                }
+            }
+        }
+
+        // ── FSR Footnote Interaction ──────────────────────────────────────
+        var _fnTypes = {};
+
+        function toggleFootnoteDropdown(n) {
+            var dd = document.getElementById('fsr-fn-dd-' + n);
+            if (!dd) return;
+            var isOpen = dd.style.display !== 'none';
+            [1, 2, 3].forEach(function (i) {
+                var d = document.getElementById('fsr-fn-dd-' + i);
+                if (d) d.style.display = 'none';
+            });
+            if (!isOpen) {
+                dd.style.display = 'block';
+                var s1 = document.getElementById('fsr-fn-step1-' + n);
+                var s2 = document.getElementById('fsr-fn-step2-' + n);
+                if (s1) s1.style.display = 'block';
+                if (s2) s2.style.display = 'none';
+            }
+        }
+
+        function selectFootnoteType(n, type) {
+            _fnTypes[n] = type;
+            var s1 = document.getElementById('fsr-fn-step1-' + n);
+            var s2 = document.getElementById('fsr-fn-step2-' + n);
+            if (s1) s1.style.display = 'none';
+            if (s2) s2.style.display = 'block';
+            var sel = document.getElementById('fsr-fn-fic-' + n);
+            if (sel) sel.value = '';
+        }
+
+        function confirmFootnote(n) {
+            var sel = document.getElementById('fsr-fn-fic-' + n);
+            var fic = sel ? sel.value : '';
+            if (!fic) return;
+            var type = _fnTypes[n] || 'Team teaching';
+            var text = type + ' with ' + fic + ', 50/50 load sharing';
+            var val = document.getElementById('fsr-fn-val-' + n);
+            if (val) { val.textContent = text; val.className = 'fn-value fn-set'; }
+            var dd = document.getElementById('fsr-fn-dd-' + n);
+            if (dd) dd.style.display = 'none';
+        }
+
+        function clearFootnote(n) {
+            _fnTypes[n] = null;
+            var val = document.getElementById('fsr-fn-val-' + n);
+            if (val) { val.textContent = 'Click to set teaching arrangement...'; val.className = 'fn-value'; }
+            var dd = document.getElementById('fsr-fn-dd-' + n);
+            if (dd) dd.style.display = 'none';
         }
 
         // ── Research Page ─────────────────────────────────────────────────
@@ -1685,8 +2423,8 @@
         function renderResearchPage() {
             const content = document.getElementById('page-content');
             content.innerHTML = `
-                <div class="research-container">
-                    <!-- Header with Add and Delete Buttons -->
+                    <div class="research-container">
+                    <!--Header with Add and Delete Buttons-->
                     <div class="research-header">
                         <button class="btn-add-research" onclick="openResearchTypeModal()">
                             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -1701,7 +2439,7 @@
                         </button>
                     </div>
 
-                    <!-- Table Card with Filters Inside -->
+                    <!--Table Card with Filters Inside-->
                     <div class="research-table-card">
                         <!-- Filters Section (Inside Table) -->
                         <div class="research-filters">
@@ -1772,7 +2510,7 @@
                     </div>
                 </div>
 
-                <!-- Research Type Selection Modal -->
+                <!--Research Type Selection Modal-->
                 <div class="research-type-modal" id="research-type-modal">
                     <div class="research-type-modal-box">
                         <div class="research-type-modal-header">
@@ -1872,287 +2610,287 @@
                     </div>
                 </div>
 
-                <!-- Research Form Modal -->
-                <div class="research-form-modal" id="research-form-modal">
-                    <div class="research-form-modal-box">
-                        <div class="research-form-modal-header">
-                            <div>
-                                <h2 class="research-form-modal-title" id="form-modal-title">Add Research</h2>
-                                <p class="research-form-modal-subtitle" id="form-modal-subtitle">Research Type</p>
-                            </div>
-                            <button class="research-form-modal-close" onclick="closeResearchForm()">✕</button>
-                        </div>
-
-                        <!-- Success Message -->
-                        <div class="success-message" id="form-success-message">
-                            <div class="success-icon">✓</div>
-                            <div class="success-title">Form Completed!</div>
-                            <div class="success-text">Your research submission has been recorded.</div>
-                        </div>
-
-                        <!-- Form 1: Research Proposal -->
-                        <form class="research-form" id="form-proposal" onsubmit="return submitResearchForm(event, 'proposal')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter research title" required>
+                <!--Research Form Modal-->
+                    <div class="research-form-modal" id="research-form-modal">
+                        <div class="research-form-modal-box">
+                            <div class="research-form-modal-header">
+                                <div>
+                                    <h2 class="research-form-modal-title" id="form-modal-title">Add Research</h2>
+                                    <p class="research-form-modal-subtitle" id="form-modal-subtitle">Research Type</p>
+                                </div>
+                                <button class="research-form-modal-close" onclick="closeResearchForm()">✕</button>
                             </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Your Role <span class="required">*</span></label>
-                                <select name="role" class="form-select" required>
-                                    <option value="">Select your role</option>
-                                    <option value="Principal Investigator">Principal Investigator</option>
-                                    <option value="Co-Principal Investigator">Co-Principal Investigator</option>
-                                    <option value="Research Associate">Research Associate</option>
-                                    <option value="Consultant">Consultant</option>
-                                </select>
+                            <!-- Success Message -->
+                            <div class="success-message" id="form-success-message">
+                                <div class="success-icon">✓</div>
+                                <div class="success-title">Form Completed!</div>
+                                <div class="success-text">Your research submission has been recorded.</div>
                             </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Co-workers Involved <span class="required">*</span></label>
-                                <textarea name="coworkers" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Funding Agency <span class="required">*</span></label>
-                                <input type="text" name="funding_agency" class="form-input" placeholder="e.g. DOST, CHED, NRCP" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
-
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
-
-                        <!-- Form 2: Research Implementation -->
-                        <form class="research-form" id="form-implementation" onsubmit="return submitResearchForm(event, 'implementation')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter research title" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Your Role <span class="required">*</span></label>
-                                <select name="role" class="form-select" required>
-                                    <option value="">Select your role</option>
-                                    <option value="Lead Researcher">Lead Researcher</option>
-                                    <option value="Co-Researcher">Co-Researcher</option>
-                                    <option value="Research Assistant">Research Assistant</option>
-                                    <option value="Data Analyst">Data Analyst</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Co-workers Involved <span class="required">*</span></label>
-                                <textarea name="coworkers" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
-
-                            <div class="form-row">
+                            <!-- Form 1: Research Proposal -->
+                            <form class="research-form" id="form-proposal" onsubmit="return submitResearchForm(event, 'proposal')" style="display:none;">
                                 <div class="form-group">
-                                    <label class="form-label">Start Date <span class="required">*</span></label>
-                                    <input type="date" name="start_date" class="form-input" required>
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter research title" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label">End Date <span class="required">*</span></label>
-                                    <input type="date" name="end_date" class="form-input" required>
+                                    <label class="form-label">Your Role <span class="required">*</span></label>
+                                    <select name="role" class="form-select" required>
+                                        <option value="">Select your role</option>
+                                        <option value="Principal Investigator">Principal Investigator</option>
+                                        <option value="Co-Principal Investigator">Co-Principal Investigator</option>
+                                        <option value="Research Associate">Research Associate</option>
+                                        <option value="Consultant">Consultant</option>
+                                    </select>
                                 </div>
-                            </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Funding Agency <span class="required">*</span></label>
-                                <input type="text" name="funding_agency" class="form-input" placeholder="e.g. DOST, CHED, NRCP" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Co-workers Involved <span class="required">*</span></label>
+                                    <textarea name="coworkers" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Funding Agency <span class="required">*</span></label>
+                                    <input type="text" name="funding_agency" class="form-input" placeholder="e.g. DOST, CHED, NRCP" required>
+                                </div>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
 
-                        <!-- Form 3-8: Generic Form for Publications -->
-                        <form class="research-form" id="form-oral_poster" onsubmit="return submitResearchForm(event, 'oral_poster')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter publication title" required>
-                            </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
 
-                            <div class="form-group">
-                                <label class="form-label">Co-Authors <span class="required">*</span></label>
-                                <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
+                            <!-- Form 2: Research Implementation -->
+                            <form class="research-form" id="form-implementation" onsubmit="return submitResearchForm(event, 'implementation')" style="display:none;">
+                                <div class="form-group">
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter research title" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Date of Completion <span class="required">*</span></label>
-                                <input type="date" name="completion_date" class="form-input" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Your Role <span class="required">*</span></label>
+                                    <select name="role" class="form-select" required>
+                                        <option value="">Select your role</option>
+                                        <option value="Lead Researcher">Lead Researcher</option>
+                                        <option value="Co-Researcher">Co-Researcher</option>
+                                        <option value="Research Assistant">Research Assistant</option>
+                                        <option value="Data Analyst">Data Analyst</option>
+                                    </select>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Co-workers Involved <span class="required">*</span></label>
+                                    <textarea name="coworkers" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Start Date <span class="required">*</span></label>
+                                        <input type="date" name="start_date" class="form-input" required>
+                                    </div>
 
-                        <form class="research-form" id="form-proceedings" onsubmit="return submitResearchForm(event, 'proceedings')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter publication title" required>
-                            </div>
+                                    <div class="form-group">
+                                        <label class="form-label">End Date <span class="required">*</span></label>
+                                        <input type="date" name="end_date" class="form-input" required>
+                                    </div>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Co-Authors <span class="required">*</span></label>
-                                <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Funding Agency <span class="required">*</span></label>
+                                    <input type="text" name="funding_agency" class="form-input" placeholder="e.g. DOST, CHED, NRCP" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Date of Publication <span class="required">*</span></label>
-                                <input type="date" name="completion_date" class="form-input" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
+                            <!-- Form 3-8: Generic Form for Publications -->
+                            <form class="research-form" id="form-oral_poster" onsubmit="return submitResearchForm(event, 'oral_poster')" style="display:none;">
+                                <div class="form-group">
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter publication title" required>
+                                </div>
 
-                        <form class="research-form" id="form-monographs" onsubmit="return submitResearchForm(event, 'monographs')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter monograph title" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Co-Authors <span class="required">*</span></label>
+                                    <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Co-Authors <span class="required">*</span></label>
-                                <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Date of Completion <span class="required">*</span></label>
+                                    <input type="date" name="completion_date" class="form-input" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Date of Publication <span class="required">*</span></label>
-                                <input type="date" name="completion_date" class="form-input" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
+                            <form class="research-form" id="form-proceedings" onsubmit="return submitResearchForm(event, 'proceedings')" style="display:none;">
+                                <div class="form-group">
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter publication title" required>
+                                </div>
 
-                        <form class="research-form" id="form-journals" onsubmit="return submitResearchForm(event, 'journals')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter article title" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Co-Authors <span class="required">*</span></label>
+                                    <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Co-Authors <span class="required">*</span></label>
-                                <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Date of Publication <span class="required">*</span></label>
+                                    <input type="date" name="completion_date" class="form-input" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Date of Publication <span class="required">*</span></label>
-                                <input type="date" name="completion_date" class="form-input" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
+                            <form class="research-form" id="form-monographs" onsubmit="return submitResearchForm(event, 'monographs')" style="display:none;">
+                                <div class="form-group">
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter monograph title" required>
+                                </div>
 
-                        <form class="research-form" id="form-chapters" onsubmit="return submitResearchForm(event, 'chapters')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter chapter title" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Co-Authors <span class="required">*</span></label>
+                                    <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Co-Authors <span class="required">*</span></label>
-                                <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Date of Publication <span class="required">*</span></label>
+                                    <input type="date" name="completion_date" class="form-input" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Date of Publication <span class="required">*</span></label>
-                                <input type="date" name="completion_date" class="form-input" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
+                            <form class="research-form" id="form-journals" onsubmit="return submitResearchForm(event, 'journals')" style="display:none;">
+                                <div class="form-group">
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter article title" required>
+                                </div>
 
-                        <form class="research-form" id="form-books" onsubmit="return submitResearchForm(event, 'books')" style="display:none;">
-                            <div class="form-group">
-                                <label class="form-label">Title <span class="required">*</span></label>
-                                <input type="text" name="title" class="form-input" placeholder="Enter book title" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Co-Authors <span class="required">*</span></label>
+                                    <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Co-Authors <span class="required">*</span></label>
-                                <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
-                                <div class="form-help-text">Separate names with commas</div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Date of Publication <span class="required">*</span></label>
+                                    <input type="date" name="completion_date" class="form-input" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Date of Publication <span class="required">*</span></label>
-                                <input type="date" name="completion_date" class="form-input" required>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Approved Credit Units <span class="required">*</span></label>
-                                <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
-                            </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
 
-                            <div class="form-actions">
-                                <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
-                                <button type="submit" class="btn-submit">Submit</button>
-                            </div>
-                        </form>
+                            <form class="research-form" id="form-chapters" onsubmit="return submitResearchForm(event, 'chapters')" style="display:none;">
+                                <div class="form-group">
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter chapter title" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Co-Authors <span class="required">*</span></label>
+                                    <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Date of Publication <span class="required">*</span></label>
+                                    <input type="date" name="completion_date" class="form-input" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
+
+                            <form class="research-form" id="form-books" onsubmit="return submitResearchForm(event, 'books')" style="display:none;">
+                                <div class="form-group">
+                                    <label class="form-label">Title <span class="required">*</span></label>
+                                    <input type="text" name="title" class="form-input" placeholder="Enter book title" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Co-Authors <span class="required">*</span></label>
+                                    <textarea name="coauthors" class="form-textarea" placeholder="e.g. J. Santos, M. Cruz, A. Reyes" required></textarea>
+                                    <div class="form-help-text">Separate names with commas</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Date of Publication <span class="required">*</span></label>
+                                    <input type="date" name="completion_date" class="form-input" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Approved Credit Units <span class="required">*</span></label>
+                                    <input type="number" name="credit_units" class="form-input" placeholder="e.g. 3" step="0.1" min="0" required>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="button" class="btn-cancel" onclick="closeResearchForm()">Cancel</button>
+                                    <button type="submit" class="btn-submit">Submit</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
 
             // Populate year filter dynamically
             populateYearFilter();
@@ -2171,7 +2909,7 @@
 
             // Generate years from 2000 to current year (descending)
             for (let year = currentYear; year >= 2000; year--) {
-                options += `<option value="${year}">${year}</option>`;
+                options += `<option value ="${year}"> ${year}</option> `;
             }
 
             yearSelect.innerHTML = options;
@@ -2214,11 +2952,11 @@
 
             const typeInfo = titles[type];
             document.getElementById('form-modal-title').textContent = typeInfo.title;
-            document.getElementById('form-modal-subtitle').textContent = `Research Type: ${typeInfo.code}`;
+            document.getElementById('form-modal-subtitle').textContent = `Research Type: ${typeInfo.code} `;
 
             // Show appropriate form
             document.querySelectorAll('.research-form').forEach(form => form.style.display = 'none');
-            const targetForm = document.getElementById(`form-${type}`);
+            const targetForm = document.getElementById(`form - ${type} `);
             if (targetForm) targetForm.style.display = 'block';
 
             // Reset form
@@ -2341,12 +3079,12 @@
                 console.error('Error loading research data:', error);
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="empty-state">
-                            <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#ef4444;">Error loading research data</div>
-                            <div style="font-size:0.8rem;color:#9ca3af;">Please try again later</div>
-                        </td>
+                    <td colspan="7" class="empty-state">
+                        <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#ef4444;">Error loading research data</div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">Please try again later</div>
+                    </td>
                     </tr>
-                `;
+                    `;
             }
         }
 
@@ -2386,12 +3124,12 @@
                 const colspan = deleteMode ? '8' : '7';
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="${colspan}" class="empty-state">
-                            <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No research papers found</div>
-                            <div style="font-size:0.8rem;color:#9ca3af;">${allResearchData.length > 0 ? 'Try adjusting your filters' : 'Your submitted research papers will appear here'}</div>
-                        </td>
+                    <td colspan="${colspan}" class="empty-state">
+                        <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No research papers found</div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">${allResearchData.length > 0 ? 'Try adjusting your filters' : 'Your submitted research papers will appear here'}</div>
+                    </td>
                     </tr>
-                `;
+                    `;
                 return;
             }
 
@@ -2420,17 +3158,17 @@
 
                 const checkboxCell = deleteMode
                     ? `<td class="checkbox-column">
-                        <input type="checkbox" 
-                               class="research-checkbox" 
-                               data-id="${item.id}" 
-                               onchange="toggleResearchSelection('${item.id}')"
-                               ${selectedResearchIds.has(item.id) ? 'checked' : ''}
-                               style="cursor:pointer;">
-                       </td>`
+                    <input type="checkbox"
+                        class="research-checkbox"
+                        data-id="${item.id}"
+                        onchange="toggleResearchSelection('${item.id}')"
+                        ${selectedResearchIds.has(item.id) ? 'checked' : ''}
+                        style="cursor:pointer;">
+                    </td>`
                     : '';
 
                 return `
-                    <tr>
+                        <tr>
                         ${checkboxCell}
                         <td style="min-width:300px;">${item.title || '-'}</td>
                         <td>${item.role || '-'}</td>
@@ -2440,7 +3178,7 @@
                         <td>${fundingAgencyDisplay}</td>
                         <td>${item.credit_units || '-'}</td>
                     </tr>
-                `;
+                    `;
             }).join('');
         }
 
@@ -2459,7 +3197,7 @@
             if (coauthorsSelect && coauthorsSet.size > 0) {
                 const currentValue = coauthorsSelect.value;
                 coauthorsSelect.innerHTML = '<option value="">All Co-Authors</option>' +
-                    Array.from(coauthorsSet).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+                    Array.from(coauthorsSet).sort().map(c => `<option value ="${c}"> ${c}</option> `).join('');
                 coauthorsSelect.value = currentValue;
             }
 
@@ -2475,7 +3213,7 @@
             if (agencySelect && agenciesSet.size > 0) {
                 const currentValue = agencySelect.value;
                 agencySelect.innerHTML = '<option value="">All Agencies</option>' +
-                    Array.from(agenciesSet).sort().map(a => `<option value="${a}">${a}</option>`).join('');
+                    Array.from(agenciesSet).sort().map(a => `<option value ="${a}"> ${a}</option> `).join('');
                 agencySelect.value = currentValue;
             }
         }
@@ -2570,7 +3308,7 @@
             const count = selectedResearchIds.size;
             const message = count === 1
                 ? 'Are you sure you want to delete this research paper? This action cannot be undone.'
-                : `Are you sure you want to delete ${count} research papers? This action cannot be undone.`;
+                : `Are you sure you want to delete ${count} research papers ? This action cannot be undone.`;
 
             // Show modal with proper class
             const modal = document.getElementById('delete-confirm-modal');
@@ -2598,7 +3336,7 @@
 
             try {
                 const deletePromises = Array.from(selectedResearchIds).map(id =>
-                    fetch(`/api/research/${id}`, { method: 'DELETE' })
+                    fetch(`/ api / research / ${id} `, { method: 'DELETE' })
                 );
 
                 const results = await Promise.all(deletePromises);
@@ -2664,21 +3402,28 @@
 
             // Update modal title and subtitle
             const titles = {
-                'extensions': 'Extensions',
-                'community_service': 'Community Service',
+                'extensions': 'Extension / Community Service',
                 'training': 'Training',
-                'information_dissemination': 'Information Dissemination'
+                'information_dissemination': 'Information Dissemination',
+                'workshop': 'Workshop',
+                'symposium': 'Symposium',
+                'others': 'Others'
             };
 
-            document.getElementById('extension-form-modal-title').textContent = `Add ${titles[type]}`;
-            document.getElementById('extension-form-modal-subtitle').textContent = titles[type];
+            document.getElementById('extension-form-modal-title').textContent = 'Add ' + (titles[type] || type);
+            document.getElementById('extension-form-modal-subtitle').textContent = titles[type] || type;
 
-            // Show the appropriate form
-            const formId = type === 'information_dissemination' ? 'form-information-dissemination' : `form-${type}`;
+            // Map type to form ID — workshop, symposium, others use training form
+            let formId;
+            if (type === 'extensions') formId = 'form-extensions';
+            else if (type === 'information_dissemination') formId = 'form-information-dissemination';
+            else formId = 'form-training'; // training, workshop, symposium, others all use training form
+
+            // Store the actual type so submitExtensionForm sends correct type
+            window._currentExtensionType = type;
+
             const form = document.getElementById(formId);
-            if (form) {
-                form.style.display = 'block';
-            }
+            if (form) form.style.display = 'block';
 
             // Open form modal
             const modal = document.getElementById('extension-form-modal');
@@ -2703,6 +3448,9 @@
         async function submitExtensionForm(event, type) {
             event.preventDefault();
 
+            // Use the actual selected type (overrides form-level type for shared forms)
+            const actualType = window._currentExtensionType || type;
+
             // Prevent double submission
             const submitBtn = event.target.querySelector('.btn-submit');
             if (submitBtn.disabled) return false;
@@ -2714,7 +3462,7 @@
 
             // Build extension object
             const extensionData = {
-                extension_type: type,
+                extension_type: actualType,
                 title: formData.get('title') || '',
                 role: formData.get('role') || '',
                 co_workers: formData.get('co_workers') || '',
@@ -2789,12 +3537,12 @@
                 console.error('Error loading extension data:', error);
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="10" class="empty-state">
-                            <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#ef4444;">Error loading extension data</div>
-                            <div style="font-size:0.8rem;color:#9ca3af;">Please try again later</div>
-                        </td>
+                    <td colspan="10" class="empty-state">
+                        <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#ef4444;">Error loading extension data</div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">Please try again later</div>
+                    </td>
                     </tr>
-                `;
+                    `;
             }
         }
 
@@ -2824,12 +3572,12 @@
             if (filteredData.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="${colspan}" class="empty-state">
-                            <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No extensions found</div>
-                            <div style="font-size:0.8rem;color:#9ca3af;">${allExtensionData.length > 0 ? 'Try adjusting your filters' : 'Click "Add Extension" to add your extension activities'}</div>
-                        </td>
+                    <td colspan="${colspan}" class="empty-state">
+                        <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No extensions found</div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">${allExtensionData.length > 0 ? 'Try adjusting your filters' : 'Click "Add Extension" to add your extension activities'}</div>
+                    </td>
                     </tr>
-                `;
+                    `;
                 return;
             }
 
@@ -2855,17 +3603,17 @@
 
                 const checkboxCell = extensionDeleteMode
                     ? `<td class="checkbox-column">
-                        <input type="checkbox" 
-                               class="extension-checkbox" 
-                               data-id="${item.id}" 
-                               onchange="toggleExtensionSelection('${item.id}')"
-                               ${selectedExtensionIds.has(item.id) ? 'checked' : ''}
-                               style="cursor:pointer;">
-                       </td>`
+                    <input type="checkbox"
+                        class="extension-checkbox"
+                        data-id="${item.id}"
+                        onchange="toggleExtensionSelection('${item.id}')"
+                        ${selectedExtensionIds.has(item.id) ? 'checked' : ''}
+                        style="cursor:pointer;">
+                    </td>`
                     : '';
 
                 return `
-                    <tr>
+                        <tr>
                         ${checkboxCell}
                         <td style="min-width:150px;">${typeDisplay}</td>
                         <td style="min-width:250px;">${item.title || '-'}</td>
@@ -2877,7 +3625,7 @@
                         <td>${item.funding_agency || '-'}</td>
                         <td>${item.credit_units || '-'}</td>
                     </tr>
-                `;
+                    `;
             }).join('');
         }
 
@@ -2889,7 +3637,7 @@
             let options = '<option value="">All Time</option>';
 
             for (let year = currentYear; year >= 2000; year--) {
-                options += `<option value="${year}">${year}</option>`;
+                options += `<option value ="${year}"> ${year}</option> `;
             }
 
             yearSelect.innerHTML = options;
@@ -2908,7 +3656,7 @@
             if (agencySelect && agenciesSet.size > 0) {
                 const currentValue = agencySelect.value;
                 agencySelect.innerHTML = '<option value="">All Agencies</option>' +
-                    Array.from(agenciesSet).sort().map(a => `<option value="${a}">${a}</option>`).join('');
+                    Array.from(agenciesSet).sort().map(a => `<option value ="${a}"> ${a}</option> `).join('');
                 agencySelect.value = currentValue;
             }
 
@@ -2924,7 +3672,7 @@
             if (roleSelect && rolesSet.size > 0) {
                 const currentValue = roleSelect.value;
                 roleSelect.innerHTML = '<option value="">All Roles</option>' +
-                    Array.from(rolesSet).sort().map(r => `<option value="${r}">${r}</option>`).join('');
+                    Array.from(rolesSet).sort().map(r => `<option value ="${r}"> ${r}</option> `).join('');
                 roleSelect.value = currentValue;
             }
         }
@@ -3006,7 +3754,7 @@
             const count = selectedExtensionIds.size;
             const message = count === 1
                 ? 'Are you sure you want to delete this extension? This action cannot be undone.'
-                : `Are you sure you want to delete ${count} extensions? This action cannot be undone.`;
+                : `Are you sure you want to delete ${count} extensions ? This action cannot be undone.`;
 
             const modal = document.getElementById('delete-confirm-modal');
             const messageEl = document.getElementById('delete-confirm-message');
@@ -3027,7 +3775,7 @@
 
             try {
                 const deletePromises = Array.from(selectedExtensionIds).map(id =>
-                    fetch(`/api/extensions/${id}`, { method: 'DELETE' })
+                    fetch(`/ api / extensions / ${id} `, { method: 'DELETE' })
                 );
 
                 await Promise.all(deletePromises);
@@ -3051,395 +3799,395 @@
         function renderPublicEngagementsPage() {
             const content = document.getElementById('page-content');
             content.innerHTML = `
-            <style>
+                    <style>
                     .pe - header {
-            display: flex;
-            justify - content: flex - end;
-            align - items: center;
-            margin - bottom: 24px;
-        }
+                    display: flex;
+                    justify - content: flex - end;
+                    align - items: center;
+                    margin - bottom: 24px;
+                }
 
                     .btn - add - engagement {
-            padding: 10px 20px;
-            background: var(--sidebar - color, #014421);
-            color: white;
-            border: none;
-            border - radius: 8px;
-            font - size: 0.85rem;
-            font - weight: 600;
-            cursor: pointer;
-            display: flex;
-            align - items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
+                    padding: 10px 20px;
+                    background: var(--sidebar - color, #014421);
+                    color: white;
+                    border: none;
+                    border - radius: 8px;
+                    font - size: 0.85rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    display: flex;
+                    align - items: center;
+                    gap: 8px;
+                    transition: all 0.2s;
+                }
 
                     .btn - add - engagement:hover {
-            filter: brightness(0.9);
-            transform: translateY(-1px);
-            box - shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
+                    filter: brightness(0.9);
+                    transform: translateY(-1px);
+                    box - shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
 
                     .pe - table - card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border - radius: 12px;
-            overflow: hidden;
-            box - shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border - radius: 12px;
+                    overflow: hidden;
+                    box - shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                }
 
                     .pe - table {
-            width: 100 %;
-            border - collapse: collapse;
-            font - size: 0.8rem;
-        }
+                    width: 100 %;
+                    border - collapse: collapse;
+                    font - size: 0.8rem;
+                }
 
                     .pe - table thead {
-            background: #f9fafb;
-            position: sticky;
-            top: 0;
-            z - index: 10;
-        }
+                    background: #f9fafb;
+                    position: sticky;
+                    top: 0;
+                    z - index: 10;
+                }
 
                     .pe - table th {
-            padding: 12px;
-            text - align: left;
-            font - size: 0.75rem;
-            font - weight: 600;
-            color: #374151;
-            text - transform: uppercase;
-            letter - spacing: 0.05em;
-            border: 1px solid #d1d5db;
-            white - space: nowrap;
-            background: #f3f4f6;
-        }
+                    padding: 12px;
+                    text - align: left;
+                    font - size: 0.75rem;
+                    font - weight: 600;
+                    color: #374151;
+                    text - transform: uppercase;
+                    letter - spacing: 0.05em;
+                    border: 1px solid #d1d5db;
+                    white - space: nowrap;
+                    background: #f3f4f6;
+                }
 
                     .pe - table th: first - child {
-            text - align: center;
-            width: 50px;
-        }
+                    text - align: center;
+                    width: 50px;
+                }
 
                     .pe - table td {
-            padding: 10px 12px;
-            font - size: 0.8rem;
-            color: #374151;
-            border: 1px solid #e5e7eb;
-        }
+                    padding: 10px 12px;
+                    font - size: 0.8rem;
+                    color: #374151;
+                    border: 1px solid #e5e7eb;
+                }
 
                     .pe - table td: first - child {
-            text - align: center;
-            font - weight: 600;
-            color: #6b7280;
-            background: #fafafa;
-        }
+                    text - align: center;
+                    font - weight: 600;
+                    color: #6b7280;
+                    background: #fafafa;
+                }
 
                     .pe - table tbody tr {
-            transition: background 0.15s;
-        }
+                    transition: background 0.15s;
+                }
 
                     .pe - table tbody tr:hover {
-            background: #f9fafb;
-        }
+                    background: #f9fafb;
+                }
 
                     .pe - table tbody tr: nth - child(even) {
-            background: #fafbfc;
-        }
+                    background: #fafbfc;
+                }
 
                     .pe - table tbody tr: nth - child(even):hover {
-            background: #f3f4f6;
-        }
+                    background: #f3f4f6;
+                }
 
                     /* Modal Styles */
                     .pe - modal {
-            position: fixed;
-            inset: 0;
-            z - index: 1000;
-            display: flex;
-            align - items: center;
-            justify - content: center;
-            background: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            pointer - events: none;
-            transition: opacity 0.2s;
-        }
+                    position: fixed;
+                    inset: 0;
+                    z - index: 1000;
+                    display: flex;
+                    align - items: center;
+                    justify - content: center;
+                    background: rgba(0, 0, 0, 0.5);
+                    opacity: 0;
+                    pointer - events: none;
+                    transition: opacity 0.2s;
+                }
 
                     .pe - modal.open {
-            opacity: 1;
-            pointer - events: all;
-        }
+                    opacity: 1;
+                    pointer - events: all;
+                }
 
                     .pe - modal - box {
-            background: white;
-            border - radius: 12px;
-            padding: 32px;
-            width: 100 %;
-            max - width: 600px;
-            max - height: 90vh;
-            overflow - y: auto;
-            box - shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-            transform: translateY(10px);
-            transition: transform 0.2s;
-        }
+                    background: white;
+                    border - radius: 12px;
+                    padding: 32px;
+                    width: 100 %;
+                    max - width: 600px;
+                    max - height: 90vh;
+                    overflow - y: auto;
+                    box - shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+                    transform: translateY(10px);
+                    transition: transform 0.2s;
+                }
 
                     .pe - modal.open.pe - modal - box {
-            transform: translateY(0);
-        }
+                    transform: translateY(0);
+                }
 
                     .pe - modal - header {
-            display: flex;
-            justify - content: space - between;
-            align - items: center;
-            margin - bottom: 28px;
-        }
+                    display: flex;
+                    justify - content: space - between;
+                    align - items: center;
+                    margin - bottom: 28px;
+                }
 
                     .pe - modal - title {
-            font - size: 1.3rem;
-            font - weight: 700;
-            color: #111827;
-        }
+                    font - size: 1.3rem;
+                    font - weight: 700;
+                    color: #111827;
+                }
 
                     .pe - modal - close {
-            width: 32px;
-            height: 32px;
-            border - radius: 6px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            display: flex;
-            align - items: center;
-            justify - content: center;
-            color: #6b7280;
-            font - size: 1.5rem;
-            transition: all 0.2s;
-            font - weight: 300;
-        }
+                    width: 32px;
+                    height: 32px;
+                    border - radius: 6px;
+                    border: none;
+                    background: transparent;
+                    cursor: pointer;
+                    display: flex;
+                    align - items: center;
+                    justify - content: center;
+                    color: #6b7280;
+                    font - size: 1.5rem;
+                    transition: all 0.2s;
+                    font - weight: 300;
+                }
 
                     .pe - modal - close:hover {
-            color: #ef4444;
-            transform: translateY(-2px);
-        }
+                    color: #ef4444;
+                    transform: translateY(-2px);
+                }
 
                     /* Wizard Progress */
                     .wizard - progress {
-            display: flex;
-            justify - content: space - between;
-            margin - bottom: 32px;
-            position: relative;
-        }
+                    display: flex;
+                    justify - content: space - between;
+                    margin - bottom: 32px;
+                    position: relative;
+                }
 
                     .wizard - progress::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #e5e7eb;
-            z - index: 0;
-        }
+                    content: '';
+                    position: absolute;
+                    top: 20px;
+                    left: 0;
+                    right: 0;
+                    height: 2px;
+                    background: #e5e7eb;
+                    z - index: 0;
+                }
 
                     .wizard - step {
-            display: flex;
-            flex - direction: column;
-            align - items: center;
-            gap: 8px;
-            position: relative;
-            z - index: 1;
-            flex: 1;
-        }
+                    display: flex;
+                    flex - direction: column;
+                    align - items: center;
+                    gap: 8px;
+                    position: relative;
+                    z - index: 1;
+                    flex: 1;
+                }
 
                     .wizard - step - circle {
-            width: 40px;
-            height: 40px;
-            border - radius: 50 %;
-            background: white;
-            border: 2px solid #e5e7eb;
-            display: flex;
-            align - items: center;
-            justify - content: center;
-            font - weight: 700;
-            font - size: 0.9rem;
-            color: #9ca3af;
-            transition: all 0.3s;
-        }
+                    width: 40px;
+                    height: 40px;
+                    border - radius: 50 %;
+                    background: white;
+                    border: 2px solid #e5e7eb;
+                    display: flex;
+                    align - items: center;
+                    justify - content: center;
+                    font - weight: 700;
+                    font - size: 0.9rem;
+                    color: #9ca3af;
+                    transition: all 0.3s;
+                }
 
                     .wizard - step.active.wizard - step - circle {
-            background: var(--sidebar - color, #014421);
-            border - color: var(--sidebar - color, #014421);
-            color: white;
-        }
+                    background: var(--sidebar - color, #014421);
+                    border - color: var(--sidebar - color, #014421);
+                    color: white;
+                }
 
                     .wizard - step.completed.wizard - step - circle {
-            background: #10b981;
-            border - color: #10b981;
-            color: white;
-        }
+                    background: #10b981;
+                    border - color: #10b981;
+                    color: white;
+                }
 
                     .wizard - step - label {
-            font - size: 0.75rem;
-            font - weight: 600;
-            color: #9ca3af;
-            text - align: center;
-        }
+                    font - size: 0.75rem;
+                    font - weight: 600;
+                    color: #9ca3af;
+                    text - align: center;
+                }
 
                     .wizard - step.active.wizard - step - label {
-            color: #111827;
-        }
+                    color: #111827;
+                }
 
                     /* Wizard Content */
                     .wizard - content {
-            min - height: 250px;
-        }
+                    min - height: 250px;
+                }
 
                     .wizard - step - content {
-            display: none;
-        }
+                    display: none;
+                }
 
                     .wizard - step - content.active {
-            display: block;
-            animation: fadeIn 0.3s;
-        }
+                    display: block;
+                    animation: fadeIn 0.3s;
+                }
 
-        @keyframes fadeIn {
+                @keyframes fadeIn {
                         from { opacity: 0; transform: translateY(10px); }
                         to { opacity: 1; transform: translateY(0); }
-        }
+                }
 
                     /* Wizard Actions */
                     .wizard - actions {
-            display: flex;
-            gap: 12px;
-            justify - content: space - between;
-            padding - top: 24px;
-            border - top: 1px solid #f3f4f6;
-            margin - top: 24px;
-        }
+                    display: flex;
+                    gap: 12px;
+                    justify - content: space - between;
+                    padding - top: 24px;
+                    border - top: 1px solid #f3f4f6;
+                    margin - top: 24px;
+                }
 
                     .btn - back {
-            padding: 10px 24px;
-            background: white;
-            color: #374151;
-            border: 1px solid #d1d5db;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            font - weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+                    padding: 10px 24px;
+                    background: white;
+                    color: #374151;
+                    border: 1px solid #d1d5db;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
 
                     .btn - back:hover {
-            background: #f9fafb;
-        }
+                    background: #f9fafb;
+                }
 
                     .btn - back:disabled {
-            opacity: 0.5;
-            cursor: not - allowed;
-        }
+                    opacity: 0.5;
+                    cursor: not - allowed;
+                }
 
                     .btn - next, .btn - submit {
-            padding: 10px 24px;
-            background: var(--sidebar - color, #014421);
-            color: white;
-            border: none;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            font - weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+                    padding: 10px 24px;
+                    background: var(--sidebar - color, #014421);
+                    color: white;
+                    border: none;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
 
                     .btn - next: hover, .btn - submit:hover {
-            filter: brightness(0.9);
-        }
+                    filter: brightness(0.9);
+                }
 
                     .pe - form - group {
-            display: flex;
-            flex - direction: column;
-            gap: 8px;
-            margin - bottom: 20px;
-        }
+                    display: flex;
+                    flex - direction: column;
+                    gap: 8px;
+                    margin - bottom: 20px;
+                }
 
                     .pe - form - label {
-            font - size: 0.85rem;
-            font - weight: 600;
-            color: #374151;
-        }
+                    font - size: 0.85rem;
+                    font - weight: 600;
+                    color: #374151;
+                }
 
                     .pe - form - label.required {
-            color: #dc2626;
-        }
+                    color: #dc2626;
+                }
 
                     .pe - form - input,
                     .pe - form - textarea {
-            padding: 10px 14px;
-            border: 1px solid #d1d5db;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            color: #374151;
-            font - family: inherit;
-            outline: none;
-            transition: border - color 0.15s;
-        }
+                    padding: 10px 14px;
+                    border: 1px solid #d1d5db;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    color: #374151;
+                    font - family: inherit;
+                    outline: none;
+                    transition: border - color 0.15s;
+                }
 
                     .pe - form - textarea {
-            resize: vertical;
-        }
+                    resize: vertical;
+                }
 
                     .pe - form - input: focus,
                     .pe - form - textarea:focus {
-            border - color: var(--sidebar - color, #014421);
-            box - shadow: 0 0 0 3px rgba(1, 68, 33, 0.1);
-        }
+                    border - color: var(--sidebar - color, #014421);
+                    box - shadow: 0 0 0 3px rgba(1, 68, 33, 0.1);
+                }
 
                     .pe - modal - actions {
-            display: flex;
-            gap: 12px;
-            justify - content: flex - end;
-            padding - top: 24px;
-            border - top: 1px solid #f3f4f6;
-            margin - top: 24px;
-        }
+                    display: flex;
+                    gap: 12px;
+                    justify - content: flex - end;
+                    padding - top: 24px;
+                    border - top: 1px solid #f3f4f6;
+                    margin - top: 24px;
+                }
 
                     .btn - cancel - pe {
-            padding: 10px 24px;
-            background: white;
-            color: #374151;
-            border: 1px solid #d1d5db;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            font - weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+                    padding: 10px 24px;
+                    background: white;
+                    color: #374151;
+                    border: 1px solid #d1d5db;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
 
                     .btn - cancel - pe:hover {
-            background: #f9fafb;
-        }
+                    background: #f9fafb;
+                }
 
                     .btn - submit - pe {
-            padding: 10px 24px;
-            background: var(--sidebar - color, #014421);
-            color: white;
-            border: none;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            font - weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+                    padding: 10px 24px;
+                    background: var(--sidebar - color, #014421);
+                    color: white;
+                    border: none;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
 
                     .btn - submit - pe:hover {
-            filter: brightness(0.9);
-        }
+                    filter: brightness(0.9);
+                }
 
                     .empty - state {
-            text - align: center;
-            padding: 60px 20px;
-            color: #9ca3af;
-        }
-                </style >
+                    text - align: center;
+                    padding: 60px 20px;
+                    color: #9ca3af;
+                }
+                </style>
 
-                < !--Header -->
+                <!--Header -->
                 <div class="pe-header">
                     <button class="btn-add-engagement" onclick="openPEModal()">
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -3476,90 +4224,90 @@
                     </div>
                 </div>
 
-                <!--Modal with Wizard-- >
-        <div class="pe-modal" id="pe-modal">
-            <div class="pe-modal-box">
-                <div class="pe-modal-header">
-                    <h2 class="pe-modal-title">Add Public Engagement</h2>
-                    <button class="pe-modal-close" onclick="closePEModal()">✕</button>
+                <!--Modal with Wizard-->
+                <div class="pe-modal" id="pe-modal">
+                    <div class="pe-modal-box">
+                        <div class="pe-modal-header">
+                            <h2 class="pe-modal-title">Add Public Engagement</h2>
+                            <button class="pe-modal-close" onclick="closePEModal()">✕</button>
+                        </div>
+
+                        <!-- Wizard Progress -->
+                        <div class="wizard-progress">
+                            <div class="wizard-step active" data-step="1">
+                                <div class="wizard-step-circle">1</div>
+                                <div class="wizard-step-label">Type & Role</div>
+                            </div>
+                            <div class="wizard-step" data-step="2">
+                                <div class="wizard-step-circle">2</div>
+                                <div class="wizard-step-label">Event Details</div>
+                            </div>
+                            <div class="wizard-step" data-step="3">
+                                <div class="wizard-step-circle">3</div>
+                                <div class="wizard-step-label">Partner & People</div>
+                            </div>
+                            <div class="wizard-step" data-step="4">
+                                <div class="wizard-step-circle">4</div>
+                                <div class="wizard-step-label">Schedule</div>
+                            </div>
+                        </div>
+
+                        <!-- Wizard Content -->
+                        <div class="wizard-content">
+                            <!-- Step 1: Type of Engagement & Designation -->
+                            <div class="wizard-step-content active" data-step="1">
+                                <div class="pe-form-group">
+                                    <label class="pe-form-label">Type of Engagement <span class="required">*</span></label>
+                                    <input type="text" class="pe-form-input" id="pe-type" placeholder="e.g., Seminar, Workshop, Training, Conference" required>
+                                </div>
+
+                                <div class="pe-form-group">
+                                    <label class="pe-form-label">Designation <span class="required">*</span></label>
+                                    <input type="text" class="pe-form-input" id="pe-designation" placeholder="e.g., Speaker, Facilitator, Panelist, Resource Person" required>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Name of Event -->
+                            <div class="wizard-step-content" data-step="2">
+                                <div class="pe-form-group">
+                                    <label class="pe-form-label">Name of Event <span class="required">*</span></label>
+                                    <textarea class="pe-form-textarea" style="min-height:120px;" id="pe-event" placeholder="Enter the full name of the event or activity" required></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Partner & Person/s Involved -->
+                            <div class="wizard-step-content" data-step="3">
+                                <div class="pe-form-group">
+                                    <label class="pe-form-label">Partner <span class="required">*</span></label>
+                                    <input type="text" class="pe-form-input" id="pe-partner" placeholder="e.g., DENR Region X, LGU Bacolod, UPLB" required>
+                                </div>
+
+                                <div class="pe-form-group">
+                                    <label class="pe-form-label">Person/s Involved <span class="required">*</span></label>
+                                    <textarea class="pe-form-textarea" style="min-height:80px;" id="pe-person" placeholder="e.g., Dr. Juan Dela Cruz, Prof. Maria Santos" required></textarea>
+                                    <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">List all persons involved, separated by commas</div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Period & Timeframe -->
+                            <div class="wizard-step-content" data-step="4">
+                                <div class="pe-form-group">
+                                    <label class="pe-form-label">Period / Timeframe <span class="required">*</span></label>
+                                    <input type="text" class="pe-form-input" id="pe-period" placeholder="e.g., Mar 5-6, 2025 or Q1 2025 or Jan-Mar 2025" required>
+                                        <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Enter the date range or period when the engagement took place</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wizard Actions -->
+                        <div class="wizard-actions">
+                            <button type="button" class="btn-back" id="pe-wizard-back-btn" onclick="peWizardPrevStep()" disabled>Back</button>
+                            <div style="flex:1;"></div>
+                            <button type="button" class="btn-next" id="pe-wizard-next-btn" onclick="peWizardNextStep()">Continue</button>
+                            <button type="button" class="btn-submit" id="pe-wizard-submit-btn" onclick="submitPEWizard()" style="display:none;">Submit Engagement</button>
+                        </div>
+                    </div>
                 </div>
-
-                <!-- Wizard Progress -->
-                <div class="wizard-progress">
-                    <div class="wizard-step active" data-step="1">
-                        <div class="wizard-step-circle">1</div>
-                        <div class="wizard-step-label">Type & Role</div>
-                    </div>
-                    <div class="wizard-step" data-step="2">
-                        <div class="wizard-step-circle">2</div>
-                        <div class="wizard-step-label">Event Details</div>
-                    </div>
-                    <div class="wizard-step" data-step="3">
-                        <div class="wizard-step-circle">3</div>
-                        <div class="wizard-step-label">Partner & People</div>
-                    </div>
-                    <div class="wizard-step" data-step="4">
-                        <div class="wizard-step-circle">4</div>
-                        <div class="wizard-step-label">Schedule</div>
-                    </div>
-                </div>
-
-                <!-- Wizard Content -->
-                <div class="wizard-content">
-                    <!-- Step 1: Type of Engagement & Designation -->
-                    <div class="wizard-step-content active" data-step="1">
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">Type of Engagement <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="pe-type" placeholder="e.g., Seminar, Workshop, Training, Conference" required>
-                        </div>
-
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">Designation <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="pe-designation" placeholder="e.g., Speaker, Facilitator, Panelist, Resource Person" required>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: Name of Event -->
-                    <div class="wizard-step-content" data-step="2">
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">Name of Event <span class="required">*</span></label>
-                            <textarea class="pe-form-textarea" style="min-height:120px;" id="pe-event" placeholder="Enter the full name of the event or activity" required></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Partner & Person/s Involved -->
-                    <div class="wizard-step-content" data-step="3">
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">Partner <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="pe-partner" placeholder="e.g., DENR Region X, LGU Bacolod, UPLB" required>
-                        </div>
-
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">Person/s Involved <span class="required">*</span></label>
-                            <textarea class="pe-form-textarea" style="min-height:80px;" id="pe-person" placeholder="e.g., Dr. Juan Dela Cruz, Prof. Maria Santos" required></textarea>
-                            <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">List all persons involved, separated by commas</div>
-                        </div>
-                    </div>
-
-                    <!-- Step 4: Period & Timeframe -->
-                    <div class="wizard-step-content" data-step="4">
-                        <div class="pe-form-group">
-                            <label class="pe-form-label">Period / Timeframe <span class="required">*</span></label>
-                            <input type="text" class="pe-form-input" id="pe-period" placeholder="e.g., Mar 5-6, 2025 or Q1 2025 or Jan-Mar 2025" required>
-                                <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Enter the date range or period when the engagement took place</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Wizard Actions -->
-                <div class="wizard-actions">
-                    <button type="button" class="btn-back" id="pe-wizard-back-btn" onclick="peWizardPrevStep()" disabled>Back</button>
-                    <div style="flex:1;"></div>
-                    <button type="button" class="btn-next" id="pe-wizard-next-btn" onclick="peWizardNextStep()">Continue</button>
-                    <button type="button" class="btn-submit" id="pe-wizard-submit-btn" onclick="submitPEWizard()" style="display:none;">Submit Engagement</button>
-                </div>
-            </div>
-        </div>
             `;
 
             // Initialize wizard
@@ -3745,13 +4493,13 @@
                 // TODO: Fetch from API
                 // For now, show empty state
                 tbody.innerHTML = `
-            < tr >
-            <td colspan="7" class="empty-state">
-                <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No engagements yet</div>
-                <div style="font-size:0.8rem;color:#9ca3af;">Click "Add Engagement" to submit your first public engagement</div>
-            </td>
-                    </tr >
-            `;
+                    <tr>
+                    <td colspan="7" class="empty-state">
+                        <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No engagements yet</div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">Click "Add Engagement" to submit your first public engagement</div>
+                    </td>
+                    </tr>
+                    `;
             } catch (error) {
                 console.error('Error loading engagements:', error);
             }
@@ -3762,371 +4510,371 @@
         function renderTAPHSPPage() {
             const content = document.getElementById('page-content');
             content.innerHTML = `
-            < style >
+                    <style>
                     .tap - header {
-            display: flex;
-            justify - content: flex - end;
-            align - items: center;
-            margin - bottom: 24px;
-        }
+                    display: flex;
+                    justify - content: flex - end;
+                    align - items: center;
+                    margin - bottom: 24px;
+                }
 
                     .btn - add - tap {
-            padding: 10px 20px;
-            background: var(--sidebar - color, #014421);
-            color: white;
-            border: none;
-            border - radius: 8px;
-            font - size: 0.85rem;
-            font - weight: 600;
-            cursor: pointer;
-            display: flex;
-            align - items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
+                    padding: 10px 20px;
+                    background: var(--sidebar - color, #014421);
+                    color: white;
+                    border: none;
+                    border - radius: 8px;
+                    font - size: 0.85rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    display: flex;
+                    align - items: center;
+                    gap: 8px;
+                    transition: all 0.2s;
+                }
 
                     .btn - add - tap:hover {
-            filter: brightness(0.9);
-            transform: translateY(-1px);
-            box - shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
+                    filter: brightness(0.9);
+                    transform: translateY(-1px);
+                    box - shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
 
                     .tap - table - card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border - radius: 12px;
-            overflow: hidden;
-            box - shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border - radius: 12px;
+                    overflow: hidden;
+                    box - shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                }
 
                     .tap - table {
-            width: 100 %;
-            border - collapse: collapse;
-            font - size: 0.8rem;
-        }
+                    width: 100 %;
+                    border - collapse: collapse;
+                    font - size: 0.8rem;
+                }
 
                     .tap - table thead {
-            background: #f9fafb;
-            position: sticky;
-            top: 0;
-            z - index: 10;
-        }
+                    background: #f9fafb;
+                    position: sticky;
+                    top: 0;
+                    z - index: 10;
+                }
 
                     .tap - table th {
-            padding: 12px;
-            text - align: left;
-            font - size: 0.75rem;
-            font - weight: 600;
-            color: #374151;
-            text - transform: uppercase;
-            letter - spacing: 0.05em;
-            border: 1px solid #d1d5db;
-            white - space: nowrap;
-            background: #f3f4f6;
-        }
+                    padding: 12px;
+                    text - align: left;
+                    font - size: 0.75rem;
+                    font - weight: 600;
+                    color: #374151;
+                    text - transform: uppercase;
+                    letter - spacing: 0.05em;
+                    border: 1px solid #d1d5db;
+                    white - space: nowrap;
+                    background: #f3f4f6;
+                }
 
                     .tap - table th: first - child {
-            text - align: center;
-            width: 50px;
-        }
+                    text - align: center;
+                    width: 50px;
+                }
 
                     .tap - table td {
-            padding: 10px 12px;
-            font - size: 0.8rem;
-            color: #374151;
-            border: 1px solid #e5e7eb;
-        }
+                    padding: 10px 12px;
+                    font - size: 0.8rem;
+                    color: #374151;
+                    border: 1px solid #e5e7eb;
+                }
 
                     .tap - table td: first - child {
-            text - align: center;
-            font - weight: 600;
-            color: #6b7280;
-            background: #fafafa;
-        }
+                    text - align: center;
+                    font - weight: 600;
+                    color: #6b7280;
+                    background: #fafafa;
+                }
 
                     .tap - table tbody tr {
-            transition: background 0.15s;
-        }
+                    transition: background 0.15s;
+                }
 
                     .tap - table tbody tr:hover {
-            background: #f9fafb;
-        }
+                    background: #f9fafb;
+                }
 
                     .tap - table tbody tr: nth - child(even) {
-            background: #fafbfc;
-        }
+                    background: #fafbfc;
+                }
 
                     .tap - table tbody tr: nth - child(even):hover {
-            background: #f3f4f6;
-        }
+                    background: #f3f4f6;
+                }
 
                     .doc - link {
-            color: #3b82f6;
-            text - decoration: none;
-            font - weight: 500;
-            font - size: 0.75rem;
-        }
+                    color: #3b82f6;
+                    text - decoration: none;
+                    font - weight: 500;
+                    font - size: 0.75rem;
+                }
 
                     .doc - link:hover {
-            text - decoration: underline;
-        }
+                    text - decoration: underline;
+                }
 
                     /* Modal Styles */
                     .tap - modal {
-            position: fixed;
-            inset: 0;
-            z - index: 1000;
-            display: flex;
-            align - items: center;
-            justify - content: center;
-            background: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            pointer - events: none;
-            transition: opacity 0.2s;
-        }
+                    position: fixed;
+                    inset: 0;
+                    z - index: 1000;
+                    display: flex;
+                    align - items: center;
+                    justify - content: center;
+                    background: rgba(0, 0, 0, 0.5);
+                    opacity: 0;
+                    pointer - events: none;
+                    transition: opacity 0.2s;
+                }
 
                     .tap - modal.open {
-            opacity: 1;
-            pointer - events: all;
-        }
+                    opacity: 1;
+                    pointer - events: all;
+                }
 
                     .tap - modal - box {
-            background: white;
-            border - radius: 12px;
-            padding: 32px;
-            width: 100 %;
-            max - width: 600px;
-            max - height: 90vh;
-            overflow - y: auto;
-            box - shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-            transform: translateY(10px);
-            transition: transform 0.2s;
-        }
+                    background: white;
+                    border - radius: 12px;
+                    padding: 32px;
+                    width: 100 %;
+                    max - width: 600px;
+                    max - height: 90vh;
+                    overflow - y: auto;
+                    box - shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+                    transform: translateY(10px);
+                    transition: transform 0.2s;
+                }
 
                     .tap - modal.open.tap - modal - box {
-            transform: translateY(0);
-        }
+                    transform: translateY(0);
+                }
 
                     .tap - modal - header {
-            display: flex;
-            justify - content: space - between;
-            align - items: center;
-            margin - bottom: 28px;
-        }
+                    display: flex;
+                    justify - content: space - between;
+                    align - items: center;
+                    margin - bottom: 28px;
+                }
 
                     .tap - modal - title {
-            font - size: 1.3rem;
-            font - weight: 700;
-            color: #111827;
-        }
+                    font - size: 1.3rem;
+                    font - weight: 700;
+                    color: #111827;
+                }
 
                     .tap - modal - close {
-            width: 32px;
-            height: 32px;
-            border - radius: 6px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            display: flex;
-            align - items: center;
-            justify - content: center;
-            color: #6b7280;
-            font - size: 1.5rem;
-            transition: all 0.2s;
-            font - weight: 300;
-        }
+                    width: 32px;
+                    height: 32px;
+                    border - radius: 6px;
+                    border: none;
+                    background: transparent;
+                    cursor: pointer;
+                    display: flex;
+                    align - items: center;
+                    justify - content: center;
+                    color: #6b7280;
+                    font - size: 1.5rem;
+                    transition: all 0.2s;
+                    font - weight: 300;
+                }
 
                     .tap - modal - close:hover {
-            color: #ef4444;
-            transform: translateY(-2px);
-        }
+                    color: #ef4444;
+                    transform: translateY(-2px);
+                }
 
                     /* Wizard Progress */
                     .wizard - progress {
-            display: flex;
-            justify - content: space - between;
-            margin - bottom: 32px;
-            position: relative;
-        }
+                    display: flex;
+                    justify - content: space - between;
+                    margin - bottom: 32px;
+                    position: relative;
+                }
 
                     .wizard - progress::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #e5e7eb;
-            z - index: 0;
-        }
+                    content: '';
+                    position: absolute;
+                    top: 20px;
+                    left: 0;
+                    right: 0;
+                    height: 2px;
+                    background: #e5e7eb;
+                    z - index: 0;
+                }
 
                     .wizard - step {
-            display: flex;
-            flex - direction: column;
-            align - items: center;
-            gap: 8px;
-            position: relative;
-            z - index: 1;
-            flex: 1;
-        }
+                    display: flex;
+                    flex - direction: column;
+                    align - items: center;
+                    gap: 8px;
+                    position: relative;
+                    z - index: 1;
+                    flex: 1;
+                }
 
                     .wizard - step - circle {
-            width: 40px;
-            height: 40px;
-            border - radius: 50 %;
-            background: white;
-            border: 2px solid #e5e7eb;
-            display: flex;
-            align - items: center;
-            justify - content: center;
-            font - weight: 700;
-            font - size: 0.9rem;
-            color: #9ca3af;
-            transition: all 0.3s;
-        }
+                    width: 40px;
+                    height: 40px;
+                    border - radius: 50 %;
+                    background: white;
+                    border: 2px solid #e5e7eb;
+                    display: flex;
+                    align - items: center;
+                    justify - content: center;
+                    font - weight: 700;
+                    font - size: 0.9rem;
+                    color: #9ca3af;
+                    transition: all 0.3s;
+                }
 
                     .wizard - step.active.wizard - step - circle {
-            background: var(--sidebar - color, #014421);
-            border - color: var(--sidebar - color, #014421);
-            color: white;
-        }
+                    background: var(--sidebar - color, #014421);
+                    border - color: var(--sidebar - color, #014421);
+                    color: white;
+                }
 
                     .wizard - step.completed.wizard - step - circle {
-            background: #10b981;
-            border - color: #10b981;
-            color: white;
-        }
+                    background: #10b981;
+                    border - color: #10b981;
+                    color: white;
+                }
 
                     .wizard - step - label {
-            font - size: 0.75rem;
-            font - weight: 600;
-            color: #9ca3af;
-            text - align: center;
-        }
+                    font - size: 0.75rem;
+                    font - weight: 600;
+                    color: #9ca3af;
+                    text - align: center;
+                }
 
                     .wizard - step.active.wizard - step - label {
-            color: #111827;
-        }
+                    color: #111827;
+                }
 
                     /* Wizard Content */
                     .wizard - content {
-            min - height: 250px;
-        }
+                    min - height: 250px;
+                }
 
                     .wizard - step - content {
-            display: none;
-        }
+                    display: none;
+                }
 
                     .wizard - step - content.active {
-            display: block;
-            animation: fadeIn 0.3s;
-        }
+                    display: block;
+                    animation: fadeIn 0.3s;
+                }
 
-        @keyframes fadeIn {
+                @keyframes fadeIn {
                         from { opacity: 0; transform: translateY(10px); }
                         to { opacity: 1; transform: translateY(0); }
-        }
+                }
 
                     /* Wizard Actions */
                     .wizard - actions {
-            display: flex;
-            gap: 12px;
-            justify - content: space - between;
-            padding - top: 24px;
-            border - top: 1px solid #f3f4f6;
-            margin - top: 24px;
-        }
+                    display: flex;
+                    gap: 12px;
+                    justify - content: space - between;
+                    padding - top: 24px;
+                    border - top: 1px solid #f3f4f6;
+                    margin - top: 24px;
+                }
 
                     .btn - back {
-            padding: 10px 24px;
-            background: white;
-            color: #374151;
-            border: 1px solid #d1d5db;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            font - weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+                    padding: 10px 24px;
+                    background: white;
+                    color: #374151;
+                    border: 1px solid #d1d5db;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
 
                     .btn - back:hover {
-            background: #f9fafb;
-        }
+                    background: #f9fafb;
+                }
 
                     .btn - back:disabled {
-            opacity: 0.5;
-            cursor: not - allowed;
-        }
+                    opacity: 0.5;
+                    cursor: not - allowed;
+                }
 
                     .btn - next, .btn - submit {
-            padding: 10px 24px;
-            background: var(--sidebar - color, #014421);
-            color: white;
-            border: none;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            font - weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+                    padding: 10px 24px;
+                    background: var(--sidebar - color, #014421);
+                    color: white;
+                    border: none;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    font - weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
 
                     .btn - next: hover, .btn - submit:hover {
-            filter: brightness(0.9);
-        }
+                    filter: brightness(0.9);
+                }
 
                     .tap - form - group {
-            display: flex;
-            flex - direction: column;
-            gap: 8px;
-            margin - bottom: 20px;
-        }
+                    display: flex;
+                    flex - direction: column;
+                    gap: 8px;
+                    margin - bottom: 20px;
+                }
 
                     .tap - form - label {
-            font - size: 0.85rem;
-            font - weight: 600;
-            color: #374151;
-        }
+                    font - size: 0.85rem;
+                    font - weight: 600;
+                    color: #374151;
+                }
 
                     .tap - form - label.required {
-            color: #dc2626;
-        }
+                    color: #dc2626;
+                }
 
                     .tap - form - input,
                     .tap - form - textarea {
-            padding: 10px 14px;
-            border: 1px solid #d1d5db;
-            border - radius: 8px;
-            font - size: 0.9rem;
-            color: #374151;
-            font - family: inherit;
-            outline: none;
-            transition: border - color 0.15s;
-        }
+                    padding: 10px 14px;
+                    border: 1px solid #d1d5db;
+                    border - radius: 8px;
+                    font - size: 0.9rem;
+                    color: #374151;
+                    font - family: inherit;
+                    outline: none;
+                    transition: border - color 0.15s;
+                }
 
                     .tap - form - textarea {
-            resize: vertical;
-        }
+                    resize: vertical;
+                }
 
                     .tap - form - input: focus,
                     .tap - form - textarea:focus {
-            border - color: var(--sidebar - color, #014421);
-            box - shadow: 0 0 0 3px rgba(1, 68, 33, 0.1);
-        }
+                    border - color: var(--sidebar - color, #014421);
+                    box - shadow: 0 0 0 3px rgba(1, 68, 33, 0.1);
+                }
 
                     .tap - form - grid {
-            display: grid;
-            grid - template - columns: 1fr 1fr;
-            gap: 16px;
-        }
+                    display: grid;
+                    grid - template - columns: 1fr 1fr;
+                    gap: 16px;
+                }
 
                     .empty - state {
-            text - align: center;
-            padding: 60px 20px;
-            color: #9ca3af;
-        }
-                </style >
+                    text - align: center;
+                    padding: 60px 20px;
+                    color: #9ca3af;
+                }
+                </style>
 
-                < !--Header -->
+                <!--Header -->
                 <div class="tap-header">
                     <button class="btn-add-tap" onclick="openTAPModal()">
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -4165,102 +4913,102 @@
                     </div>
                 </div>
 
-                <!--Modal with Wizard-- >
-        <div class="tap-modal" id="tap-modal">
-            <div class="tap-modal-box">
-                <div class="tap-modal-header">
-                    <h2 class="tap-modal-title">Add TAP-HSP Project</h2>
-                    <button class="tap-modal-close" onclick="closeTAPModal()">✕</button>
-                </div>
-
-                <!-- Wizard Progress -->
-                <div class="wizard-progress">
-                    <div class="wizard-step active" data-step="1">
-                        <div class="wizard-step-circle">1</div>
-                        <div class="wizard-step-label">Title & Location</div>
-                    </div>
-                    <div class="wizard-step" data-step="2">
-                        <div class="wizard-step-circle">2</div>
-                        <div class="wizard-step-label">Period & Partner</div>
-                    </div>
-                    <div class="wizard-step" data-step="3">
-                        <div class="wizard-step-circle">3</div>
-                        <div class="wizard-step-label">Team</div>
-                    </div>
-                    <div class="wizard-step" data-step="4">
-                        <div class="wizard-step-circle">4</div>
-                        <div class="wizard-step-label">Documents</div>
-                    </div>
-                </div>
-
-                <!-- Wizard Content -->
-                <div class="wizard-content">
-                    <!-- Step 1: Title & Location -->
-                    <div class="wizard-step-content active" data-step="1">
-                        <div class="tap-form-group">
-                            <label class="tap-form-label">Project Title <span class="required">*</span></label>
-                            <textarea class="tap-form-textarea" style="min-height:100px;" id="tap-title" placeholder="Enter the full title of the TAP-HSP project" required></textarea>
+                <!--Modal with Wizard-->
+                <div class="tap-modal" id="tap-modal">
+                    <div class="tap-modal-box">
+                        <div class="tap-modal-header">
+                            <h2 class="tap-modal-title">Add TAP-HSP Project</h2>
+                            <button class="tap-modal-close" onclick="closeTAPModal()">✕</button>
                         </div>
 
-                        <div class="tap-form-grid">
-                            <div class="tap-form-group">
-                                <label class="tap-form-label">Province <span class="required">*</span></label>
-                                <input type="text" class="tap-form-input" id="tap-province" placeholder="e.g., Laguna" required>
+                        <!-- Wizard Progress -->
+                        <div class="wizard-progress">
+                            <div class="wizard-step active" data-step="1">
+                                <div class="wizard-step-circle">1</div>
+                                <div class="wizard-step-label">Title & Location</div>
                             </div>
-
-                            <div class="tap-form-group">
-                                <label class="tap-form-label">Municipality <span class="required">*</span></label>
-                                <input type="text" class="tap-form-input" id="tap-municipality" placeholder="e.g., Los Baños" required>
+                            <div class="wizard-step" data-step="2">
+                                <div class="wizard-step-circle">2</div>
+                                <div class="wizard-step-label">Period & Partner</div>
+                            </div>
+                            <div class="wizard-step" data-step="3">
+                                <div class="wizard-step-circle">3</div>
+                                <div class="wizard-step-label">Team</div>
+                            </div>
+                            <div class="wizard-step" data-step="4">
+                                <div class="wizard-step-circle">4</div>
+                                <div class="wizard-step-label">Documents</div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Step 2: Period & Partner Agency -->
-                    <div class="wizard-step-content" data-step="2">
-                        <div class="tap-form-group">
-                            <label class="tap-form-label">Period <span class="required">*</span></label>
-                            <input type="text" class="tap-form-input" id="tap-period" placeholder="e.g., Jan 2025 - Dec 2025 or Q1-Q4 2025" required>
-                                <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Enter the project duration or timeframe</div>
+                        <!-- Wizard Content -->
+                        <div class="wizard-content">
+                            <!-- Step 1: Title & Location -->
+                            <div class="wizard-step-content active" data-step="1">
+                                <div class="tap-form-group">
+                                    <label class="tap-form-label">Project Title <span class="required">*</span></label>
+                                    <textarea class="tap-form-textarea" style="min-height:100px;" id="tap-title" placeholder="Enter the full title of the TAP-HSP project" required></textarea>
+                                </div>
+
+                                <div class="tap-form-grid">
+                                    <div class="tap-form-group">
+                                        <label class="tap-form-label">Province <span class="required">*</span></label>
+                                        <input type="text" class="tap-form-input" id="tap-province" placeholder="e.g., Laguna" required>
+                                    </div>
+
+                                    <div class="tap-form-group">
+                                        <label class="tap-form-label">Municipality <span class="required">*</span></label>
+                                        <input type="text" class="tap-form-input" id="tap-municipality" placeholder="e.g., Los Baños" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Period & Partner Agency -->
+                            <div class="wizard-step-content" data-step="2">
+                                <div class="tap-form-group">
+                                    <label class="tap-form-label">Period <span class="required">*</span></label>
+                                    <input type="text" class="tap-form-input" id="tap-period" placeholder="e.g., Jan 2025 - Dec 2025 or Q1-Q4 2025" required>
+                                        <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Enter the project duration or timeframe</div>
+                                </div>
+
+                                <div class="tap-form-group">
+                                    <label class="tap-form-label">Partner Agency <span class="required">*</span></label>
+                                    <input type="text" class="tap-form-input" id="tap-partner" placeholder="e.g., LGU Los Baños, DENR Region IV-A" required>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Person Involved & Role -->
+                            <div class="wizard-step-content" data-step="3">
+                                <div class="tap-form-group">
+                                    <label class="tap-form-label">Person Involved <span class="required">*</span></label>
+                                    <input type="text" class="tap-form-input" id="tap-person" placeholder="e.g., Dr. Juan Dela Cruz" required>
+                                </div>
+
+                                <div class="tap-form-group">
+                                    <label class="tap-form-label">Role <span class="required">*</span></label>
+                                    <input type="text" class="tap-form-input" id="tap-role" placeholder="e.g., Project Lead, Co-Investigator, Consultant" required>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Project Report/Documents -->
+                            <div class="wizard-step-content" data-step="4">
+                                <div class="tap-form-group">
+                                    <label class="tap-form-label">Project Report / Documents URL</label>
+                                    <input type="url" class="tap-form-input" id="tap-document" placeholder="https://drive.google.com/... or https://doi.org/...">
+                                        <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Optional: Provide a link to project reports or related documents</div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="tap-form-group">
-                            <label class="tap-form-label">Partner Agency <span class="required">*</span></label>
-                            <input type="text" class="tap-form-input" id="tap-partner" placeholder="e.g., LGU Los Baños, DENR Region IV-A" required>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Person Involved & Role -->
-                    <div class="wizard-step-content" data-step="3">
-                        <div class="tap-form-group">
-                            <label class="tap-form-label">Person Involved <span class="required">*</span></label>
-                            <input type="text" class="tap-form-input" id="tap-person" placeholder="e.g., Dr. Juan Dela Cruz" required>
-                        </div>
-
-                        <div class="tap-form-group">
-                            <label class="tap-form-label">Role <span class="required">*</span></label>
-                            <input type="text" class="tap-form-input" id="tap-role" placeholder="e.g., Project Lead, Co-Investigator, Consultant" required>
-                        </div>
-                    </div>
-
-                    <!-- Step 4: Project Report/Documents -->
-                    <div class="wizard-step-content" data-step="4">
-                        <div class="tap-form-group">
-                            <label class="tap-form-label">Project Report / Documents URL</label>
-                            <input type="url" class="tap-form-input" id="tap-document" placeholder="https://drive.google.com/... or https://doi.org/...">
-                                <div style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Optional: Provide a link to project reports or related documents</div>
+                        <!-- Wizard Actions -->
+                        <div class="wizard-actions">
+                            <button type="button" class="btn-back" id="tap-wizard-back-btn" onclick="tapWizardPrevStep()" disabled>Back</button>
+                            <div style="flex:1;"></div>
+                            <button type="button" class="btn-next" id="tap-wizard-next-btn" onclick="tapWizardNextStep()">Continue</button>
+                            <button type="button" class="btn-submit" id="tap-wizard-submit-btn" onclick="submitTAPWizard()" style="display:none;">Submit Project</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Wizard Actions -->
-                <div class="wizard-actions">
-                    <button type="button" class="btn-back" id="tap-wizard-back-btn" onclick="tapWizardPrevStep()" disabled>Back</button>
-                    <div style="flex:1;"></div>
-                    <button type="button" class="btn-next" id="tap-wizard-next-btn" onclick="tapWizardNextStep()">Continue</button>
-                    <button type="button" class="btn-submit" id="tap-wizard-submit-btn" onclick="submitTAPWizard()" style="display:none;">Submit Project</button>
-                </div>
-            </div>
-        </div>
             `;
 
             // Initialize wizard
@@ -4443,13 +5191,13 @@
                 // TODO: Fetch from API
                 // For now, show empty state
                 tbody.innerHTML = `
-            < tr >
-            <td colspan="9" class="empty-state">
-                <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No TAP-HSP projects yet</div>
-                <div style="font-size:0.8rem;color:#9ca3af;">Click "Add Project" to submit your first TAP-HSP project</div>
-            </td>
-                    </tr >
-            `;
+                    <tr>
+                    <td colspan="9" class="empty-state">
+                        <div style="font-size:0.95rem;font-weight:600;margin-bottom:4px;color:#9ca3af;">No TAP-HSP projects yet</div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">Click "Add Project" to submit your first TAP-HSP project</div>
+                    </td>
+                    </tr>
+                    `;
             } catch (error) {
                 console.error('Error loading projects:', error);
             }
@@ -4463,7 +5211,7 @@
             const initial = memberData ? memberData.first[0].toUpperCase() : '{{ initial }}';
 
             content.innerHTML = `
-            <div class="settings-container">
+                    <div class="settings-container">
                     <!--Left Column: Personalization-->
                     <div>
                         <div class="settings-card">
@@ -4533,62 +5281,62 @@
                         </div>
                     </div>
 
-                    <!--Right Column: Account-- >
-            <div>
-                <div class="settings-card">
-                    <h2 class="settings-card-title">Account Information</h2>
-                    <div class="account-info-item">
-                        <div class="account-info-label">Email Address</div>
-                        <div class="account-info-value">${email}</div>
-                    </div>
-                    <div class="account-info-item">
-                        <div class="account-info-label">Account Type</div>
-                        <div class="account-info-value">Faculty Member</div>
-                    </div>
-                    <div class="account-info-item">
-                        <div class="account-info-label">Department</div>
-                        <div class="account-info-value">Community and Environmental Resource Planning</div>
-                    </div>
-                </div>
+                    <!--Right Column: Account-->
+                    <div>
+                        <div class="settings-card">
+                            <h2 class="settings-card-title">Account Information</h2>
+                            <div class="account-info-item">
+                                <div class="account-info-label">Email Address</div>
+                                <div class="account-info-value">${email}</div>
+                            </div>
+                            <div class="account-info-item">
+                                <div class="account-info-label">Account Type</div>
+                                <div class="account-info-value">Faculty Member</div>
+                            </div>
+                            <div class="account-info-item">
+                                <div class="account-info-label">Department</div>
+                                <div class="account-info-value">Community and Environmental Resource Planning</div>
+                            </div>
+                        </div>
 
-                <div class="settings-card" style="margin-top: 20px;">
-                    <h2 class="settings-card-title">Security</h2>
-                    <div class="settings-option">
-                        <div class="settings-option-info">
-                            <div class="settings-option-label">Change Password</div>
-                            <div class="settings-option-desc">Update your account password</div>
+                        <div class="settings-card" style="margin-top: 20px;">
+                            <h2 class="settings-card-title">Security</h2>
+                            <div class="settings-option">
+                                <div class="settings-option-info">
+                                    <div class="settings-option-label">Change Password</div>
+                                    <div class="settings-option-desc">Update your account password</div>
+                                </div>
+                                <button class="btn-change" onclick="alert('Change password feature coming soon')">Change</button>
+                            </div>
+                            <div class="settings-option">
+                                <div class="settings-option-info">
+                                    <div class="settings-option-label">Two-Factor Authentication</div>
+                                    <div class="settings-option-desc">Add extra security to your account</div>
+                                </div>
+                                <button class="btn-change" onclick="alert('2FA feature coming soon')">Enable</button>
+                            </div>
                         </div>
-                        <button class="btn-change" onclick="alert('Change password feature coming soon')">Change</button>
-                    </div>
-                    <div class="settings-option">
-                        <div class="settings-option-info">
-                            <div class="settings-option-label">Two-Factor Authentication</div>
-                            <div class="settings-option-desc">Add extra security to your account</div>
-                        </div>
-                        <button class="btn-change" onclick="alert('2FA feature coming soon')">Enable</button>
-                    </div>
-                </div>
 
-                <div class="settings-card" style="margin-top: 20px;">
-                    <h2 class="settings-card-title">Preferences</h2>
-                    <div class="settings-option">
-                        <div class="settings-option-info">
-                            <div class="settings-option-label">Email Notifications</div>
-                            <div class="settings-option-desc">Receive updates via email</div>
+                        <div class="settings-card" style="margin-top: 20px;">
+                            <h2 class="settings-card-title">Preferences</h2>
+                            <div class="settings-option">
+                                <div class="settings-option-info">
+                                    <div class="settings-option-label">Email Notifications</div>
+                                    <div class="settings-option-desc">Receive updates via email</div>
+                                </div>
+                                <div class="toggle-switch active"></div>
+                            </div>
+                            <div class="settings-option">
+                                <div class="settings-option-info">
+                                    <div class="settings-option-label">Desktop Notifications</div>
+                                    <div class="settings-option-desc">Show browser notifications</div>
+                                </div>
+                                <div class="toggle-switch"></div>
+                            </div>
                         </div>
-                        <div class="toggle-switch active"></div>
-                    </div>
-                    <div class="settings-option">
-                        <div class="settings-option-info">
-                            <div class="settings-option-label">Desktop Notifications</div>
-                            <div class="settings-option-desc">Show browser notifications</div>
-                        </div>
-                        <div class="toggle-switch"></div>
                     </div>
                 </div>
-            </div>
-                </div >
-            `;
+                    `;
         }
 
         function changeSidebarColor(colorName, colorValue) {

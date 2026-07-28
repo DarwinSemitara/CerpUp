@@ -2224,14 +2224,6 @@
 
             // ═══ Updated Toggle Unit Config ═══
             function toggleUnitConfig() {
-                // Check if "All Sections" is selected
-                var sectionEl = document.getElementById('section-select');
-
-                if (sectionEl && sectionEl.value === '') {
-                    showToast('Please select a specific section before configuring subject blocks. "All Sections" view does not support configuration.', 'warning', 6000);
-                    return;
-                }
-
                 var form = document.getElementById('unit-config-form');
                 var btn = document.getElementById('unit-config-toggle-btn');
 
@@ -2421,15 +2413,7 @@
 
                 // Sum up allocated units from schedules FOR CURRENT SCHOOL YEAR/SEMESTER ONLY
                 schedules.forEach(function (sch) {
-                    // Only count schedules that match current schoolYear and semester
-                    // Support both old 'year' field and new 'schoolYear' field
-                    var matchesYearSem = false;
-                    if (sch.schoolYear) {
-                        matchesYearSem = (sch.schoolYear === currentSchoolYear && sch.semester === currentSemester);
-                    } else {
-                        // If no schoolYear field, include it (backward compatibility)
-                        matchesYearSem = (sch.semester === currentSemester);
-                    }
+                    var matchesYearSem = (sch.schoolYear === currentSchoolYear && sch.semester === currentSemester);
 
                     if (matchesYearSem && subjectUnits[sch.subjCode]) {
                         var duration = (slotIdx(sch.end) - slotIdx(sch.start)) / 2; // Convert to hours
@@ -2712,9 +2696,12 @@
             window.filtered = filtered;
 
             var currentMode = 'manual';
-            var currentSchoolYear = '2024-2025';
-            var currentSemester = '1';
-            var currentSection = ''; // Empty means all sections
+            // School year & semester: persist admin's choice via localStorage
+            // Default: current year to next year, 1st semester
+            var _defaultSY = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+            var currentSchoolYear = localStorage.getItem('cerp_schoolYear') || _defaultSY;
+            var currentSemester = localStorage.getItem('cerp_semester') || '1';
+            var currentSection = localStorage.getItem('cerp_section') || ''; // Empty means all sections
 
             // Populate school year dropdown dynamically
             function populateSchoolYears() {
@@ -2722,10 +2709,9 @@
                 if (!select) return;
 
                 var currentYear = new Date().getFullYear();
-                var startYear = 2024; // Starting from 2024
-                var endYear = currentYear + 5; // 5 years into the future
+                var startYear = 2024;
+                var endYear = currentYear + 5;
 
-                // Generate school year options
                 for (var year = startYear; year <= endYear; year++) {
                     var nextYear = year + 1;
                     var value = year + '-' + nextYear;
@@ -2734,18 +2720,20 @@
                     var option = document.createElement('option');
                     option.value = value;
                     option.textContent = label;
-
-                    // Set default to 2024-2025
-                    if (value === '2024-2025') {
-                        option.selected = true;
-                    }
-
+                    if (value === currentSchoolYear) option.selected = true;
                     select.appendChild(option);
                 }
+                select.value = currentSchoolYear;
             }
 
             // Call on page load
             populateSchoolYears();
+
+            // Auto-select semester and section from saved values
+            var semSelect = document.getElementById('semester-select');
+            if (semSelect) semSelect.value = currentSemester;
+            var secSelect = document.getElementById('section-select');
+            if (secSelect && currentSection) secSelect.value = currentSection;
 
             async function loadSchedules() {
                 try {
@@ -2781,6 +2769,8 @@
                     applySchedFilter();
                 }, 100);
             }
+            // Expose globally so CHE assistant can refresh schedule after actions
+            window.loadSchedules = loadSchedules;
 
             // Validation function for schedule conflicts and unit limits
             function validateSchedule(prof, day, start, end, excludeId) {
@@ -2905,6 +2895,11 @@
                 if (semesterSelect) currentSemester = semesterSelect.value;
                 if (sectionSelect) currentSection = sectionSelect.value;
 
+                // Persist selections so they survive page reloads
+                localStorage.setItem('cerp_schoolYear', currentSchoolYear);
+                localStorage.setItem('cerp_semester', currentSemester);
+                localStorage.setItem('cerp_section', currentSection);
+
                 // Repopulate subject dropdowns (all subjects always available)
                 populateSubjectDropdowns();
 
@@ -2931,26 +2926,13 @@
             function applyFilters() {
                 // Filter schedules based on school year, semester, and section
                 filtered = schedules.filter(function (s) {
-                    // Support both old 'year' field and new 'schoolYear' field for backward compatibility
-                    var matchSchoolYear = s.schoolYear === currentSchoolYear || !s.schoolYear;
+                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
                     var matchSection = !currentSection || s.section === currentSection;
-
-                    console.log('Filter check for schedule:', s.id, {
-                        schoolYear: s.schoolYear,
-                        currentSchoolYear: currentSchoolYear,
-                        matchSchoolYear: matchSchoolYear,
-                        matchSemester: matchSemester,
-                        matchSection: matchSection,
-                        result: matchSchoolYear && matchSemester && matchSection
-                    });
-
                     return matchSchoolYear && matchSemester && matchSection;
                 });
 
-                window.filtered = filtered; // Update global reference
-
-                console.log('📊 Filtered', filtered.length, 'schedules out of', schedules.length, 'total');
+                window.filtered = filtered;
 
                 // Update unit tracking and draggable blocks when filter changes
                 calculateAllocatedUnits();
@@ -2971,7 +2953,7 @@
                         sProfName = sProfName.split(',')[0].trim();
                     }
                     var matchProf = sProfName === selectedProf;
-                    var matchSchoolYear = s.schoolYear === currentSchoolYear || !s.schoolYear;
+                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
                     return matchProf && matchSchoolYear && matchSemester;
                 });
@@ -3486,28 +3468,28 @@
 
                 if (!tbody) return;
 
-                // Calculate FIC loads across ALL year levels for current semester
+                // Calculate FIC loads for current school year + semester
                 ficLoadData = {};
                 schedules.forEach(function (s) {
-                    // Only count schedules in the current semester (across all years)
-                    if (s.semester === currentSemester) {
+                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
+                    var matchSemester = s.semester === currentSemester;
+                    if (matchSchoolYear && matchSemester) {
                         if (!ficLoadData[s.prof]) {
                             ficLoadData[s.prof] = 0;
                         }
 
-                        // Calculate units for this schedule
                         var startIdx = slotIdx(s.start);
                         var endIdx = slotIdx(s.end);
                         if (startIdx >= 0 && endIdx > startIdx) {
-                            var hours = (endIdx - startIdx) * 0.5; // Each slot is 0.5 hours
+                            var hours = (endIdx - startIdx) * 0.5;
                             ficLoadData[s.prof] += hours;
                         }
                     }
                 });
 
-                // Filter schedules by current semester ONLY (all year levels)
+                // Filter schedules by current school year + semester
                 var currentSemesterSchedules = schedules.filter(function (s) {
-                    return s.semester === currentSemester;
+                    return s.schoolYear === currentSchoolYear && s.semester === currentSemester;
                 });
 
                 if (!currentSemesterSchedules.length) {

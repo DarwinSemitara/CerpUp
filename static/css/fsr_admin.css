@@ -1,0 +1,274 @@
+/* ══════════════════════════════════════════════════════════════
+   FSR Admin Page - Full Faculty Service Record Styles
+   ══════════════════════════════════════════════════════════════ */
+
+.fsr-container {
+    padding: 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+/* Generator Section */
+.fsr-generator-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.fsr-generator-section h2 {
+    color: #6b0f1a;
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.fsr-control-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.fsr-control-group label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.fsr-control-group select {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.fsr-control-group select:focus {
+    outline: none;
+    border-color: #6b0f1a;
+}
+
+.fsr-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #6b0f1a;
+    color: white;
+    margin-top: auto;
+}
+
+.fsr-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.fsr-btn:hover:not(:disabled) {
+    background: #8b1424;
+}
+
+/* Preview Section */
+.fsr-preview-section {
+    background: white;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 600px;
+    overflow: hidden;
+}
+
+/* Spreadsheet */
+.fsr-spreadsheet {
+    overflow: auto;
+    max-height: 900px;
+}
+
+.fsr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    background: white;
+}
+
+.fsr-table th,
+.fsr-table td {
+    border: 1px solid #a0a0a0;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    vertical-align: top;
+    background: white;
+}
+
+.fsr-table th {
+    background: #e8e8e8;
+    color: #000;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.fsr-table td {
+    min-height: 30px;
+    word-wrap: break-word;
+}
+
+.fsr-table tr:hover td {
+    background: #fffacd;
+}
+
+/* Header Row */
+.fsr-header-row th {
+    background: #ffffff !important;
+    color: #000 !important;
+    font-size: 1rem;
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 700;
+    border: 2px solid #000;
+}
+
+.fsr-info-label {
+    background: #f5f5f5 !important;
+    font-weight: 600;
+}
+
+.fsr-info-cell {
+    background: #ffffff !important;
+}
+
+/* Section Headers */
+.fsr-section-row td {
+    background: #d9d9d9 !important;
+    color: #000 !important;
+    font-weight: 700;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.3px;
+    border: 1px solid #808080;
+}
+
+/* Subsection Headers */
+.fsr-subsection-row td {
+    background: #e8e8e8 !important;
+    color: #000 !important;
+    font-weight: 600;
+    padding: 0.4rem;
+    font-size: 0.8rem;
+    border: 1px solid #808080;
+}
+
+/* Column Headers */
+.fsr-column-header-row th {
+    background: #bfbfbf !important;
+    color: #000 !important;
+    font-weight: 600;
+    padding: 0.5rem 0.4rem;
+    text-align: center;
+    border: 1px solid #808080;
+}
+
+/* Totals Row */
+.fsr-total-row {
+    background: #ffffcc !important;
+    font-weight: 700;
+}
+
+.fsr-total-row td {
+    background: #ffffcc !important;
+    border: 1px solid #808080 !important;
+    font-weight: 700;
+}
+
+/* Empty State */
+.fsr-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+}
+
+.fsr-empty-state svg {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    opacity: 0.3;
+}
+
+.fsr-empty-state h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+/* Loading State */
+.fsr-loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.fsr-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #6b0f1a;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: fsr-spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes fsr-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error State */
+.fsr-error-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #e53e3e;
+}
+
+.fsr-error-state svg {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
+    opacity: 0.5;
+}
+
+/* Utility */
+.fsr-spacer {
+    border: none;
+    height: 10px;
+}
+
+.fsr-spacer td {
+    border: none !important;
+}
+
+.fsr-no-border td {
+    border: none !important;
+}
+
+.fsr-italic-empty {
+    text-align: center;
+    color: #9ca3af;
+    font-style: italic;
+    padding: 0.75rem;
+}
