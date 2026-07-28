@@ -883,9 +883,13 @@ def add_member():
             f"🔍 Received is_faculty value: '{is_faculty_raw}' (type: {type(is_faculty_raw)})")
 
         # Build member data from form fields
+        # Normalize name casing: store as Title Case
+        raw_last = request.form.get('last', '').strip()
+        raw_first = request.form.get('first', '').strip()
+
         member = {
-            'last':      request.form.get('last', ''),
-            'first':     request.form.get('first', ''),
+            'last':      raw_last.title() if raw_last.isupper() or raw_last.islower() else raw_last,
+            'first':     raw_first.title() if raw_first.isupper() or raw_first.islower() else raw_first,
             'mi':        request.form.get('mi', 'N/A'),
             'role':      request.form.get('role', ''),
             'email':     request.form.get('email', ''),
@@ -921,6 +925,48 @@ def add_member():
 
     except Exception as e:
         print(f"❌ Error adding member: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/members/<member_id>', methods=['PUT'])
+@login_required
+def update_member(member_id):
+    """Update an existing member's details."""
+    try:
+        doc = db.collection('members').document(member_id).get()
+        if not doc.exists:
+            return jsonify({'error': 'Member not found.'}), 404
+
+        data = request.get_json() if request.is_json else None
+        if not data:
+            # Try form data
+            data = {}
+            for key in ['last', 'first', 'mi', 'role', 'email', 'address',
+                        'suffix', 'contact', 'gender', 'dob', 'type', 'user_no']:
+                val = request.form.get(key)
+                if val is not None:
+                    data[key] = val
+            is_faculty_raw = request.form.get('is_faculty')
+            if is_faculty_raw is not None:
+                data['is_faculty'] = is_faculty_raw.lower() == 'true'
+            avail = request.form.getlist('availability')
+            if avail:
+                data['availability'] = avail
+
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+
+        # Normalize name casing
+        if 'last' in data:
+            raw = data['last'].strip()
+            data['last'] = raw.title() if raw.isupper() or raw.islower() else raw
+        if 'first' in data:
+            raw = data['first'].strip()
+            data['first'] = raw.title() if raw.isupper() or raw.islower() else raw
+
+        db.collection('members').document(member_id).update(data)
+        return jsonify({'status': 'ok', 'id': member_id})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
