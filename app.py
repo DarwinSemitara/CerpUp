@@ -621,7 +621,6 @@ def che_execute_action():
                     'type': 'Lecture',
                     'year': '1',
                     'semester': semester,
-                    'school_year': school_year,
                     'created_at': datetime.utcnow().isoformat(),
                 })
                 result['message'] += f" Added as ID: {new_id[:8]}..."
@@ -741,7 +740,6 @@ def che_execute_action():
                             'type': 'generated',
                             'year': '1',
                             'semester': target_sem,
-                            'school_year': target_sy,
                             'created_at': datetime.utcnow().isoformat(),
                         })
                         saved += 1
@@ -1584,9 +1582,11 @@ def add_schedule():
             'section':   data['section'],
             'year':      data.get('year', '1'),
             'semester':  data.get('semester', '1'),
-            'school_year': data.get('schoolYear', ''),
             'created_at': __import__('datetime').datetime.utcnow().isoformat(),
         }
+        # Only add school_year if provided (column may not exist in all setups)
+        if data.get('schoolYear'):
+            entry_db['school_year'] = data['schoolYear']
         db.collection('schedules').document(entry_id).set(entry_db)
 
         # Return with camelCase (frontend expects)
@@ -1820,7 +1820,6 @@ def api_generate_full_schedule():
                     'type': 'generated',
                     'year': '1',
                     'semester': target_semester,
-                    'school_year': target_school_year,
                     'created_at': datetime.utcnow().isoformat(),
                 })
                 saved_count += 1
