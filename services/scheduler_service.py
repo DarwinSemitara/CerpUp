@@ -80,8 +80,8 @@ class FullGAConfig:
     reference_schedules: List[Dict] = field(default_factory=list)
     faculty_overrides: Dict[str, Any] = field(default_factory=dict)
     pop_size: int = 100
-    max_generations: int = 500
-    time_limit_seconds: float = 10.0
+    max_generations: int = 1000
+    time_limit_seconds: float = 120.0
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -950,6 +950,11 @@ def find_optimal_slot(
     room_occ = set()
     sect_occ = set()
 
+    # Normalize for case-insensitive matching
+    professor_lower = professor.lower().strip()
+    room_lower = room.lower().strip()
+    section_lower = section.lower().strip()
+
     for s in existing_schedules:
         if not s.get('start') or not s.get('end') or not s.get('day'):
             continue
@@ -960,11 +965,14 @@ def find_optimal_slot(
             continue
         for slot in range(ss, es):
             key = (s['day'], slot)
-            if s.get('prof') == professor:
+            # Professor conflict (case-insensitive)
+            if (s.get('prof') or '').lower().strip() == professor_lower:
                 prof_occ.add(key)
-            if s.get('room') == room and room != 'TBA':
+            # Room conflict (case-insensitive, skip TBA)
+            if room_lower and room_lower != 'tba' and (s.get('room') or '').lower().strip() == room_lower:
                 room_occ.add(key)
-            if s.get('section') == section:
+            # Section conflict (case-insensitive)
+            if section_lower and (s.get('section') or '').lower().strip() == section_lower:
                 sect_occ.add(key)
 
     days_to_try = [target_day] if target_day else DAYS

@@ -24,7 +24,8 @@ Your role is to help administrators and members with anything related to the CER
 2. **Check data**: Look at the system data provided in context. What do you actually know?
 3. **Plan**: Before acting, think about what steps are needed. If scheduling, consider conflicts.
 4. **Validate**: Before outputting an action, verify you have ALL required parameters.
-5. **Respond**: Be specific with names, numbers, and details from the data — never guess.
+5. **Conflict check**: For ANY scheduling action, mentally check: Is the professor free? Is the room free? Is the section free at that time? If you see a conflict in the data, TELL the user and suggest alternatives.
+6. **Respond**: Be specific with names, numbers, and details from the data — never guess.
 
 ## What you CAN help with:
 - Research projects, publications, and papers submitted to the system
@@ -224,6 +225,58 @@ def extract_action(reply: str) -> Optional[dict]:
     return None
 
 
+# ── Conflict Checker ───────────────────────────────────────────────────────────
+
+def _check_slot_conflicts(schedule: dict, existing_schedules: list) -> list:
+    """Check if a placed schedule conflicts with existing ones. Returns list of conflict descriptions."""
+    from services.scheduler_service import time_to_slot
+
+    conflicts = []
+    day = schedule.get('day', '')
+    start = schedule.get('start', '')
+    end = schedule.get('end', '')
+    prof = (schedule.get('prof') or '').lower().strip()
+    room = (schedule.get('room') or '').lower().strip()
+    section = (schedule.get('section') or '').lower().strip()
+
+    if not day or not start or not end:
+        return conflicts
+
+    try:
+        new_start = time_to_slot(start)
+        new_end = time_to_slot(end)
+    except (ValueError, IndexError):
+        return conflicts
+
+    for s in existing_schedules:
+        if s.get('day') != day:
+            continue
+        if not s.get('start') or not s.get('end'):
+            continue
+        try:
+            ex_start = time_to_slot(s['start'])
+            ex_end = time_to_slot(s['end'])
+        except (ValueError, IndexError):
+            continue
+
+        # Check time overlap
+        if new_start < ex_end and new_end > ex_start:
+            # Professor conflict
+            if prof and (s.get('prof') or '').lower().strip() == prof:
+                conflicts.append(
+                    f"Professor '{schedule.get('prof')}' already has {s.get('subjCode', '')} at {s.get('start')}-{s.get('end')} on {day}")
+            # Room conflict
+            if room and room != 'tba' and (s.get('room') or '').lower().strip() == room:
+                conflicts.append(
+                    f"Room '{schedule.get('room')}' is occupied by {s.get('subjCode', '')} ({s.get('prof', '')}) at {s.get('start')}-{s.get('end')} on {day}")
+            # Section conflict
+            if section and (s.get('section') or '').lower().strip() == section:
+                conflicts.append(
+                    f"Section '{schedule.get('section')}' has {s.get('subjCode', '')} at {s.get('start')}-{s.get('end')} on {day}")
+
+    return conflicts
+
+
 # ── Schedule Action Executor ───────────────────────────────────────────────────
 
 def execute_schedule_action(action_data: dict, existing_schedules: list) -> dict:
@@ -338,6 +391,14 @@ def execute_schedule_action(action_data: dict, existing_schedules: list) -> dict
         )
 
         if result:
+            # Verify no conflicts with the found slot
+            conflicts = _check_slot_conflicts(result, existing_schedules)
+            if conflicts:
+                return {
+                    'success': False,
+                    'message': f"Cannot place at {result.get('day')} {result.get('start')}-{result.get('end')} — conflicts detected: {'; '.join(conflicts)}",
+                    'data': {'conflicts': conflicts}
+                }
             return {'success': True, 'message': f"Placed on {result['day']} at {result['start']}-{result['end']}", 'data': {'schedule': result}}
         else:
             # Fallback: try without time constraint
