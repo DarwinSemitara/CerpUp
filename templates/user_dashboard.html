@@ -1657,6 +1657,17 @@
             const extensions = fsrData.extensions || [];
             const schedules = fsrData.schedules || [];
 
+            // Classify research by research_type field (must be before usage)
+            const researchProposals = research.filter(r => r.research_type === 'proposal');
+            const researchImpl = research.filter(r => r.research_type === 'implementation' || (!r.research_type));
+            const creative_b1 = research.filter(r => r.research_type === 'oral_poster');
+            const creative_b2 = research.filter(r => r.research_type === 'proceedings');
+            const creative_b3 = research.filter(r => r.research_type === 'monographs' || r.research_type === 'monograph');
+            const creative_b4 = research.filter(r => r.research_type === 'journals' || r.research_type === 'journal_article');
+            const creative_b5 = research.filter(r => r.research_type === 'chapters' || r.research_type === 'book_chapter');
+            const creative_b6 = research.filter(r => r.research_type === 'books' || r.research_type === 'book');
+            const creative_b7 = research.filter(r => r.research_type === 'others_creative');
+
             // Build FIC options HTML for footnote dropdowns (exclude self)
             const myLast = (member.last || '').trim().toLowerCase();
             const myFirst = (member.first || '').trim().toLowerCase();
@@ -1820,17 +1831,6 @@
             const infoDissemination = extensions.filter(e => e.type === 'information_dissemination');
             const symposium = extensions.filter(e => e.type === 'symposium');
             const othersExt = extensions.filter(e => e.type === 'others');
-
-            // Classify research by research_type field
-            const researchProposals = research.filter(r => r.research_type === 'proposal');
-            const researchImpl = research.filter(r => r.research_type === 'implementation' || (!r.research_type));
-            const creative_b1 = research.filter(r => r.research_type === 'oral_poster');
-            const creative_b2 = research.filter(r => r.research_type === 'proceedings');
-            const creative_b3 = research.filter(r => r.research_type === 'monographs' || r.research_type === 'monograph');
-            const creative_b4 = research.filter(r => r.research_type === 'journals' || r.research_type === 'journal_article');
-            const creative_b5 = research.filter(r => r.research_type === 'chapters' || r.research_type === 'book_chapter');
-            const creative_b6 = research.filter(r => r.research_type === 'books' || r.research_type === 'book');
-            const creative_b7 = research.filter(r => r.research_type === 'other_creative');
 
             // Builder for creative work rows (II.B sections)
             const buildCreativeRows = (list) => {
