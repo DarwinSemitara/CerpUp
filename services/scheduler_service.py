@@ -467,27 +467,37 @@ def seed_from_reference(reference_schedules: List[Dict],
 
     ref_genes = trimmed_genes if trimmed_genes else ref_genes
 
-    # Create seeded population
-    # Only 10% direct copies (preserve structure), 90% with randomized time slots
-    seed_count = max(int(pop_size * 0.1), 1)
+    # Ensure ALL subjects from the subjects list are covered
+    # If a subject isn't in the reference, create random genes for it
+    ref_keys = set(f"{g.subj_code}_{g.section}" for g in ref_genes)
+    for subj in subjects:
+        key = f"{subj['code']}_{subj['section']}"
+        if key not in ref_keys:
+            # This subject wasn't in reference — create from scratch
+            remaining = subj.get('weekly_slots', slots_for_duration(
+                float(subj.get('units', 3))))
+            while remaining > 0:
+                block = min(remaining, MAX_BLOCK_SLOTS)
+                s = dict(subj)
+                s['block_slots'] = block
+                ref_genes.append(random_gene(s, rooms, prof_availability))
+                remaining -= block
+
+    # Create seeded population — ALL with randomized time slots
+    # No direct copies: we want the GA to find NEW optimal placements
     population = []
-
-    # Direct copies (just a few for reference)
-    for _ in range(seed_count):
-        population.append(copy.deepcopy(ref_genes))
-
-    # Randomized variants: keep subject/prof/room/section but randomize day+time
-    remaining = pop_size - seed_count
-    for _ in range(remaining):
+    for _ in range(pop_size):
         variant = copy.deepcopy(ref_genes)
         for g in variant:
-            # Randomize day (respecting availability)
+            # Fully randomize day and time (respecting availability)
             avail = prof_availability.get(g.professor, [])
             valid_days = avail if avail else WEEKDAYS
             g.day = random.choice(valid_days)
-            # Randomize start time
             max_start = SLOTS_PER_DAY - g.duration
             g.start_slot = random.randint(0, max(0, max_start))
+            # Also randomize room occasionally
+            if rooms and random.random() < 0.2:
+                g.room = random.choice(rooms)
         population.append(variant)
 
     return population

@@ -2943,8 +2943,8 @@
             function applyFilters() {
                 // Filter schedules based on school year, semester, and section
                 filtered = schedules.filter(function (s) {
-                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
-                    var matchSemester = s.semester === currentSemester;
+                    var matchSchoolYear = !currentSchoolYear || s.schoolYear === currentSchoolYear || !s.schoolYear;
+                    var matchSemester = !currentSemester || s.semester === currentSemester || !s.semester;
                     var matchSection = !currentSection || s.section === currentSection;
                     return matchSchoolYear && matchSemester && matchSection;
                 });
