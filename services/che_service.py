@@ -453,13 +453,21 @@ def execute_schedule_action(action_data: dict, existing_schedules: list) -> dict
         school_year = params.get('school_year', '')
         delete_all = params.get('delete_all', False)
 
+        # Safety: require at least one filter or explicit delete_all
+        if not delete_all and not prof and not subj and not day and not semester and not school_year:
+            return {
+                'success': False,
+                'message': 'Please specify what to delete (professor, subject, day, semester, or school_year). Use "delete_all": true to delete everything.',
+                'data': {}
+            }
+
         matches = []
         for s in existing_schedules:
-            # If delete_all is true, match everything
             if delete_all:
                 matches.append(s)
                 continue
 
+            # ALL provided filters must match (AND logic)
             match = True
             if prof and prof.lower() not in (s.get('prof') or '').lower():
                 match = False

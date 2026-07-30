@@ -1586,7 +1586,7 @@ def add_schedule():
             'section':   data['section'],
             'year':      data.get('year', '1'),
             'semester':  data.get('semester', '1'),
-            'school_year': data.get('schoolYear', f"{__import__('datetime').datetime.utcnow().year}-{__import__('datetime').datetime.utcnow().year + 1}"),
+            'school_year': data.get('schoolYear') or f"{__import__('datetime').datetime.utcnow().year}-{__import__('datetime').datetime.utcnow().year + 1}",
             'created_at': __import__('datetime').datetime.utcnow().isoformat(),
         }
         db.collection('schedules').document(entry_id).set(entry_db)

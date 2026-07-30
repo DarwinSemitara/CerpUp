@@ -3704,20 +3704,7 @@
                 if (!confirm('Delete this schedule block?')) return;
                 try {
                     await fetch('/api/schedules/' + id, { method: 'DELETE' });
-                    schedules = schedules.filter(function (s) { return s.id !== id; });
-                    filtered = filtered.filter(function (s) { return s.id !== id; });
-                    window.schedules = schedules; // Update global reference
-                    window.filtered = filtered; // Update global reference
-                    refreshFilterOptions(); renderTimetable(); renderReport();
-                    if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
-
-                    // Update room timetable if exists
-                    if (window.populateRoomSchedule) {
-                        populateRoomSchedule();
-                    }
-
-                    // Update unit tracking
-                    calculateAllocatedUnits();
+                    await loadSchedules();
                     renderDraggableBlocks();
                     populateSubjectDropdowns(); // Update dropdown
                 } catch (err) { alert('Failed to delete.'); }
@@ -3966,13 +3953,12 @@
                                                 schedules[currentIdx].day = oldDay;
                                                 schedules[currentIdx].start = oldStart;
                                                 schedules[currentIdx].end = oldEnd;
-                                                applyFilters();
-                                                refreshFilterOptions();
-                                                renderTimetable();
-                                                renderReport();
-                                                if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
                                             }
+                                            await loadSchedules();
                                             alert('Failed to save changes to database. Changes have been reverted.');
+                                        } else {
+                                            // Success — reload to update FIC and allocation
+                                            await loadSchedules();
                                         }
                                     } catch (err) {
                                         // Rollback on error
@@ -4100,11 +4086,10 @@
                         body: JSON.stringify(updated),
                     });
                     var data = await res.json();
-                    if (res.ok) schedules[idx] = Object.assign({ id: data.id }, data.entry);
+                    if (res.ok) {
+                        await loadSchedules();
+                    }
                 } catch (err) { }
-                applyFilters(); // Reapply filter
-                refreshFilterOptions(); renderTimetable(); renderReport();
-                if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
             }
 
             var pendingDay = null, pendingStart = -1, pendingEnd = -1;
