@@ -683,10 +683,21 @@
                 if (!res.ok) throw new Error();
                 const members = await res.json();
 
-                const chairperson = members.find(m => m.type === 'chairperson');
-                const faculty = members.filter(m => m.type === 'faculty');
-                const reps = members.filter(m => m.type === 'reps');
-                const adminStaff = members.filter(m => m.type === 'admin_staff');
+                // Categorize members by type, with role-based fallback
+                const chairperson = members.find(m => m.type === 'chairperson' || (m.role && m.role.includes('Chairperson')));
+                const faculty = members.filter(m => {
+                    if (m === chairperson) return false;
+                    if (m.type === 'faculty') return true;
+                    if (m.role && /Associate Professor|Assistant Professor|Instructor|Teaching Associate/i.test(m.role)) return true;
+                    return false;
+                });
+                const reps = members.filter(m => m.type === 'reps' && m !== chairperson && !faculty.includes(m));
+                const adminStaff = members.filter(m => {
+                    if (m === chairperson || faculty.includes(m) || reps.includes(m)) return false;
+                    if (m.type === 'admin_staff' || m.type === 'staff') return true;
+                    if (m.role && /Administrative|Office Aide|Utility Worker|ICT Assistant/i.test(m.role)) return true;
+                    return false;
+                });
 
                 document.getElementById('chairperson-section').innerHTML = chairperson ? renderMemberCard(chairperson, true) : '';
                 document.getElementById('faculty-grid').innerHTML = faculty.length > 0 ? faculty.map(m => renderMemberCard(m)).join('') : '<p style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:32px;">No faculty members yet</p>';

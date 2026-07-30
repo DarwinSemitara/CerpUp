@@ -195,6 +195,18 @@ async function submitAddMember(event) {
     // Add availability
     selectedAvailability.forEach(day => fd.append('availability', day));
 
+    // Auto-determine member type from selected roles
+    const roles = selectedRoles || [];
+    let memberType = 'admin_staff';
+    if (roles.some(r => r === 'Chairperson')) {
+        memberType = 'chairperson';
+    } else if (roles.some(r => ['Associate Professor', 'Assistant Professor', 'Instructor', 'Teaching Associate'].includes(r))) {
+        memberType = 'faculty';
+    } else if (roles.some(r => ['University Research Associate 1', 'Junior Project Assistant'].includes(r))) {
+        memberType = 'staff';
+    }
+    fd.set('type', memberType);
+
     // Add is_faculty checkbox (convert to string 'true'/'false')
     const isFaculty = document.getElementById('is-faculty-checkbox')?.checked || false;
     fd.append('is_faculty', isFaculty ? 'true' : 'false');
