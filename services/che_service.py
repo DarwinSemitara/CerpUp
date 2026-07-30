@@ -68,8 +68,9 @@ When you detect a scheduling intent, respond with a JSON action block wrapped in
    params: { "prof": "Name", "subjCode": "CODE 101" (optional), "target_day": "Monday" (optional), "target_time_period": "morning|afternoon|evening" (optional) }
    confirm: true
 
-4. `delete_schedule` — Remove a schedule block
-   params: { "prof": "Name" (optional), "subjCode": "CODE 101" (optional), "day": "Monday" (optional) }
+4. `delete_schedule` — Remove schedule blocks
+   params: { "prof": "Name" (optional), "subjCode": "CODE 101" (optional), "day": "Monday" (optional), "semester": "1" (optional), "school_year": "2026-2027" (optional), "delete_all": true/false }
+   Set "delete_all": true to delete ALL schedules for the current context (use when admin says "delete all", "clear everything", "remove all schedules")
    confirm: true
 
 5. `generate_full` — Run basic GA schedule generation (legacy, small scale)
@@ -387,15 +388,27 @@ def execute_schedule_action(action_data: dict, existing_schedules: list) -> dict
         prof = params.get('prof', '')
         subj = params.get('subjCode', '')
         day = params.get('day', '')
+        semester = params.get('semester', '')
+        school_year = params.get('school_year', '')
+        delete_all = params.get('delete_all', False)
 
         matches = []
         for s in existing_schedules:
+            # If delete_all is true, match everything
+            if delete_all:
+                matches.append(s)
+                continue
+
             match = True
             if prof and prof.lower() not in (s.get('prof') or '').lower():
                 match = False
             if subj and subj.upper() not in (s.get('subjCode') or '').upper():
                 match = False
-            if day and day != s.get('day'):
+            if day and day.lower() != (s.get('day') or '').lower():
+                match = False
+            if semester and semester != (s.get('semester') or ''):
+                match = False
+            if school_year and school_year != (s.get('schoolYear') or ''):
                 match = False
             if match:
                 matches.append(s)
@@ -404,7 +417,7 @@ def execute_schedule_action(action_data: dict, existing_schedules: list) -> dict
             return {
                 'success': True,
                 'message': f"Found {len(matches)} schedule(s) to delete.",
-                'data': {'schedules_to_delete': [s.get('id') for s in matches], 'details': matches}
+                'data': {'schedules_to_delete': [s.get('id') for s in matches if s.get('id')], 'details': matches}
             }
         return {'success': False, 'message': 'No matching schedules found.', 'data': {}}
 

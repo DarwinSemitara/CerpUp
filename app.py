@@ -588,6 +588,8 @@ def che_execute_action():
                 'room': data.get('room', ''),
                 'section': data.get('section', ''),
                 'units': data.get('units', ''),
+                'semester': data.get('semester', ''),
+                'schoolYear': data.get('school_year', data.get('schoolYear', '')),
             })
 
         # Execute the action
