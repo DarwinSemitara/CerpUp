@@ -2407,24 +2407,27 @@
                     subjectUnits[code].allocated = 0;
                 });
 
-                console.log('📊 Calculating allocated units...');
-                console.log('Current filters:', { schoolYear: currentSchoolYear, semester: currentSemester });
-                console.log('Configured subjects:', Object.keys(subjectUnits));
+                // Get currently selected professor from filter
+                var profEl = document.getElementById('sf-professor');
+                var selectedProf = profEl ? profEl.value : '';
 
-                // Sum up allocated units from schedules FOR CURRENT SCHOOL YEAR/SEMESTER ONLY
+                // Sum up allocated units from schedules FOR CURRENT SEMESTER + SELECTED FACULTY ONLY
                 schedules.forEach(function (sch) {
-                    var matchesYearSem = ((sch.schoolYear === currentSchoolYear || !sch.schoolYear) && sch.semester === currentSemester);
+                    var matchesSemester = (sch.schoolYear === currentSchoolYear || !sch.schoolYear) && sch.semester === currentSemester;
 
-                    if (matchesYearSem && subjectUnits[sch.subjCode]) {
-                        var duration = (slotIdx(sch.end) - slotIdx(sch.start)) / 2; // Convert to hours
-                        subjectUnits[sch.subjCode].allocated += duration;
-                        console.log('  ✅', sch.subjCode, '+', duration, 'hours');
+                    // Match professor (normalize name by removing suffix)
+                    var schProf = sch.prof || '';
+                    if (schProf.indexOf(',') > -1) schProf = schProf.split(',')[0].trim();
+                    var matchesProf = !selectedProf || schProf === selectedProf;
+
+                    if (matchesSemester && matchesProf && subjectUnits[sch.subjCode]) {
+                        var startIdx = slotIdx(sch.start);
+                        var endIdx = slotIdx(sch.end);
+                        if (startIdx >= 0 && endIdx > startIdx) {
+                            var duration = (endIdx - startIdx) / 2;
+                            subjectUnits[sch.subjCode].allocated += duration;
+                        }
                     }
-                });
-
-                console.log('📊 Final allocated units:');
-                Object.keys(subjectUnits).forEach(function (code) {
-                    console.log('  ', code, ':', subjectUnits[code].allocated, '/', subjectUnits[code].configured, 'hours');
                 });
             }
 

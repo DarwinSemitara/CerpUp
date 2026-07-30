@@ -438,17 +438,26 @@ def seed_from_reference(reference_schedules: List[Dict],
         return []
 
     # Create seeded population
-    seed_count = max(int(pop_size * 0.2), 1)
+    # Only 10% direct copies (preserve structure), 90% with randomized time slots
+    seed_count = max(int(pop_size * 0.1), 1)
     population = []
 
-    # Direct copies
+    # Direct copies (just a few for reference)
     for _ in range(seed_count):
         population.append(copy.deepcopy(ref_genes))
 
-    # Mutated variants of reference
+    # Randomized variants: keep subject/prof/room/section but randomize day+time
     remaining = pop_size - seed_count
     for _ in range(remaining):
-        variant = mutate_v2(ref_genes, rooms, prof_availability, rate=0.25)
+        variant = copy.deepcopy(ref_genes)
+        for g in variant:
+            # Randomize day (respecting availability)
+            avail = prof_availability.get(g.professor, [])
+            valid_days = avail if avail else WEEKDAYS
+            g.day = random.choice(valid_days)
+            # Randomize start time
+            max_start = SLOTS_PER_DAY - g.duration
+            g.start_slot = random.randint(0, max(0, max_start))
         population.append(variant)
 
     return population
