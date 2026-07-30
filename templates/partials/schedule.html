@@ -4200,21 +4200,10 @@
                     var data = await res.json();
                     if (!res.ok) throw new Error(data.error || 'Failed.');
                     schedules.push(Object.assign({ id: data.id }, data.entry));
-                    applyFilters(); // Reapply filter instead of copying all
-                    window.schedules = schedules; // Update global reference
-                    refreshFilterOptions(); renderTimetable(); renderReport();
-                    if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
+                    window.schedules = schedules;
 
-                    // Update unit tracking
-                    calculateAllocatedUnits();
-                    renderDraggableBlocks();
-                    populateSubjectDropdowns(); // Update dropdown
-
-                    // Update room timetable if exists
-                    if (window.populateRoomSchedule) {
-                        populateRoomSchedule();
-                    }
-
+                    // Reload from DB to ensure full consistency then re-render
+                    await loadSchedules();
                     closeNewBlockModal();
                 } catch (err) {
                     errEl.textContent = err.message;
