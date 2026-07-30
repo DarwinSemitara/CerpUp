@@ -435,6 +435,38 @@ def seed_from_reference(reference_schedules: List[Dict],
     if not ref_genes:
         return []
 
+    # Deduplicate: ensure total hours per subject-section don't exceed expected
+    # Group by subject+section, keep only enough blocks to fill weekly_hours
+    from collections import defaultdict
+    gene_groups = defaultdict(list)
+    for g in ref_genes:
+        key = f"{g.subj_code}_{g.section}"
+        gene_groups[key].append(g)
+
+    # Find configured weekly hours from subjects list
+    subj_hours = {}
+    for s in subjects:
+        key = f"{s['code']}_{s['section']}"
+        subj_hours[key] = s.get(
+            'weekly_slots', slots_for_duration(float(s.get('units', 3))))
+
+    # Trim excess blocks
+    trimmed_genes = []
+    for key, genes in gene_groups.items():
+        max_slots = subj_hours.get(key, 6)  # default 3 hours = 6 slots
+        total_slots = 0
+        for g in genes:
+            if total_slots + g.duration <= max_slots:
+                trimmed_genes.append(g)
+                total_slots += g.duration
+            elif total_slots < max_slots:
+                # Trim this gene's duration to fit
+                g.duration = max_slots - total_slots
+                trimmed_genes.append(g)
+                total_slots = max_slots
+
+    ref_genes = trimmed_genes if trimmed_genes else ref_genes
+
     # Create seeded population
     # Only 10% direct copies (preserve structure), 90% with randomized time slots
     seed_count = max(int(pop_size * 0.1), 1)

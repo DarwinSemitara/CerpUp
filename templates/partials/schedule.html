@@ -2288,10 +2288,13 @@
                     courses = ALL_SUBJECTS.filter(function (s) { return s.code.startsWith('NSTP'); });
                 }
 
-                // Create checkbox items
+                // Create checkbox items with unit input
                 courses.forEach(function (course) {
                     var item = document.createElement('div');
                     item.className = 'course-checkbox-item';
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.gap = '8px';
 
                     var checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -2309,10 +2312,37 @@
 
                     var label = document.createElement('label');
                     label.htmlFor = checkbox.id;
+                    label.style.flex = '1';
+                    label.style.fontSize = '0.82rem';
                     label.textContent = course.code + ' - ' + course.name;
+
+                    // Unit input next to each course
+                    var unitInput = document.createElement('input');
+                    unitInput.type = 'number';
+                    unitInput.min = '1';
+                    unitInput.max = '12';
+                    unitInput.step = '0.5';
+                    unitInput.value = subjectUnits[course.code] ? subjectUnits[course.code].configured : 3;
+                    unitInput.className = 'unit-input';
+                    unitInput.style.width = '55px';
+                    unitInput.style.padding = '4px 6px';
+                    unitInput.style.fontSize = '0.8rem';
+                    unitInput.style.textAlign = 'center';
+                    unitInput.style.border = '1px solid #d1d5db';
+                    unitInput.style.borderRadius = '6px';
+                    unitInput.dataset.code = course.code;
+                    unitInput.title = 'Hours/units for ' + course.code;
+                    unitInput.onchange = function () { updateUnitConfigGrid(); };
+
+                    var unitLabel = document.createElement('span');
+                    unitLabel.style.fontSize = '0.7rem';
+                    unitLabel.style.color = '#9ca3af';
+                    unitLabel.textContent = 'hrs';
 
                     item.appendChild(checkbox);
                     item.appendChild(label);
+                    item.appendChild(unitInput);
+                    item.appendChild(unitLabel);
                     courseList.appendChild(item);
                 });
 
@@ -2346,7 +2376,7 @@
             function saveUnitConfiguration() {
                 var newSubjectUnits = {};
 
-                // Get all checked courses from all categories
+                // Get all checked courses from all categories with their unit values
                 ['cerp', 'hume', 'nstp'].forEach(function (category) {
                     var courseList = document.getElementById(category + '-courses');
                     if (!courseList) return;
@@ -2357,9 +2387,12 @@
                         var subject = ALL_SUBJECTS.find(function (s) { return s.code === code; });
 
                         if (subject) {
-                            // All subjects get max 3 units per section
+                            // Read unit value from the inline input
+                            var unitInput = courseList.querySelector('input[data-code="' + code + '"]');
+                            var units = unitInput ? parseFloat(unitInput.value) || 3 : 3;
+
                             newSubjectUnits[code] = {
-                                configured: 3,
+                                configured: units,
                                 allocated: 0,
                                 name: subject.name
                             };
