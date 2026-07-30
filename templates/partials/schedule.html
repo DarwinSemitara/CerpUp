@@ -2914,9 +2914,11 @@
                 if (nbmName) nbmName.value = '';
                 if (nbmProf) nbmProf.innerHTML = '<option value="">Select Subject First</option>';
 
-                // Apply filter and re-render
+                // Apply filter and re-render everything
                 applyFilters();
+                refreshFilterOptions();
                 renderTimetable();
+                renderReport();
                 if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
 
                 // Re-render draggable blocks if unit config is saved
