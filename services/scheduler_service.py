@@ -353,35 +353,33 @@ def mutate_v2(chromosome: List[Gene], rooms: List[str],
 
 
 def crossover_v2(p1: List[Gene], p2: List[Gene]) -> List[Gene]:
-    """Section-aware crossover: keep section genes together."""
+    """Gene-preserving crossover: keeps all genes, mixes time/day from both parents."""
     if len(p1) < 2:
         return copy.deepcopy(p1)
 
-    # Group genes by section
-    sections_p1: Dict[str, List[int]] = {}
-    for i, g in enumerate(p1):
-        if g.section not in sections_p1:
-            sections_p1[g.section] = []
-        sections_p1[g.section].append(i)
+    # Use p1 as the base (preserves all subject-section coverage)
+    child = copy.deepcopy(p1)
 
-    # Pick random sections from p1, rest from p2
-    all_sections = list(sections_p1.keys())
-    if len(all_sections) < 2:
-        point = random.randint(1, len(p1) - 1)
-        return copy.deepcopy(p1[:point]) + copy.deepcopy(p2[point:])
-
-    split = random.randint(1, len(all_sections) - 1)
-    from_p1_sections = set(all_sections[:split])
-
-    child = []
-    for g in p1:
-        if g.section in from_p1_sections:
-            child.append(copy.deepcopy(g))
+    # For a random subset of genes, copy day+start_slot+room from p2's matching genes
+    p2_map = {}
     for g in p2:
-        if g.section not in from_p1_sections:
-            child.append(copy.deepcopy(g))
+        key = f"{g.subj_code}_{g.section}_{g.professor}"
+        if key not in p2_map:
+            p2_map[key] = []
+        p2_map[key].append(g)
 
-    return child if child else copy.deepcopy(p1)
+    for i, g in enumerate(child):
+        if random.random() < 0.5:
+            key = f"{g.subj_code}_{g.section}_{g.professor}"
+            if key in p2_map and p2_map[key]:
+                donor = p2_map[key][0]
+                g.day = donor.day
+                g.start_slot = donor.start_slot
+                g.room = donor.room
+                # Rotate through donors
+                p2_map[key] = p2_map[key][1:] + [p2_map[key][0]]
+
+    return child
 
 
 def tournament_select_v2(population, scores, k=4):

@@ -2931,6 +2931,7 @@
                 if (!displayDiv) return;
 
                 // Filter schedules for this professor in current semester/year
+                // Only include entries with valid time slots (actually placed on timetable)
                 var profSchedules = schedules.filter(function (s) {
                     var sProfName = s.prof || '';
                     if (sProfName.indexOf(',') > -1) {
@@ -2939,7 +2940,9 @@
                     var matchProf = sProfName === selectedProf;
                     var matchSchoolYear = s.schoolYear === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
-                    return matchProf && matchSchoolYear && matchSemester;
+                    // Must have valid time to be "placed"
+                    var hasValidTime = s.start && s.end && slotIdx(s.start) >= 0 && slotIdx(s.end) > slotIdx(s.start);
+                    return matchProf && matchSchoolYear && matchSemester && hasValidTime;
                 });
 
                 if (profSchedules.length === 0) {

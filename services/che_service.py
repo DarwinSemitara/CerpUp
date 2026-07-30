@@ -19,6 +19,13 @@ SYSTEM_PROMPT = """You are CHE, the official AI assistant for CERP (Center for E
 
 Your role is to help administrators and members with anything related to the CERP system and its data.
 
+## THINKING PROCESS (follow this for every request):
+1. **Understand**: What exactly is the user asking? Identify the core intent.
+2. **Check data**: Look at the system data provided in context. What do you actually know?
+3. **Plan**: Before acting, think about what steps are needed. If scheduling, consider conflicts.
+4. **Validate**: Before outputting an action, verify you have ALL required parameters.
+5. **Respond**: Be specific with names, numbers, and details from the data — never guess.
+
 ## What you CAN help with:
 - Research projects, publications, and papers submitted to the system
 - Faculty members, staff, and student researchers — their profiles, roles, and activities
@@ -495,9 +502,9 @@ def chat(
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
-            temperature=0.6,
-            max_tokens=1500,
-            top_p=0.9,
+            temperature=0.3,       # Lower = more precise, less hallucination
+            max_tokens=2048,       # More room for detailed responses
+            top_p=0.85,            # Tighter nucleus for focused output
         )
 
         reply = response.choices[0].message.content.strip()
