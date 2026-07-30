@@ -2903,28 +2903,25 @@
                 localStorage.setItem('cerp_semester', currentSemester);
                 localStorage.setItem('cerp_section', currentSection);
 
-                // Repopulate subject dropdowns (all subjects always available)
+                // Full reload: re-apply all filters and re-render everything
+                applyFilters();
+
+                // Recalculate units for new semester/year
+                if (unitConfigSaved) {
+                    calculateAllocatedUnits();
+                    renderDraggableBlocks();
+                }
                 populateSubjectDropdowns();
 
-                // Clear any selected subjects in the forms
-                var nbmCode = document.getElementById('nbm-code');
-                var nbmName = document.getElementById('nbm-name');
-                var nbmProf = document.getElementById('nbm-prof');
-                if (nbmCode) nbmCode.value = '';
-                if (nbmName) nbmName.value = '';
-                if (nbmProf) nbmProf.innerHTML = '<option value="">Select Subject First</option>';
-
-                // Apply filter and re-render everything
-                applyFilters();
-                refreshFilterOptions();
+                // Re-render timetable and report with new filtered data
                 renderTimetable();
                 renderReport();
                 if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
 
-                // Re-render draggable blocks if unit config is saved
-                if (unitConfigSaved) {
-                    calculateAllocatedUnits();
-                    renderDraggableBlocks();
+                // Update FIC status for the currently selected professor
+                var profEl = document.getElementById('sf-professor');
+                if (profEl && profEl.value) {
+                    updateFICStatus(profEl.value);
                 }
             };
 
