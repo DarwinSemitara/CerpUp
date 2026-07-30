@@ -1584,9 +1584,6 @@ def add_schedule():
             'semester':  data.get('semester', '1'),
             'created_at': __import__('datetime').datetime.utcnow().isoformat(),
         }
-        # Only add school_year if provided (column may not exist in all setups)
-        if data.get('schoolYear'):
-            entry_db['school_year'] = data['schoolYear']
         db.collection('schedules').document(entry_id).set(entry_db)
 
         # Return with camelCase (frontend expects)
