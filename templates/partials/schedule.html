@@ -2413,7 +2413,7 @@
 
                 // Sum up allocated units from schedules FOR CURRENT SEMESTER + SELECTED FACULTY ONLY
                 schedules.forEach(function (sch) {
-                    var matchesSemester = sch.semester === currentSemester;
+                    var matchesSemester = (sch.schoolYear === currentSchoolYear) && sch.semester === currentSemester;
 
                     // Match professor (normalize name by removing suffix)
                     var schProf = sch.prof || '';
@@ -2910,7 +2910,7 @@
             function applyFilters() {
                 // Filter schedules based on school year, semester, and section
                 filtered = schedules.filter(function (s) {
-                    var matchSchoolYear = s.semester === currentSemester;
+                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
                     var matchSection = !currentSection || s.section === currentSection;
                     return matchSchoolYear && matchSemester && matchSection;
@@ -2937,7 +2937,7 @@
                         sProfName = sProfName.split(',')[0].trim();
                     }
                     var matchProf = sProfName === selectedProf;
-                    var matchSchoolYear = s.semester === currentSemester;
+                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
                     return matchProf && matchSchoolYear && matchSemester;
                 });
@@ -3455,7 +3455,7 @@
                 // Calculate FIC loads for current school year + semester
                 ficLoadData = {};
                 schedules.forEach(function (s) {
-                    var matchSchoolYear = s.semester === currentSemester;
+                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
                     if (matchSchoolYear && matchSemester) {
                         if (!ficLoadData[s.prof]) {
@@ -3473,7 +3473,7 @@
 
                 // Filter schedules by current school year + semester
                 var currentSemesterSchedules = schedules.filter(function (s) {
-                    return s.semester === currentSemester && s.semester === currentSemester;
+                    return s.schoolYear === currentSchoolYear && s.semester === currentSemester;
                 });
 
                 if (!currentSemesterSchedules.length) {
