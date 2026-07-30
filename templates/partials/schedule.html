@@ -2898,31 +2898,13 @@
                 if (semesterSelect) currentSemester = semesterSelect.value;
                 if (sectionSelect) currentSection = sectionSelect.value;
 
-                // Persist selections so they survive page reloads
+                // Persist selections
                 localStorage.setItem('cerp_schoolYear', currentSchoolYear);
                 localStorage.setItem('cerp_semester', currentSemester);
                 localStorage.setItem('cerp_section', currentSection);
 
-                // Full reload: re-apply all filters and re-render everything
-                applyFilters();
-
-                // Recalculate units for new semester/year
-                if (unitConfigSaved) {
-                    calculateAllocatedUnits();
-                    renderDraggableBlocks();
-                }
-                populateSubjectDropdowns();
-
-                // Re-render timetable and report with new filtered data
-                renderTimetable();
-                renderReport();
-                if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
-
-                // Update FIC status for the currently selected professor
-                var profEl = document.getElementById('sf-professor');
-                if (profEl && profEl.value) {
-                    updateFICStatus(profEl.value);
-                }
+                // Reload schedules from DB and fully re-render
+                loadSchedules();
             };
 
             function applyFilters() {
