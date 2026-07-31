@@ -301,7 +301,7 @@ function openDeleteModal(memberId) {
     _deleteTargetId = memberId;
 
     // Check if member has an account and show appropriate warning
-    const member = members.find(m => m.id === memberId);
+    const member = membersData.find(m => m.id === memberId);
     const warningEl = document.getElementById('delete-member-warning');
     if (warningEl) {
         if (member && member.uid) {
