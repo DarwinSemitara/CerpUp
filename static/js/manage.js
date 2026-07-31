@@ -299,6 +299,22 @@ async function confirmCreateAccount() {
 
 function openDeleteModal(memberId) {
     _deleteTargetId = memberId;
+
+    // Check if member has an account and show appropriate warning
+    const member = members.find(m => m.id === memberId);
+    const warningEl = document.getElementById('delete-member-warning');
+    if (warningEl) {
+        if (member && member.uid) {
+            warningEl.style.display = 'block';
+            warningEl.textContent = '⚠️ This member has a user account. Deleting will also remove their login access.';
+        } else if (member && member.is_faculty) {
+            warningEl.style.display = 'block';
+            warningEl.textContent = '⚠️ This member is listed as faculty. They will be removed from the Faculty & Staff page.';
+        } else {
+            warningEl.style.display = 'none';
+        }
+    }
+
     document.getElementById('delete-member-modal').classList.add('open');
 }
 
@@ -317,12 +333,21 @@ window.confirmDeleteMember = async function () {
 
     try {
         const res = await fetch(`/api/members/${_deleteTargetId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+
+        // Show warning if member had an account
+        const msg = data.had_account
+            ? 'Member and their user account have been deleted.'
+            : 'Member deleted successfully!';
+
         closeDeleteModal();
         await loadMembers();
-        showSuccessModal('Member deleted successfully!');
-    } catch {
-        alert('Failed to delete member. Please try again.');
+        showSuccessModal(msg);
+    } catch (e) {
+        alert('Failed to delete member: ' + (e.message || 'Please try again.'));
+    } finally {
+        // ALWAYS reset button state so it works next time
         btn.disabled = false;
         btn.style.height = '';
         btn.textContent = originalText;

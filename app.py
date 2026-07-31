@@ -919,7 +919,13 @@ def add_member():
             member['photo_url'] = url
 
         # Save to Firestore
-        db.collection('members').document(member_id).set(member)
+        try:
+            db.collection('members').document(member_id).set(member)
+        except Exception as db_err:
+            err_msg = str(db_err)
+            if 'duplicate' in err_msg.lower() or 'unique' in err_msg.lower() or '23505' in err_msg:
+                return jsonify({'error': 'A member with this email already exists. You can leave the email blank or use a different one.'}), 400
+            raise db_err
         print(
             f"💾 Saved member {member_id} with is_faculty={member['is_faculty']}")
 
@@ -975,18 +981,36 @@ def update_member(member_id):
 @app.route('/api/members/<member_id>', methods=['DELETE'])
 @login_required
 def delete_member(member_id):
-    """Delete a member and their photo."""
+    """Delete a member, their photo, and associated user account if any."""
     try:
         doc = db.collection('members').document(member_id).get()
         if not doc.exists:
             return jsonify({'error': 'Member not found.'}), 404
 
+        member_data = doc.to_dict()
+
         # Delete photo from Cloudinary
         delete_member_photo(member_id)
 
-        # Delete from Firestore
+        # Delete associated user account if exists
+        uid = member_data.get('uid')
+        if uid:
+            try:
+                # Delete from users table
+                db.collection('users').document(uid).delete()
+                # Delete from Supabase Auth
+                supabase.auth.admin.delete_user(uid)
+            except Exception as auth_err:
+                logger.warning(f"Could not delete auth user {uid}: {auth_err}")
+
+        # Delete the member record
         db.collection('members').document(member_id).delete()
-        return jsonify({'status': 'ok'})
+
+        return jsonify({
+            'status': 'ok',
+            'had_account': bool(uid),
+            'message': 'Member and associated account deleted.' if uid else 'Member deleted.'
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
