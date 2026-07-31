@@ -1863,6 +1863,52 @@ def api_generate_full_schedule():
 
 # ── AI Chat API ────────────────────────────────────────────────
 
+# ── Dashboard Stats API ────────────────────────────────────────
+
+@app.route('/api/dashboard/stats', methods=['GET'])
+@login_required
+def dashboard_stats():
+    """Return real counts for dashboard charts (research by month + TAP status)."""
+    try:
+        from collections import defaultdict
+
+        # Research/publications by month for current year
+        research_docs = db.collection('research').stream()
+        monthly_counts = defaultdict(int)
+        for d in research_docs:
+            rd = d.to_dict()
+            created = rd.get('created_at', '')
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                    if dt.year == datetime.utcnow().year:
+                        monthly_counts[dt.month] += 1
+                except (ValueError, TypeError):
+                    pass
+
+        pub_this_year = [monthly_counts.get(m, 0) for m in range(1, 13)]
+
+        # TAP projects status
+        tap_docs = db.collection('tap_projects').stream()
+        tap_ongoing = tap_finished = tap_pending = 0
+        for d in tap_docs:
+            td = d.to_dict()
+            status = (td.get('status') or 'ongoing').lower()
+            if status in ('finished', 'completed', 'done'):
+                tap_finished += 1
+            elif status in ('pending', 'planned'):
+                tap_pending += 1
+            else:
+                tap_ongoing += 1
+
+        return jsonify({
+            'pub_this_year': pub_this_year,
+            'tap': [tap_ongoing, tap_finished, tap_pending]
+        })
+    except Exception as e:
+        return jsonify({'pub_this_year': [0]*12, 'tap': [0, 0, 0], 'error': str(e)})
+
+
 @app.route('/api/news', methods=['GET'])
 def get_news():
     """Return all news/events from Firestore for public display."""
