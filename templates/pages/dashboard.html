@@ -55,9 +55,9 @@
 
     .year-btn:hover {
         background: white;
-        border-color: #fb923c;
-        color: #fb923c;
-        box-shadow: 0 2px 4px rgba(251, 146, 60, 0.1);
+        border-color: #6b0f1a;
+        color: #6b0f1a;
+        box-shadow: 0 2px 4px rgba(107, 15, 26, 0.1);
     }
 
     .year-btn svg {
@@ -112,7 +112,7 @@
 
     .year-option:hover {
         background: #fef3f2;
-        color: #fb923c;
+        color: #6b0f1a;
     }
 
     .year-option:first-child {
@@ -170,7 +170,7 @@
         <!-- Inline legend -->
         <div style="display:flex;gap:20px;margin-bottom:16px;">
             <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:#374151;font-weight:500;">
-                <div style="width:28px;height:3px;background:#fb923c;border-radius:2px;"></div>
+                <div style="width:28px;height:3px;background:#6b0f1a;border-radius:2px;"></div>
                 <span id="pub-legend-current">This Year</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:#9ca3af;font-weight:500;">
@@ -208,17 +208,17 @@
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:12px;">
                 <div class="legend-item">
-                    <div class="legend-dot" style="background:#fb923c;"></div>
+                    <div class="legend-dot" style="background:#6b0f1a;"></div>
                     <span>Ongoing</span>
                     <span style="margin-left:auto;font-weight:700;color:#111827;" id="tap-ongoing-count">18</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-dot" style="background:#fbbf24;"></div>
+                    <div class="legend-dot" style="background:#9b1a2a;"></div>
                     <span>Finished</span>
                     <span style="margin-left:auto;font-weight:700;color:#111827;" id="tap-finished-count">12</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-dot" style="background:#fde047;"></div>
+                    <div class="legend-dot" style="background:#d4a0a8;"></div>
                     <span>Pending</span>
                     <span style="margin-left:auto;font-weight:700;color:#111827;" id="tap-pending-count">6</span>
                 </div>
@@ -228,7 +228,7 @@
 </div>
 
 <!-- Faculty Section -->
-<div class="card" style="margin-bottom:20px;">
+<div class="card" style="margin-bottom:20px;overflow:visible;">
     <div class="card-header">
         <h2 class="card-title">Faculty</h2>
         <div style="display:flex;gap:8px;">
@@ -249,7 +249,7 @@
             </div>
         </div>
     </div>
-    <div class="card-body">
+    <div class="card-body" style="overflow:visible;">
         <!-- Staff Grid -->
         <div id="staff-grid" class="staff-grid">
             <div class="content-spinner">
@@ -339,30 +339,7 @@
                     <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Auto-filled from member profile</p>
                 </div>
 
-                <!-- Year Level -->
-                <div class="form-group">
-                    <label class="form-label">Year Level(s) *</label>
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="1" onchange="onStaffYearCheckChange('add')">
-                            <span>1st Year</span>
-                        </label>
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="2" onchange="onStaffYearCheckChange('add')">
-                            <span>2nd Year</span>
-                        </label>
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="3" onchange="onStaffYearCheckChange('add')">
-                            <span>3rd Year</span>
-                        </label>
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="4" onchange="onStaffYearCheckChange('add')">
-                            <span>4th Year</span>
-                        </label>
-                    </div>
-                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Select year level(s) to see available
-                        subjects</p>
-                </div>
+
 
                 <!-- Subjects -->
                 <div class="form-group">
@@ -447,35 +424,6 @@
                     </div>
                     <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Select the days this staff member is
                         available to teach</p>
-                </div>
-
-                <!-- Year Level -->
-                <div class="form-group">
-                    <label class="form-label">Year Level(s) *</label>
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="1" id="edit-year-1"
-                                onchange="onStaffYearCheckChange('edit')">
-                            <span>1st Year</span>
-                        </label>
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="2" id="edit-year-2"
-                                onchange="onStaffYearCheckChange('edit')">
-                            <span>2nd Year</span>
-                        </label>
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="3" id="edit-year-3"
-                                onchange="onStaffYearCheckChange('edit')">
-                            <span>3rd Year</span>
-                        </label>
-                        <label class="availability-checkbox">
-                            <input type="checkbox" name="yearLevel" value="4" id="edit-year-4"
-                                onchange="onStaffYearCheckChange('edit')">
-                            <span>4th Year</span>
-                        </label>
-                    </div>
-                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Select year level(s) to see available
-                        subjects</p>
                 </div>
 
                 <!-- Subjects -->
@@ -638,13 +586,12 @@
         border: 1px solid #e5e7eb;
         border-radius: 8px;
         overflow: visible;
-        transition: all 0.3s ease;
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
         cursor: pointer;
         position: relative;
         display: flex;
         flex-direction: column;
-        height: 240px;
-        /* Increased height significantly for better display */
+        min-height: 240px;
     }
 
     .staff-card:hover {
@@ -778,20 +725,7 @@
         background: #fef2f2;
     }
 
-    .staff-year-section {
-        margin-bottom: 32px;
-    }
 
-    .staff-year-header {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: #6b0f1a;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 16px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid #6b0f1a;
-    }
 
     .staff-subjects {
         font-size: 0.75rem;
@@ -857,7 +791,7 @@
     }
 
     .subject-chip:hover {
-        border-color: #fb923c;
+        border-color: #6b0f1a;
         background: #fef3f2;
     }
 

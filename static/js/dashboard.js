@@ -5,25 +5,35 @@
 let pubChart = null;
 let tapChartInst = null;
 
-const pubData = {
-    'this': [5, 7, 4, 8, 6, 9, 7, 10, 5, 8, 6, 9],
-    2025: [5, 7, 4, 8, 6, 9, 7, 10, 5, 8, 6, 9],
-    2024: [4, 6, 3, 7, 5, 8, 6, 9, 4, 7, 5, 8],
-    2023: [3, 5, 2, 4, 6, 3, 7, 4, 5, 3, 6, 4],
+let pubData = {
+    'this': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 };
 
 const pubPrevYear = { 'this': 2024, 2025: 2024, 2024: 2023, 2023: 2022 };
-const pubData2022 = [2, 4, 1, 3, 5, 2, 6, 3, 4, 2, 5, 3];
+const pubData2022 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 // TAP data: [ongoing, finished, pending] per year
-const tapDataByYear = {
-    2025: [18, 12, 6],
-    2024: [15, 10, 8],
-    2023: [12, 8, 5],
-    2022: [10, 6, 4],
+let tapDataByYear = {
+    2025: [0, 0, 0],
+    2026: [0, 0, 0],
 };
-let tapYear = 2025;
+let tapYear = new Date().getFullYear();
 let pubYear = 'this';
+
+// Fetch real data from API
+(async function loadDashboardStats() {
+    try {
+        const res = await fetch('/api/dashboard/stats');
+        if (res.ok) {
+            const stats = await res.json();
+            pubData['this'] = stats.pub_this_year || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            const [ongoing, finished, pending] = stats.tap || [0, 0, 0];
+            tapDataByYear[new Date().getFullYear()] = [ongoing, finished, pending];
+            tapYear = new Date().getFullYear();
+            initCharts();
+        }
+    } catch (e) { console.warn('Dashboard stats fetch failed:', e); }
+})();
 
 function getPrevData(y) {
     const prev = pubPrevYear[y];
@@ -62,17 +72,17 @@ function initCharts() {
                     {
                         label: getYearLabel(pubYear),
                         data: pubData[pubYear],
-                        borderColor: '#fb923c',
+                        borderColor: '#6b0f1a',
                         backgroundColor: 'transparent',
                         borderWidth: 2.5,
                         pointBackgroundColor: '#fff',
-                        pointBorderColor: '#fb923c',
+                        pointBorderColor: '#6b0f1a',
                         pointBorderWidth: 2.5,
                         pointRadius: 6,
                         pointHoverRadius: 8,
                         pointHoverBorderWidth: 3,
                         pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#fb923c',
+                        pointHoverBorderColor: '#6b0f1a',
                         fill: false,
                         tension: 0.4,
                         spanGaps: false,
@@ -183,7 +193,7 @@ function initCharts() {
                 labels: ['Ongoing', 'Finished', 'Pending'],
                 datasets: [{
                     data: [ongoing, finished, pending],
-                    backgroundColor: ['#fb923c', '#fbbf24', '#fde047'],
+                    backgroundColor: ['#6b0f1a', '#9b1a2a', '#d4a0a8'],
                     borderColor: ['#fff', '#fff', '#fff'],
                     borderWidth: 2,
                     hoverOffset: 0,
@@ -217,9 +227,9 @@ function initCharts() {
                         // Dim all segments except the hovered one
                         meta.data.forEach((segment, i) => {
                             if (i === index) {
-                                segment.options.backgroundColor = ['#fb923c', '#fbbf24', '#fde047'][i];
+                                segment.options.backgroundColor = ['#6b0f1a', '#9b1a2a', '#d4a0a8'][i];
                             } else {
-                                segment.options.backgroundColor = ['rgba(251, 146, 60, 0.3)', 'rgba(251, 191, 36, 0.3)', 'rgba(253, 224, 71, 0.3)'][i];
+                                segment.options.backgroundColor = ['rgba(107, 15, 26, 0.3)', 'rgba(155, 26, 42, 0.3)', 'rgba(212, 160, 168, 0.3)'][i];
                             }
                         });
                         tapChartInst.update('none');
@@ -227,7 +237,7 @@ function initCharts() {
                         // Reset all segments to original colors
                         const meta = tapChartInst.getDatasetMeta(0);
                         meta.data.forEach((segment, i) => {
-                            segment.options.backgroundColor = ['#fb923c', '#fbbf24', '#fde047'][i];
+                            segment.options.backgroundColor = ['#6b0f1a', '#9b1a2a', '#d4a0a8'][i];
                         });
                         tapChartInst.update('none');
                     }
