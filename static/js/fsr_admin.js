@@ -218,18 +218,31 @@ async function fsrDownload(format) {
                 })
             });
             if (!res.ok) throw new Error('Generation failed');
-            const blob = await res.blob();
+
+            const data = await res.json();
+
+            if (!data.success || !data.download_url) {
+                throw new Error(data.error || 'Failed to get download URL');
+            }
+
+            // Fetch the file from Supabase Storage and trigger download
+            const fileRes = await fetch(data.download_url);
+            if (!fileRes.ok) throw new Error('Failed to fetch file');
+
+            const blob = await fileRes.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const ext = 'xlsx';
-            const sem = fsrCurrentSemester.replace(' ', '_');
-            const year = fsrCurrentYear.replace('-', '_');
-            a.download = `FSR_${fsrCurrentMemberData.last || 'Member'}_${sem}_${year}.${ext}`;
-            document.body.appendChild(a); a.click();
-            document.body.removeChild(a); URL.revokeObjectURL(url);
+            a.download = data.file_name || `FSR_${fsrCurrentMemberData.last || 'Member'}_${fsrCurrentSemester.replace(' ', '_')}_${fsrCurrentYear.replace('-', '_')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log('✓ FSR downloaded:', data.file_name);
         }
     } catch (e) {
+        console.error('FSR download error:', e);
         alert('Failed to download FSR: ' + e.message);
     } finally {
         btn.disabled = false;

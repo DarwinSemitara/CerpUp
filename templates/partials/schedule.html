@@ -1211,7 +1211,8 @@
     }
 
     #fic-status-display {
-        flex: 1;
+        flex: 0 1 auto;
+        max-height: 300px;
         overflow-y: auto !important;
         overflow-x: hidden;
         display: flex;
@@ -1236,6 +1237,59 @@
 
     #fic-status-display::-webkit-scrollbar-thumb:hover {
         background: #9ca3af;
+    }
+
+    /* Co-Teaching Scrollbar */
+    #co-teaching-footnotes::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #co-teaching-footnotes::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    #co-teaching-footnotes::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 3px;
+    }
+
+    #co-teaching-footnotes::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+
+    /* Co-Teaching Footnote Styles */
+    .footnote-select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        color: #374151;
+        background: white;
+        cursor: pointer;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+
+    .footnote-select:focus {
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+    }
+
+    .footnote-dropdown-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #save-footnotes-btn:hover {
+        background: #016428;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(1, 68, 33, 0.2);
+    }
+
+    #save-footnotes-btn:active {
+        transform: translateY(0);
     }
 
     .fic-status-item {
@@ -1755,29 +1809,180 @@
 
                 </div><!-- /timetable-section -->
 
-                <!-- Faculty Side Panel -->
-                <div class="faculty-side-panel" style="display:flex;flex-direction:column;">
-                    <h3 style="margin:0 0 16px 0;font-size:1rem;font-weight:600;color:#111827;">FIC Status</h3>
+                <!-- Right Side Column: Faculty Panel + Co-Teaching -->
+                <div style="display:flex;flex-direction:column;gap:20px;width:320px;flex-shrink:0;">
 
-                    <!-- FIC Status Display - Scrollable Container -->
-                    <div id="fic-status-display" style="flex:1;max-height:400px;overflow-y:auto;overflow-x:hidden;">
-                        <div style="text-align:center;color:#9ca3af;padding:60px 20px;font-size:0.875rem;">
-                            Select a faculty from the filter above to view their status
-                        </div>
-                    </div>
+                    <!-- Faculty Side Panel -->
+                    <div class="faculty-side-panel" style="display:flex;flex-direction:column;">
+                        <h3 style="margin:0 0 16px 0;font-size:1rem;font-weight:600;color:#111827;flex-shrink:0;">FIC
+                            Status</h3>
 
-                    <!-- FIC Status Footer - Fixed at bottom -->
-                    <div id="fic-status-footer"
-                        style="display:none;margin-top:12px;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;flex-shrink:0;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <span style="font-weight:600;color:#374151;font-size:0.875rem;">Total Load:</span>
-                            <span id="fic-total-hours" style="font-weight:700;color:#6b0f1a;font-size:0.9rem;">0.0
-                                hours</span>
+                        <!-- FIC Status Display - Scrollable Container -->
+                        <div id="fic-status-display"
+                            style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;max-height:300px;">
+                            <div style="text-align:center;color:#9ca3af;padding:60px 20px;font-size:0.875rem;">
+                                Select a faculty from the filter above to view their status
+                            </div>
                         </div>
-                    </div>
-                </div>
+
+                        <!-- FIC Status Footer - Fixed at bottom -->
+                        <div id="fic-status-footer"
+                            style="display:block;margin-top:auto;padding-top:12px;padding-bottom:0;flex-shrink:0;">
+                            <div style="padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-weight:600;color:#374151;font-size:0.875rem;">Total Load:</span>
+                                    <span id="fic-total-hours"
+                                        style="font-weight:700;color:#6b0f1a;font-size:0.9rem;">0.0
+                                        hours</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- /faculty-side-panel -->
+
+                    <!-- Co-Teaching Container -->
+                    <div id="co-teaching-container"
+                        style="background:white;border:2px solid #e5e7eb;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;flex-direction:column;">
+                        <h4
+                            style="margin:0 0 12px 0;font-size:1rem;font-weight:600;color:#111827;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            Co-Teaching
+                        </h4>
+
+                        <!-- Compact Display Rows (Scrollable) -->
+                        <div
+                            style="max-height:40px;overflow-y:auto;margin-bottom:12px;border:1px solid #e5e7eb;border-radius:6px;">
+                            <div id="footnote-display-1" class="footnote-display-row"
+                                style="padding:8px 10px;background:#f9fafb;font-size:0.75rem;color:#6b7280;min-height:40px;display:flex;align-items:center;border-bottom:1px solid #e5e7eb;">
+                                Not configured
+                            </div>
+                            <div id="footnote-display-2" class="footnote-display-row"
+                                style="padding:8px 10px;background:#f9fafb;font-size:0.75rem;color:#6b7280;min-height:40px;display:flex;align-items:center;border-bottom:1px solid #e5e7eb;">
+                                Not configured
+                            </div>
+                            <div id="footnote-display-3" class="footnote-display-row"
+                                style="padding:8px 10px;background:#f9fafb;font-size:0.75rem;color:#6b7280;min-height:40px;display:flex;align-items:center;">
+                                Not configured
+                            </div>
+                        </div>
+
+                        <!-- Configure Button -->
+                        <button onclick="openFootnoteModal()"
+                            style="width:100%;padding:10px;background:#014421;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Configure
+                        </button>
+                    </div><!-- /co-teaching-container -->
+
+                </div><!-- /right-side-column -->
 
             </div><!-- /timetable-and-panel -->
+
+            <!-- Co-Teaching Modal -->
+            <div id="footnote-modal"
+                style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+                <div
+                    style="background:white;border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h3 style="margin:0;font-size:1.1rem;font-weight:600;color:#111827;">Configure Co-Teaching
+                            Footnotes</h3>
+                        <button onclick="closeFootnoteModal()"
+                            style="background:none;border:none;cursor:pointer;color:#6b7280;padding:4px;">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Modal Footnote Forms -->
+                    <div style="display:flex;flex-direction:column;gap:20px;">
+                        <!-- Footnote 1 -->
+                        <div class="footnote-dropdown-group">
+                            <label
+                                style="font-size:0.85rem;color:#374151;font-weight:600;margin-bottom:8px;display:block;">Footnote
+                                1</label>
+                            <select id="modal-footnote-1-subject" class="footnote-select"
+                                onchange="handleModalFootnoteSubjectChange(1)">
+                                <option value="">Select subject...</option>
+                            </select>
+                            <select id="modal-footnote-1-type" class="footnote-select"
+                                style="display:none;margin-top:8px;" onchange="handleModalFootnoteTypeChange(1)">
+                                <option value="">Select type...</option>
+                                <option value="relay">Relay with</option>
+                                <option value="team">Team Teaching with</option>
+                            </select>
+                            <select id="modal-footnote-1-faculty" class="footnote-select"
+                                style="display:none;margin-top:8px;">
+                                <option value="">Select faculty...</option>
+                            </select>
+                        </div>
+
+                        <!-- Footnote 2 -->
+                        <div class="footnote-dropdown-group">
+                            <label
+                                style="font-size:0.85rem;color:#374151;font-weight:600;margin-bottom:8px;display:block;">Footnote
+                                2</label>
+                            <select id="modal-footnote-2-subject" class="footnote-select"
+                                onchange="handleModalFootnoteSubjectChange(2)">
+                                <option value="">Select subject...</option>
+                            </select>
+                            <select id="modal-footnote-2-type" class="footnote-select"
+                                style="display:none;margin-top:8px;" onchange="handleModalFootnoteTypeChange(2)">
+                                <option value="">Select type...</option>
+                                <option value="relay">Relay with</option>
+                                <option value="team">Team Teaching with</option>
+                            </select>
+                            <select id="modal-footnote-2-faculty" class="footnote-select"
+                                style="display:none;margin-top:8px;">
+                                <option value="">Select faculty...</option>
+                            </select>
+                        </div>
+
+                        <!-- Footnote 3 -->
+                        <div class="footnote-dropdown-group">
+                            <label
+                                style="font-size:0.85rem;color:#374151;font-weight:600;margin-bottom:8px;display:block;">Footnote
+                                3</label>
+                            <select id="modal-footnote-3-subject" class="footnote-select"
+                                onchange="handleModalFootnoteSubjectChange(3)">
+                                <option value="">Select subject...</option>
+                            </select>
+                            <select id="modal-footnote-3-type" class="footnote-select"
+                                style="display:none;margin-top:8px;" onchange="handleModalFootnoteTypeChange(3)">
+                                <option value="">Select type...</option>
+                                <option value="relay">Relay with</option>
+                                <option value="team">Team Teaching with</option>
+                            </select>
+                            <select id="modal-footnote-3-faculty" class="footnote-select"
+                                style="display:none;margin-top:8px;">
+                                <option value="">Select faculty...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Modal Actions -->
+                    <div style="display:flex;gap:12px;margin-top:24px;">
+                        <button onclick="closeFootnoteModal()"
+                            style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+                            Cancel
+                        </button>
+                        <button id="modal-save-footnotes-btn" onclick="saveModalFootnotes()"
+                            style="flex:1;padding:10px;background:#014421;color:white;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div><!-- /footnote-modal -->
 
             <!-- Subject Block Selection Section -->
             <div class="add-subject-card">
@@ -3325,6 +3530,18 @@
                     footer.style.display = 'block';
                     totalHoursSpan.textContent = totalHours.toFixed(1) + ' hours';
                 }
+
+                // Populate subject dropdowns and load footnotes
+                populateModalFootnoteSubjects(selectedProf);
+
+                // Get member UID from selected professor
+                var memberData = staffData.find(function (p) {
+                    return (p.fullName || '').split(',')[0].trim() === selectedProf;
+                });
+
+                if (memberData && memberData.uid) {
+                    loadFootnotes(memberData.uid);
+                }
             }
 
             function clearFICStatus() {
@@ -3333,10 +3550,487 @@
                     displayDiv.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:60px 20px;font-size:0.875rem;">Select a faculty from the filter above to view their status</div>';
                 }
 
-                // Hide footer
+                // Hide footer (but keep it visible by default with 0.0 hours)
                 var footer = document.getElementById('fic-status-footer');
-                if (footer) {
-                    footer.style.display = 'none';
+                var totalHoursSpan = document.getElementById('fic-total-hours');
+                if (footer && totalHoursSpan) {
+                    footer.style.display = 'block';
+                    totalHoursSpan.textContent = '0.0 hours';
+                }
+            }
+
+            // ═══ Co-Teaching Footnote Functions ═══
+
+            // Open footnote modal
+            window.openFootnoteModal = function () {
+                var modal = document.getElementById('footnote-modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+
+                    // Get current selected professor
+                    var profSel = document.getElementById('sf-professor');
+                    if (profSel && profSel.value) {
+                        // Populate subjects for modal
+                        populateModalFootnoteSubjects(profSel.value);
+
+                        // Load existing footnotes
+                        var memberData = staffData.find(function (p) {
+                            return (p.fullName || '').split(',')[0].trim() === profSel.value;
+                        });
+                        if (memberData && memberData.uid) {
+                            loadModalFootnotes(memberData.uid);
+                        }
+                    }
+                }
+            };
+
+            // Close footnote modal
+            window.closeFootnoteModal = function () {
+                var modal = document.getElementById('footnote-modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            };
+
+            // Populate subject dropdowns with current professor's subjects  
+            function populateModalFootnoteSubjects(selectedProf) {
+                // Get professor's schedules
+                var profSchedules = schedules.filter(function (s) {
+                    var sProfName = s.prof || '';
+                    if (sProfName.indexOf(',') > -1) {
+                        sProfName = sProfName.split(',')[0].trim();
+                    }
+                    var matchProf = sProfName === selectedProf;
+                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
+                    var matchSemester = s.semester === currentSemester;
+                    var hasValidTime = s.start && s.end && slotIdx(s.start) >= 0 && slotIdx(s.end) > slotIdx(s.start);
+                    return matchProf && matchSchoolYear && matchSemester && hasValidTime;
+                });
+
+                // Get unique subjects
+                var subjects = {};
+                profSchedules.forEach(function (sched) {
+                    if (sched.subjCode) {
+                        subjects[sched.subjCode] = true;
+                    }
+                });
+
+                // Populate all subject dropdowns
+                for (var i = 1; i <= 3; i++) {
+                    var select = document.getElementById('footnote-' + i + '-subject');
+                    if (select) {
+                        select.innerHTML = '<option value="">Select subject...</option>';
+                        Object.keys(subjects).sort().forEach(function (subj) {
+                            var opt = document.createElement('option');
+                            opt.value = subj;
+                            opt.textContent = subj;
+                            select.appendChild(opt);
+                        });
+                    }
+                }
+            }
+
+            // Populate faculty dropdown with all faculty except current
+            function populateFootnoteFaculty(footnoteNum, currentProf) {
+                var select = document.getElementById('footnote-' + footnoteNum + '-faculty');
+                if (!select) return;
+
+                select.innerHTML = '<option value="">Select faculty...</option>';
+
+                // Add all professors except the current one
+                staffData.forEach(function (staff) {
+                    var profName = (staff.fullName || '').split(',')[0].trim();
+                    if (profName !== currentProf) {
+                        var opt = document.createElement('option');
+                        opt.value = profName;
+                        opt.textContent = staff.fullName || profName;
+                        select.appendChild(opt);
+                    }
+                });
+            }
+
+            window.handleFootnoteSubjectChange = function (footnoteNum) {
+                var subjectSelect = document.getElementById('footnote-' + footnoteNum + '-subject');
+                var typeSelect = document.getElementById('footnote-' + footnoteNum + '-type');
+                var facultySelect = document.getElementById('footnote-' + footnoteNum + '-faculty');
+
+                if (subjectSelect && subjectSelect.value) {
+                    // Show type dropdown
+                    if (typeSelect) {
+                        typeSelect.style.display = 'block';
+                        typeSelect.value = '';
+                    }
+                    // Hide and reset faculty dropdown
+                    if (facultySelect) {
+                        facultySelect.style.display = 'none';
+                        facultySelect.value = '';
+                    }
+                } else {
+                    // Hide both type and faculty
+                    if (typeSelect) {
+                        typeSelect.style.display = 'none';
+                        typeSelect.value = '';
+                    }
+                    if (facultySelect) {
+                        facultySelect.style.display = 'none';
+                        facultySelect.value = '';
+                    }
+                }
+            };
+
+            window.handleFootnoteTypeChange = function (footnoteNum) {
+                var typeSelect = document.getElementById('footnote-' + footnoteNum + '-type');
+                var facultySelect = document.getElementById('footnote-' + footnoteNum + '-faculty');
+                var profSel = document.getElementById('sf-professor');
+
+                if (typeSelect && typeSelect.value && profSel && profSel.value) {
+                    // Populate and show faculty dropdown
+                    populateFootnoteFaculty(footnoteNum, profSel.value);
+                    if (facultySelect) {
+                        facultySelect.style.display = 'block';
+                    }
+                } else {
+                    // Hide faculty dropdown
+                    if (facultySelect) {
+                        facultySelect.style.display = 'none';
+                        facultySelect.value = '';
+                    }
+                }
+            };
+
+            window.saveFootnotes = async function () {
+                var btn = document.getElementById('save-footnotes-btn');
+                if (!btn) return;
+
+                // Get current selected professor
+                var profSel = document.getElementById('sf-professor');
+                if (!profSel || !profSel.value) {
+                    alert('Please select a faculty member first');
+                    return;
+                }
+
+                var selectedProf = profSel.value;
+
+                // Collect footnote data
+                var footnotes = [];
+                for (var i = 1; i <= 3; i++) {
+                    var subjectSelect = document.getElementById('footnote-' + i + '-subject');
+                    var typeSelect = document.getElementById('footnote-' + i + '-type');
+                    var facultySelect = document.getElementById('footnote-' + i + '-faculty');
+
+                    if (subjectSelect && subjectSelect.value &&
+                        typeSelect && typeSelect.value &&
+                        facultySelect && facultySelect.value) {
+                        footnotes.push({
+                            number: i,
+                            subject: subjectSelect.value,
+                            type: typeSelect.value,
+                            faculty_name: facultySelect.value
+                        });
+                    }
+                }
+
+                // Disable button
+                btn.disabled = true;
+                btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Saving...';
+
+                try {
+                    // Get member ID from selected professor
+                    var memberData = profs.find(function (p) {
+                        return p.last === selectedProf;
+                    });
+
+                    if (!memberData || !memberData.uid) {
+                        throw new Error('Could not find member ID for selected professor');
+                    }
+
+                    var response = await fetch('/api/fsr-footnotes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            member_id: memberData.uid,
+                            semester: currentSemester,
+                            academic_year: currentSchoolYear,
+                            footnotes: footnotes
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to save footnotes');
+                    }
+
+                    var result = await response.json();
+
+                    // Show success
+                    btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Saved!';
+
+                    setTimeout(function () {
+                        btn.disabled = false;
+                        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Save Footnotes';
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Error saving footnotes:', error);
+                    alert('Failed to save footnotes: ' + error.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Save Footnotes';
+                }
+            };
+
+            async function loadFootnotes(memberUid) {
+                try {
+                    var response = await fetch(`/api/fsr-footnotes/${memberUid}?semester=${encodeURIComponent(currentSemester)}&academic_year=${encodeURIComponent(currentSchoolYear)}`);
+
+                    if (!response.ok) {
+                        console.log('No footnotes found for this member');
+                        return;
+                    }
+
+                    var data = await response.json();
+
+                    if (data.footnotes && data.footnotes.length > 0) {
+                        // Clear all footnotes first
+                        for (var i = 1; i <= 3; i++) {
+                            var subjectSelect = document.getElementById('footnote-' + i + '-subject');
+                            var typeSelect = document.getElementById('footnote-' + i + '-type');
+                            var facultySelect = document.getElementById('footnote-' + i + '-faculty');
+
+                            if (subjectSelect) subjectSelect.value = '';
+                            if (typeSelect) {
+                                typeSelect.value = '';
+                                typeSelect.style.display = 'none';
+                            }
+                            if (facultySelect) {
+                                facultySelect.value = '';
+                                facultySelect.style.display = 'none';
+                            }
+                        }
+
+                        // Load saved footnotes
+                        data.footnotes.forEach(function (fn) {
+                            var num = fn.footnote_number;
+                            var subjectSelect = document.getElementById('footnote-' + num + '-subject');
+                            var typeSelect = document.getElementById('footnote-' + num + '-type');
+                            var facultySelect = document.getElementById('footnote-' + num + '-faculty');
+
+                            if (subjectSelect && fn.subject) {
+                                subjectSelect.value = fn.subject;
+                            }
+
+                            if (typeSelect && fn.footnote_type) {
+                                typeSelect.value = fn.footnote_type;
+                                typeSelect.style.display = 'block';
+                            }
+
+                            if (facultySelect && fn.faculty_name) {
+                                // Populate faculty dropdown first
+                                var profSel = document.getElementById('sf-professor');
+                                if (profSel && profSel.value) {
+                                    populateFootnoteFaculty(num, profSel.value);
+                                }
+                                facultySelect.value = fn.faculty_name;
+                                facultySelect.style.display = 'block';
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading footnotes:', error);
+                }
+            }
+
+            // ═══ Modal-specific Co-Teaching Functions ═══
+
+            window.handleModalFootnoteSubjectChange = function (footnoteNum) {
+                var subjectSelect = document.getElementById('modal-footnote-' + footnoteNum + '-subject');
+                var typeSelect = document.getElementById('modal-footnote-' + footnoteNum + '-type');
+                var facultySelect = document.getElementById('modal-footnote-' + footnoteNum + '-faculty');
+
+                if (subjectSelect && subjectSelect.value) {
+                    if (typeSelect) {
+                        typeSelect.style.display = 'block';
+                        typeSelect.value = '';
+                    }
+                    if (facultySelect) {
+                        facultySelect.style.display = 'none';
+                        facultySelect.value = '';
+                    }
+                } else {
+                    if (typeSelect) {
+                        typeSelect.style.display = 'none';
+                        typeSelect.value = '';
+                    }
+                    if (facultySelect) {
+                        facultySelect.style.display = 'none';
+                        facultySelect.value = '';
+                    }
+                }
+            };
+
+            window.handleModalFootnoteTypeChange = function (footnoteNum) {
+                var typeSelect = document.getElementById('modal-footnote-' + footnoteNum + '-type');
+                var facultySelect = document.getElementById('modal-footnote-' + footnoteNum + '-faculty');
+                var profSel = document.getElementById('sf-professor');
+
+                if (typeSelect && typeSelect.value && profSel && profSel.value) {
+                    populateModalFootnoteFaculty(footnoteNum, profSel.value);
+                    if (facultySelect) {
+                        facultySelect.style.display = 'block';
+                    }
+                } else {
+                    if (facultySelect) {
+                        facultySelect.style.display = 'none';
+                        facultySelect.value = '';
+                    }
+                }
+            };
+
+            function populateModalFootnoteFaculty(footnoteNum, currentProf) {
+                var select = document.getElementById('modal-footnote-' + footnoteNum + '-faculty');
+                if (!select) return;
+
+                select.innerHTML = '<option value="">Select faculty...</option>';
+
+                if (typeof staffData !== 'undefined' && staffData) {
+                    staffData.forEach(function (staff) {
+                        var profName = (staff.fullName || '').split(',')[0].trim();
+                        if (profName !== currentProf) {
+                            var opt = document.createElement('option');
+                            opt.value = profName;
+                            opt.textContent = staff.fullName || profName;
+                            select.appendChild(opt);
+                        }
+                    });
+                }
+            }
+
+            function updateFootnoteDisplayRows() {
+                for (var i = 1; i <= 3; i++) {
+                    var subjectSelect = document.getElementById('modal-footnote-' + i + '-subject');
+                    var typeSelect = document.getElementById('modal-footnote-' + i + '-type');
+                    var facultySelect = document.getElementById('modal-footnote-' + i + '-faculty');
+                    var displayRow = document.getElementById('footnote-display-' + i);
+
+                    if (subjectSelect && typeSelect && facultySelect && displayRow) {
+                        if (subjectSelect.value && typeSelect.value && facultySelect.value) {
+                            var typeText = typeSelect.value === 'relay' ? 'Relay' : 'Team';
+                            displayRow.textContent = subjectSelect.value + ' - ' + typeText + ' w/ ' + facultySelect.value;
+                            displayRow.style.color = '#111827';
+                        } else {
+                            displayRow.textContent = 'Not configured';
+                            displayRow.style.color = '#6b7280';
+                        }
+                    }
+                }
+            }
+
+            window.saveModalFootnotes = async function () {
+                var btn = document.getElementById('modal-save-footnotes-btn');
+                if (!btn) return;
+
+                var profSel = document.getElementById('sf-professor');
+                if (!profSel || !profSel.value) {
+                    alert('Please select a faculty member first');
+                    return;
+                }
+
+                var selectedProf = profSel.value;
+
+                // Collect footnote data from modal
+                var footnotes = [];
+                for (var i = 1; i <= 3; i++) {
+                    var subjectSelect = document.getElementById('modal-footnote-' + i + '-subject');
+                    var typeSelect = document.getElementById('modal-footnote-' + i + '-type');
+                    var facultySelect = document.getElementById('modal-footnote-' + i + '-faculty');
+
+                    if (subjectSelect && subjectSelect.value &&
+                        typeSelect && typeSelect.value &&
+                        facultySelect && facultySelect.value) {
+                        footnotes.push({
+                            number: i,
+                            subject: subjectSelect.value,
+                            type: typeSelect.value,
+                            faculty_name: facultySelect.value
+                        });
+                    }
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+
+                try {
+                    var memberData = staffData.find(function (staff) {
+                        return (staff.fullName || '').split(',')[0].trim() === selectedProf;
+                    });
+
+                    if (!memberData || !memberData.uid) {
+                        throw new Error('Could not find member ID');
+                    }
+
+                    var response = await fetch('/api/fsr-footnotes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            member_id: memberData.uid,
+                            semester: currentSemester,
+                            academic_year: currentSchoolYear,
+                            footnotes: footnotes
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Failed to save');
+
+                    // Update display rows
+                    updateFootnoteDisplayRows();
+
+                    // Close modal
+                    closeFootnoteModal();
+
+                } catch (error) {
+                    console.error('Error saving footnotes:', error);
+                    alert('Failed to save: ' + error.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Save';
+                }
+            };
+
+            async function loadModalFootnotes(memberUid) {
+                try {
+                    var response = await fetch(`/api/fsr-footnotes/${memberUid}?semester=${encodeURIComponent(currentSemester)}&academic_year=${encodeURIComponent(currentSchoolYear)}`);
+
+                    if (!response.ok) return;
+
+                    var data = await response.json();
+
+                    if (data.footnotes && data.footnotes.length > 0) {
+                        data.footnotes.forEach(function (fn) {
+                            var num = fn.footnote_number;
+                            var subjectSelect = document.getElementById('modal-footnote-' + num + '-subject');
+                            var typeSelect = document.getElementById('modal-footnote-' + num + '-type');
+                            var facultySelect = document.getElementById('modal-footnote-' + num + '-faculty');
+
+                            if (subjectSelect && fn.subject) {
+                                subjectSelect.value = fn.subject;
+                                handleModalFootnoteSubjectChange(num);
+                            }
+
+                            if (typeSelect && fn.footnote_type) {
+                                typeSelect.value = fn.footnote_type;
+                                typeSelect.style.display = 'block';
+                                handleModalFootnoteTypeChange(num);
+                            }
+
+                            if (facultySelect && fn.faculty_name) {
+                                facultySelect.value = fn.faculty_name;
+                                facultySelect.style.display = 'block';
+                            }
+                        });
+
+                        // Update display rows
+                        updateFootnoteDisplayRows();
+                    }
+                } catch (error) {
+                    console.error('Error loading modal footnotes:', error);
                 }
             }
 

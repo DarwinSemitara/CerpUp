@@ -2442,16 +2442,31 @@
                     body: JSON.stringify({ semester: '2nd Semester', academic_year: '2025-2026' })
                 });
                 if (!res.ok) throw new Error('Failed to generate FSR');
-                const blob = await res.blob();
+
+                const data = await res.json();
+
+                if (!data.success || !data.download_url) {
+                    throw new Error(data.error || 'Failed to get download URL');
+                }
+
+                // Fetch the file from Supabase Storage and trigger download
+                if (btn) btn.textContent = 'Downloading...';
+                const fileRes = await fetch(data.download_url);
+                if (!fileRes.ok) throw new Error('Failed to fetch file');
+
+                const blob = await fileRes.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `FSR_${(memberData && memberData.last) || 'Member'}_2nd_Semester_2025-2026.xlsx`;
+                a.download = data.file_name || `FSR_${(memberData && memberData.last) || 'Member'}_2nd_Semester_2025-2026.xlsx`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+
+                console.log('✓ FSR downloaded:', data.file_name);
             } catch (e) {
+                console.error('FSR download error:', e);
                 alert('Failed to download FSR: ' + e.message);
             } finally {
                 if (btn) {

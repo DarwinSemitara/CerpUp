@@ -284,12 +284,131 @@ class FSRGenerator:
         output_dir = 'generated_fsr'
         os.makedirs(output_dir, exist_ok=True)
         ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_path = os.path.join(output_dir,
-                                   f"FSR_{member_data.get('last', 'Faculty')}_{ts}.xlsx")
+        temp_output_path = os.path.join(output_dir,
+                                        f"FSR_{member_data.get('last', 'Faculty')}_{ts}.xlsx")
 
-        return self.generate_fsr(faculty_data, [], [],
-                                 output_path, schedule_data=all_schedule_data,
-                                 footnotes_data=footnotes_data)
+        # Generate FSR to temporary local file
+        self.generate_fsr(faculty_data, [], [],
+                          temp_output_path, schedule_data=all_schedule_data,
+                          footnotes_data=footnotes_data)
+
+        # Upload to Supabase Storage and save metadata
+        try:
+            file_metadata = self._upload_fsr_to_storage(
+                temp_output_path,
+                member_id,
+                member_data,
+                semester,
+                academic_year
+            )
+
+            # Delete local file after successful upload
+            if os.path.exists(temp_output_path):
+                os.remove(temp_output_path)
+                print(f"✓ Deleted local file: {temp_output_path}")
+
+            return file_metadata
+        except Exception as e:
+            print(f"Error uploading FSR to storage: {e}")
+            # Return local path as fallback
+            return {'local_path': temp_output_path, 'error': str(e)}
+
+    def _upload_fsr_to_storage(self, file_path, member_id, member_data, semester, academic_year):
+        """
+        Upload FSR file to Supabase Storage and save metadata to database.
+
+        Returns:
+            dict: File metadata with download URL
+        """
+        from services.supabase_service import supabase
+
+        # Read file
+        with open(file_path, 'rb') as f:
+            file_content = f.read()
+
+        # Get file info
+        file_size = os.path.getsize(file_path)
+        file_name = os.path.basename(file_path)
+
+        # Create storage path: academic_year/semester/filename
+        # Clean up names for path
+        year_folder = academic_year.replace('/', '-')
+        semester_folder = semester.replace(' ', '-')
+        storage_path = f"{year_folder}/{semester_folder}/{file_name}"
+
+        # Upload to Supabase Storage
+        bucket_name = 'fsr-files'
+
+        try:
+            # Upload file (will overwrite if exists)
+            supabase.storage.from_(bucket_name).upload(
+                storage_path,
+                file_content,
+                file_options={
+                    "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+            )
+            print(f"✓ Uploaded to storage: {storage_path}")
+        except Exception as upload_error:
+            # If file exists, update it
+            if 'already exists' in str(upload_error).lower():
+                supabase.storage.from_(bucket_name).update(
+                    storage_path,
+                    file_content,
+                    file_options={
+                        "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+                )
+                print(f"✓ Updated existing file: {storage_path}")
+            else:
+                raise
+
+        # Get public URL
+        public_url = supabase.storage.from_(
+            bucket_name).get_public_url(storage_path)
+
+        # Save metadata to database
+        member_name = f"{member_data.get('first', '')} {member_data.get('last', '')}".strip(
+        )
+        member_email = member_data.get('email', '')
+
+        # Check if record exists (upsert logic)
+        existing = supabase.table('fsr_files').select('id').eq(
+            'member_id', member_id
+        ).eq('semester', semester).eq('academic_year', academic_year).is_(
+            'deleted_at', None
+        ).execute()
+
+        file_metadata = {
+            'member_id': member_id,
+            'member_name': member_name,
+            'member_email': member_email,
+            'semester': semester,
+            'academic_year': academic_year,
+            'file_path': storage_path,
+            'file_name': file_name,
+            'file_size': file_size,
+            'storage_bucket': bucket_name,
+        }
+
+        if existing.data and len(existing.data) > 0:
+            # Update existing record
+            record_id = existing.data[0]['id']
+            supabase.table('fsr_files').update(
+                file_metadata).eq('id', record_id).execute()
+            print(f"✓ Updated FSR metadata: {record_id}")
+        else:
+            # Insert new record
+            result = supabase.table('fsr_files').insert(
+                file_metadata).execute()
+            record_id = result.data[0]['id'] if result.data else None
+            print(f"✓ Saved FSR metadata: {record_id}")
+
+        return {
+            'id': record_id,
+            'file_name': file_name,
+            'download_url': public_url,
+            'file_size': file_size,
+            'storage_path': storage_path
+        }
 
     # ── Private helpers ───────────────────────────────────────────────────
 
