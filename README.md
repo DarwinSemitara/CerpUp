@@ -1,143 +1,80 @@
-# CERP 2.0 - Chemical Engineering Research Portal
+# DCERP - Department of Community and Environmental Resource Planning
 
-A modern web application for managing research, publications, extensions, and schedules for the Chemical Engineering department.
+> A comprehensive research management platform designed for academic institutions to streamline faculty operations, research tracking, and administrative workflows.
 
-## Tech Stack
+## Overview
 
-- **Backend**: Flask (Python)
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
-- **File Storage**: Cloudinary
-- **Frontend**: HTML, CSS, JavaScript
+DCERP is a full-stack web application that serves as a centralized platform for managing faculty research activities, academic schedules, publications, and extension programs. The system provides role-based interfaces for administrators and faculty members, enabling efficient collaboration and data management across the department.
 
-## Features
+## Architecture
 
-- 👥 Member management and profiles
-- 📚 Research tracking and management
-- 📰 News and events
-- 🎓 Extension activities
-- 📅 Class scheduling system
-- 📊 TAP-HSP project tracking
-- 🔐 Role-based access control (Admin/Member)
+### Technology Stack
 
-## Deployment on Render
+- **Backend Framework**: Flask 2.3+ (Python)
+- **Database**: PostgreSQL (via Supabase)
+- **Authentication**: JWT-based authentication with Supabase Auth
+- **Cloud Storage**: Cloudinary for media assets
+- **Frontend**: Server-side rendered templates with vanilla JavaScript
+- **Deployment**: Render platform with automated CI/CD
 
-### Prerequisites
+### Key Components
 
-1. A Supabase account with a project set up
-2. A Cloudinary account for image uploads
-3. A GitHub account
+- **Service Layer**: Modular services for database operations, file management, and external integrations
+- **Template Engine**: Jinja2-based server-side rendering with dynamic content loading
+- **API Layer**: RESTful endpoints for data operations and real-time updates
+- **Scheduler Service**: Background task processing for automated operations
 
-### Environment Variables Required
+## Core Features
 
-Add these environment variables in Render dashboard:
+### Faculty Management
+- Comprehensive member profiles with academic credentials
+- Position tracking and organizational hierarchy
+- Profile photo management with cloud storage
+- Research interests and specialization tracking
 
-```
-SECRET_KEY=<your-secret-key>
-SUPABASE_URL=<your-supabase-project-url>
-SUPABASE_ANON_KEY=<your-supabase-anon-key>
-SUPABASE_SERVICE_KEY=<your-supabase-service-role-key>
-CLOUDINARY_CLOUD_NAME=<your-cloudinary-cloud-name>
-CLOUDINARY_API_KEY=<your-cloudinary-api-key>
-CLOUDINARY_API_SECRET=<your-cloudinary-api-secret>
-```
+### Research & Publications
+- Research project lifecycle management
+- Publication tracking with metadata (authors, citations, DOI)
+- Public engagement and extension activity logging
+- Collaboration tracking across projects
 
-### Deployment Steps
+### Academic Scheduling
+- Interactive class schedule builder with drag-and-drop interface
+- Faculty Schedule Report (FSR) automated generation
+- Co-teaching and team-teaching configuration with footnote management
+- Subject block allocation and unit load tracking
+- Semester-based schedule management with conflict detection
 
-1. **Push to GitHub**:
-   ```bash
-   git add .
-   git commit -m "Prepare for deployment"
-   git push origin main
-   ```
+### Extension Programs
+- TAP-HSP (Training Assistance Program - Human Resource Scholarship) project tracking
+- Community extension activity management
+- Event scheduling and participation logging
 
-2. **Connect to Render**:
-   - Go to [Render Dashboard](https://dashboard.render.com/)
-   - Click "New +" → "Web Service"
-   - Connect your GitHub repository
-   - Render will auto-detect `render.yaml` configuration
+### News & Events
+- Content management system for departmental announcements
+- Event calendar with RSVP functionality
+- Image gallery integration
 
-3. **Configure Environment Variables**:
-   - In Render dashboard, go to your service → "Environment"
-   - Add all required environment variables listed above
-   - Click "Save Changes"
+### Administrative Dashboard
+- Real-time analytics and reporting
+- Member activity monitoring
+- System-wide configuration management
+- Bulk data operations and exports
 
-4. **Deploy**:
-   - Render will automatically deploy using the configuration in `render.yaml`
-   - Wait for the build and deployment to complete
+### CHE (Chemical Engineering Helper)
+- AI-powered conversational assistant
+- Context-aware responses for departmental queries
+- Natural language processing integration
 
-### Database Setup
+## System Requirements
 
-Make sure your Supabase database has these tables:
-- `users` - Authentication and user management
-- `members` - Faculty member profiles
-- `research` - Research projects
-- `extensions` - Extension activities
-- `schedules` - Class schedules
-- `news` - News and events
-- `engagements` - Public engagement activities
-- `tap_projects` - TAP-HSP projects
+### Development Environment
+- Python 3.9 or higher
+- PostgreSQL-compatible database
+- Modern web browser (Chrome 90+, Firefox 88+, Safari 14+)
 
-### Local Development
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd CERP2.0
-   ```
-
-2. **Create virtual environment**:
-   ```bash
-   python -m venv venv
-   venv\Scripts\activate  # Windows
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements-supabase.txt
-   ```
-
-4. **Create `.env` file**:
-   ```
-   SECRET_KEY=your-dev-secret-key
-   SUPABASE_URL=your-supabase-url
-   SUPABASE_ANON_KEY=your-supabase-anon-key
-   SUPABASE_SERVICE_KEY=your-supabase-service-key
-   CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
-   CLOUDINARY_API_KEY=your-cloudinary-api-key
-   CLOUDINARY_API_SECRET=your-cloudinary-api-secret
-   ```
-
-5. **Run the application**:
-   ```bash
-   python app.py
-   ```
-
-6. **Access the application**:
-   - Open browser to `http://localhost:5000`
-
-### Default Credentials
-
-After setting up, create an admin account using:
-```bash
-python scripts/create_supabase_user.py
-```
-
-## Project Structure
-
-```
-CERP2.0/
-├── app.py                  # Main application (Supabase)
-├── services/               # Service modules
-│   ├── supabase_service.py
-│   └── cloudinary_service.py
-├── templates/              # HTML templates
-├── static/                 # CSS, JS, images
-├── scripts/                # Utility scripts
-├── archive_firebase/       # Old Firebase code (not used)
-└── requirements-supabase.txt
-```
-
-## Support
-
-For issues or questions, contact the development team.
+### Production Environment
+- Cloud hosting platform (Render, Heroku, AWS)
+- Supabase project with PostgreSQL database
+- Cloudinary account for media storage
+- Environment-specific configuration variables
