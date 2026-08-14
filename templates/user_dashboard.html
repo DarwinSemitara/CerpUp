@@ -690,6 +690,80 @@
             color: #888;
             font-size: 0.63rem;
         }
+
+        /* Year Selector Styles */
+        .year-selector {
+            position: relative;
+        }
+
+        .year-btn {
+            padding: 8px 14px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: #374151;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .year-btn:hover {
+            background: white;
+            border-color: #fb923c;
+            color: #fb923c;
+            box-shadow: 0 2px 4px rgba(251, 146, 60, 0.1);
+        }
+
+        .year-btn svg {
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .year-btn:hover svg {
+            opacity: 1;
+        }
+
+        .year-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 6px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            min-width: 140px;
+            display: none;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .year-option {
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-weight: 500;
+        }
+
+        .year-option:hover {
+            background: #fef3f2;
+            color: #fb923c;
+        }
+
+        .year-option:first-child {
+            border-radius: 10px 10px 0 0;
+        }
+
+        .year-option:last-child {
+            border-radius: 0 0 10px 10px;
+        }
     </style>
 </head>
 
@@ -1562,17 +1636,33 @@
                         <div class="chart-header">
                             <div>
                                 <div class="chart-title">Publications Report</div>
-                                <div class="chart-subtitle">This Year vs Last Year</div>
+                                <div class="chart-subtitle">
+                                    <span id="member-pub-year-label">2025</span> vs <span id="member-pub-prev-year-label">2024</span>
+                                </div>
+                            </div>
+                            <div class="year-selector">
+                                <button class="year-btn" onclick="toggleMemberYearDropdown('pub')" style="min-width:120px;justify-content:space-between;padding:8px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:0.8rem;color:#374151;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all 0.2s;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span id="member-pub-year-btn-label">2025</span>
+                                    <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <div class="year-dropdown" id="member-pub-year-dropdown" style="position:absolute;top:100%;right:0;margin-top:6px;background:white;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:140px;display:none;z-index:10;overflow:hidden;max-height:300px;overflow-y:auto;">
+                                    <!-- Populated dynamically -->
+                                </div>
                             </div>
                         </div>
                         <div style="display:flex;gap:20px;margin-bottom:16px;">
                             <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:#374151;font-weight:500;">
                                 <div style="width:28px;height:3px;background:#fb923c;border-radius:2px;"></div>
-                                <span>This Year</span>
+                                <span id="member-pub-legend-current">This Year</span>
                             </div>
                             <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:#9ca3af;font-weight:500;">
                                 <div style="width:28px;height:2px;background:#d1d5db;border-radius:2px;border-top:2px dashed #d1d5db;"></div>
-                                <span>Last Year</span>
+                                <span id="member-pub-legend-prev">Last Year</span>
                             </div>
                         </div>
                         <div style="position:relative;height:240px;">
@@ -1580,34 +1670,34 @@
                         </div>
                     </div>
 
-                    <!-- TAP-HSP Pie Chart -->
+                    <!-- Extensions Pie Chart -->
                     <div class="chart-card" style="display:flex;flex-direction:column;">
                         <div class="chart-header" style="margin-bottom:12px;">
                             <div>
-                                <div class="chart-title">TAP-HSP Progress</div>
-                                <div class="chart-subtitle">2025</div>
+                                <div class="chart-title">Extensions</div>
+                                <div class="chart-subtitle" id="member-ext-year-label">2025</div>
+                            </div>
+                            <div class="year-selector">
+                                <button class="year-btn" onclick="toggleMemberYearDropdown('ext')" style="min-width:100px;justify-content:space-between;padding:8px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:0.8rem;color:#374151;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all 0.2s;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span id="member-ext-year-btn-label">2025</span>
+                                    <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <div class="year-dropdown" id="member-ext-year-dropdown" style="position:absolute;top:100%;right:0;margin-top:6px;background:white;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);min-width:140px;display:none;z-index:10;overflow:hidden;max-height:300px;overflow-y:auto;">
+                                    <!-- Populated dynamically -->
+                                </div>
                             </div>
                         </div>
                         <div style="display:flex;flex-direction:column;align-items:center;gap:16px;flex:1;justify-content:center;">
                             <div style="width:180px;height:180px;position:relative;">
                                 <canvas id="user-tap-chart"></canvas>
                             </div>
-                            <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:12px;">
-                                <div class="legend-item">
-                                    <div class="legend-dot" style="background:#fb923c;"></div>
-                                    <span>Ongoing</span>
-                                    <span style="margin-left:auto;font-weight:700;color:#111827;">18</span>
-                                </div>
-                                <div class="legend-item">
-                                    <div class="legend-dot" style="background:#fbbf24;"></div>
-                                    <span>Finished</span>
-                                    <span style="margin-left:auto;font-weight:700;color:#111827;">12</span>
-                                </div>
-                                <div class="legend-item">
-                                    <div class="legend-dot" style="background:#fde047;"></div>
-                                    <span>Pending</span>
-                                    <span style="margin-left:auto;font-weight:700;color:#111827;">6</span>
-                                </div>
+                            <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:12px;" id="member-ext-legend">
+                                <!-- Legend populated dynamically -->
                             </div>
                         </div>
                     </div>
@@ -2335,6 +2425,9 @@
                         </td></tr>
                     </table>
                 </div>`;
+
+            // Load existing footnotes from database
+            setTimeout(loadExistingFootnotes, 100);
         }
 
         async function downloadMemberFSR() {
@@ -2408,6 +2501,9 @@
             if (val) { val.textContent = text; val.className = 'fn-value fn-set'; }
             var dd = document.getElementById('fsr-fn-dd-' + n);
             if (dd) dd.style.display = 'none';
+
+            // Save to database
+            saveFootnote(n, type, fic);
         }
 
         function clearFootnote(n) {
@@ -2416,6 +2512,77 @@
             if (val) { val.textContent = 'Click to set teaching arrangement...'; val.className = 'fn-value'; }
             var dd = document.getElementById('fsr-fn-dd-' + n);
             if (dd) dd.style.display = 'none';
+
+            // Delete from database
+            deleteFootnote(n);
+        }
+
+        async function saveFootnote(footnoteNumber, footnoteType, facultyName) {
+            try {
+                const response = await fetch('/api/fsr-footnotes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        footnote_number: footnoteNumber,
+                        footnote_type: footnoteType,
+                        faculty_name: facultyName,
+                        load_sharing: '50-50 load sharing',
+                        semester: '2nd Semester',  // TODO: Get from current selection
+                        academic_year: '2025-2026'  // TODO: Get from current selection
+                    })
+                });
+                if (!response.ok) {
+                    console.error('Failed to save footnote');
+                }
+            } catch (e) {
+                console.error('Error saving footnote:', e);
+            }
+        }
+
+        async function deleteFootnote(footnoteNumber) {
+            try {
+                const response = await fetch('/api/fsr-footnotes', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        footnote_number: footnoteNumber,
+                        semester: '2nd Semester',  // TODO: Get from current selection
+                        academic_year: '2025-2026'  // TODO: Get from current selection
+                    })
+                });
+                if (!response.ok) {
+                    console.error('Failed to delete footnote');
+                }
+            } catch (e) {
+                console.error('Error deleting footnote:', e);
+            }
+        }
+
+        async function loadExistingFootnotes() {
+            try {
+                const response = await fetch(`/api/fsr-footnotes?semester=2nd Semester&academic_year=2025-2026`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const footnotes = data.footnotes || [];
+
+                footnotes.forEach(fn => {
+                    const n = fn.footnote_number;
+                    const type = fn.footnote_type;
+                    const faculty = fn.faculty_name;
+                    const sharing = fn.load_sharing || '50/50 load sharing';
+
+                    _fnTypes[n] = type;
+                    const text = `${type} with ${faculty}, ${sharing}`;
+                    const val = document.getElementById(`fsr-fn-val-${n}`);
+                    if (val) {
+                        val.textContent = text;
+                        val.className = 'fn-value fn-set';
+                    }
+                });
+            } catch (e) {
+                console.error('Error loading footnotes:', e);
+            }
         }
 
         // ── Research Page ─────────────────────────────────────────────────
@@ -2952,15 +3119,15 @@
 
             const typeInfo = titles[type];
             document.getElementById('form-modal-title').textContent = typeInfo.title;
-            document.getElementById('form-modal-subtitle').textContent = `Research Type: ${typeInfo.code} `;
+            document.getElementById('form-modal-subtitle').textContent = `Research Type: ${typeInfo.code}`;
 
             // Show appropriate form
             document.querySelectorAll('.research-form').forEach(form => form.style.display = 'none');
-            const targetForm = document.getElementById(`form - ${type} `);
-            if (targetForm) targetForm.style.display = 'block';
-
-            // Reset form
-            if (targetForm) targetForm.reset();
+            const targetForm = document.getElementById(`form-${type}`);
+            if (targetForm) {
+                targetForm.style.display = 'block';
+                targetForm.reset();
+            }
 
             // Hide success message
             const successMsg = document.getElementById('form-success-message');
@@ -5417,6 +5584,36 @@
 
         let userPubChart = null;
         let userTapChart = null;
+        let currentMemberDashboardYear = new Date().getFullYear();
+        let memberPubData = {};
+        let memberExtDataByYear = {};
+
+        // Load data on page load
+        (async function loadMemberDashboardData() {
+            try {
+                const res = await fetch('/api/member-dashboard-stats-by-year');
+                if (res.ok) {
+                    const stats = await res.json();
+
+                    // Populate memberPubData with all years
+                    Object.keys(stats.publications_by_year || {}).forEach(year => {
+                        memberPubData[year] = stats.publications_by_year[year];
+                    });
+
+                    // Populate extension data by year
+                    memberExtDataByYear = stats.extensions_by_year || {};
+
+                    // Set current year as default
+                    currentMemberDashboardYear = new Date().getFullYear();
+                }
+            } catch (e) {
+                console.warn('Member dashboard stats fetch failed:', e);
+                // Initialize with empty data
+                currentMemberDashboardYear = new Date().getFullYear();
+                memberPubData[currentMemberDashboardYear] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                memberExtDataByYear[currentMemberDashboardYear] = {};
+            }
+        })();
 
         function initUserCharts() {
             // Destroy existing charts if they exist
@@ -5431,9 +5628,27 @@
 
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-            // Sample data (hardcoded for now)
-            const thisYearData = [5, 7, 4, 8, 6, 9, 7, 10, 5, 8, 6, 9];
-            const lastYearData = [4, 6, 3, 7, 5, 8, 6, 9, 4, 7, 5, 8];
+            // Get data for current year and previous year
+            const currentYearData = memberPubData[currentMemberDashboardYear] || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            const prevYear = currentMemberDashboardYear - 1;
+            const prevYearData = memberPubData[prevYear] || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+            // Update labels
+            const pubYearLabel = document.getElementById('member-pub-year-label');
+            const pubPrevYearLabel = document.getElementById('member-pub-prev-year-label');
+            const pubYearBtnLabel = document.getElementById('member-pub-year-btn-label');
+            const extYearLabel = document.getElementById('member-ext-year-label');
+            const extYearBtnLabel = document.getElementById('member-ext-year-btn-label');
+            const pubLegendCurrent = document.getElementById('member-pub-legend-current');
+            const pubLegendPrev = document.getElementById('member-pub-legend-prev');
+
+            if (pubYearLabel) pubYearLabel.textContent = currentMemberDashboardYear;
+            if (pubPrevYearLabel) pubPrevYearLabel.textContent = prevYear;
+            if (pubYearBtnLabel) pubYearBtnLabel.textContent = currentMemberDashboardYear;
+            if (extYearLabel) extYearLabel.textContent = currentMemberDashboardYear;
+            if (extYearBtnLabel) extYearBtnLabel.textContent = currentMemberDashboardYear;
+            if (pubLegendCurrent) pubLegendCurrent.textContent = currentMemberDashboardYear;
+            if (pubLegendPrev) pubLegendPrev.textContent = prevYear;
 
             // ── Publications Line Chart ──
             const pubCtx = document.getElementById('user-pub-chart');
@@ -5444,8 +5659,8 @@
                         labels: months,
                         datasets: [
                             {
-                                label: 'This Year',
-                                data: thisYearData,
+                                label: currentMemberDashboardYear.toString(),
+                                data: currentYearData,
                                 borderColor: '#fb923c',
                                 backgroundColor: 'transparent',
                                 borderWidth: 2.5,
@@ -5461,8 +5676,8 @@
                                 tension: 0.4,
                             },
                             {
-                                label: 'Last Year',
-                                data: lastYearData,
+                                label: prevYear.toString(),
+                                data: prevYearData,
                                 borderColor: '#d1d5db',
                                 backgroundColor: 'transparent',
                                 borderWidth: 2,
@@ -5501,7 +5716,7 @@
                                 boxPadding: 6,
                                 callbacks: {
                                     title: items => months[items[0].dataIndex],
-                                    label: ctx => ` ${ctx.dataset.label}: ${ctx.raw} publications`
+                                    label: ctx => ` ${ctx.dataset.label}: ${ctx.raw} research`
                                 }
                             }
                         },
@@ -5514,7 +5729,7 @@
                                 },
                                 ticks: {
                                     font: { size: 11, weight: '500' },
-                                    stepSize: 2,
+                                    stepSize: 1,
                                     padding: 10,
                                     color: '#6b7280'
                                 },
@@ -5534,21 +5749,71 @@
                 });
             }
 
-            // ── TAP-HSP Pie Chart ──
+            // ── Extensions Pie Chart ──
             const tapCtx = document.getElementById('user-tap-chart');
             if (tapCtx) {
-                const tapData = [18, 12, 6]; // [ongoing, finished, pending]
+                const extData = memberExtDataByYear[currentMemberDashboardYear] || {};
+
+                // Extension types and their display info
+                const extensionTypes = [
+                    { key: 'extensions', label: 'Extension/Community Service', color: '#fb923c' },
+                    { key: 'training', label: 'Training', color: '#f97316' },
+                    { key: 'information_dissemination', label: 'Information Dissemination', color: '#ea580c' },
+                    { key: 'workshop', label: 'Workshop', color: '#c2410c' },
+                    { key: 'symposium', label: 'Symposium', color: '#fdba74' },
+                    { key: 'others', label: 'Others', color: '#fed7aa' }
+                ];
+
+                const chartData = [];
+                const chartLabels = [];
+                const chartColors = [];
+
+                extensionTypes.forEach(type => {
+                    const count = extData[type.key] || 0;
+                    if (count > 0) {
+                        chartData.push(count);
+                        chartLabels.push(type.label);
+                        chartColors.push(type.color);
+                    }
+                });
+
+                // If no data, show empty state
+                if (chartData.length === 0) {
+                    chartData.push(1);
+                    chartLabels.push('No Data');
+                    chartColors.push('#e5e7eb');
+                }
+
+                // Update legend
+                const legendContainer = document.getElementById('member-ext-legend');
+                if (legendContainer) {
+                    if (chartData.length === 1 && chartLabels[0] === 'No Data') {
+                        legendContainer.innerHTML = '<div class="legend-item"><span style="color:#9ca3af;font-size:0.85rem;">No extensions for this year</span></div>';
+                    } else {
+                        legendContainer.innerHTML = extensionTypes.map((type, i) => {
+                            const count = extData[type.key] || 0;
+                            if (count === 0) return '';
+                            return `
+                                <div class="legend-item">
+                                    <div class="legend-dot" style="background:${type.color};"></div>
+                                    <span>${type.label}</span>
+                                    <span style="margin-left:auto;font-weight:700;color:#111827;">${count}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
 
                 userTapChart = new Chart(tapCtx, {
                     type: 'pie',
                     data: {
-                        labels: ['Ongoing', 'Finished', 'Pending'],
+                        labels: chartLabels,
                         datasets: [{
-                            data: tapData,
-                            backgroundColor: ['#fb923c', '#fbbf24', '#fde047'],
-                            borderColor: ['#fff', '#fff', '#fff'],
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            borderColor: chartColors.map(() => '#fff'),
                             borderWidth: 2,
-                            hoverOffset: 0,
+                            hoverOffset: 4,
                         }]
                     },
                     options: {
@@ -5570,33 +5835,83 @@
                                     }
                                 }
                             }
-                        },
-                        onHover: (event, activeElements) => {
-                            if (activeElements.length > 0) {
-                                const index = activeElements[0].index;
-                                const meta = userTapChart.getDatasetMeta(0);
-
-                                // Dim all segments except the hovered one
-                                meta.data.forEach((segment, i) => {
-                                    if (i === index) {
-                                        segment.options.backgroundColor = ['#fb923c', '#fbbf24', '#fde047'][i];
-                                    } else {
-                                        segment.options.backgroundColor = ['rgba(251, 146, 60, 0.3)', 'rgba(251, 191, 36, 0.3)', 'rgba(253, 224, 71, 0.3)'][i];
-                                    }
-                                });
-                                userTapChart.update('none');
-                            } else {
-                                // Reset all segments to original colors
-                                const meta = userTapChart.getDatasetMeta(0);
-                                meta.data.forEach((segment, i) => {
-                                    segment.options.backgroundColor = ['#fb923c', '#fbbf24', '#fde047'][i];
-                                });
-                                userTapChart.update('none');
-                            }
                         }
                     }
                 });
             }
+
+            // Build year dropdown (2000 to current year)
+            const currentYear = new Date().getFullYear();
+            const years = [];
+            for (let y = currentYear; y >= 2000; y--) {
+                years.push(y);
+            }
+            buildMemberYearDropdown('pub', years);
+            buildMemberYearDropdown('ext', years);
+        }
+
+        function changeMemberDashboardYear(year) {
+            currentMemberDashboardYear = parseInt(year);
+            initUserCharts();
+        }
+
+        function buildMemberYearDropdown(prefix, years) {
+            const dropdown = document.getElementById(`member-${prefix}-year-dropdown`);
+            if (!dropdown) return;
+
+            dropdown.innerHTML = years.map(y => {
+                return `<div class="year-option" style="padding:10px 16px;font-size:0.85rem;color:#374151;cursor:pointer;transition:all 0.15s;font-weight:500;" onclick="selectMemberYear_${prefix}(${y})">${y}</div>`;
+            }).join('');
+        }
+
+        // Create global functions for year selection
+        window.selectMemberYear_pub = function (y) {
+            changeMemberDashboardYear(y);
+            const dropdown = document.getElementById('member-pub-year-dropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        };
+
+        window.selectMemberYear_ext = function (y) {
+            changeMemberDashboardYear(y);
+            const dropdown = document.getElementById('member-ext-year-dropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        };
+
+        function toggleMemberYearDropdown(prefix) {
+            const dropdown = document.getElementById(`member-${prefix}-year-dropdown`);
+            if (dropdown) {
+                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+
+        // Make toggleMemberYearDropdown globally accessible
+        window.toggleMemberYearDropdown = toggleMemberYearDropdown;
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.year-selector')) {
+                const pubDropdown = document.getElementById('member-pub-year-dropdown');
+                const extDropdown = document.getElementById('member-ext-year-dropdown');
+                if (pubDropdown) pubDropdown.style.display = 'none';
+                if (extDropdown) extDropdown.style.display = 'none';
+            }
+        });
+
+        // Load member dashboard stats from API (legacy - kept for backwards compatibility)
+        async function loadMemberDashboardStats() {
+            try {
+                const res = await fetch('/api/member-dashboard-stats');
+                if (res.ok) {
+                    return await res.json();
+                }
+            } catch (e) {
+                console.error('Failed to load dashboard stats:', e);
+            }
+            return {
+                research_this_year: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                research_last_year: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                total_extensions: 0
+            };
         }
 
         // ── Schedule Loading (REMOVED) ──────────────────────────────────────────────

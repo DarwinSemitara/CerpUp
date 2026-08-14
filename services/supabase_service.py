@@ -281,7 +281,7 @@ class SupabaseDocumentRef:
 
     def update(self, data):
         """Update document data."""
-        data['updated_at'] = datetime.utcnow().isoformat()
+        # Don't automatically add updated_at - not all tables have this column
         response = self.client.table(self.table_name).update(
             data).eq('id', self.doc_id).execute()
         return response

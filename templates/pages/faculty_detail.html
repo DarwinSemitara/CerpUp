@@ -1,0 +1,169 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<style>
+    .faculty-detail-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        color: #374151;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        margin-bottom: 24px;
+    }
+
+    .back-button:hover {
+        background: #f9fafb;
+        border-color: #6b0f1a;
+        color: #6b0f1a;
+    }
+
+    .faculty-header {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .faculty-header-content {
+        display: flex;
+        gap: 32px;
+        align-items: start;
+    }
+
+    .faculty-photo-large {
+        width: 200px;
+        height: 200px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 3px solid #e5e7eb;
+        flex-shrink: 0;
+    }
+
+    .faculty-photo-large img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .faculty-photo-placeholder-large {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 4rem;
+        font-weight: 700;
+    }
+
+    .faculty-info {
+        flex: 1;
+    }
+
+    .faculty-name {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 8px;
+    }
+
+    .faculty-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+        color: #6b7280;
+    }
+
+    .meta-label {
+        font-weight: 600;
+        color: #374151;
+        min-width: 120px;
+    }
+
+    .promotions-section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 32px;
+        min-height: 300px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .promotions-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-height: 250px;
+        color: #9ca3af;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+</style>
+
+<div class="faculty-detail-container">
+    <!-- Back Button -->
+    <a href="/dashboard/" class="back-button">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Dashboard
+    </a>
+
+    <!-- Faculty Header -->
+    <div class="faculty-header">
+        <div class="faculty-header-content">
+            <div class="faculty-photo-large">
+                {% if staff and staff.photo_url %}
+                <img src="{{ staff.photo_url }}" alt="{{ member.first }} {{ member.last }}">
+                {% else %}
+                <div class="faculty-photo-placeholder-large">
+                    {{ member.first[0] if member.first else 'F' }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="faculty-info">
+                <h1 class="faculty-name">{{ member.first }} {{ member.middle or '' }} {{ member.last }}</h1>
+                <div class="faculty-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Email:</span>
+                        <span>{{ member.email or 'Not provided' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotions Section (Placeholder for now) -->
+    <div class="promotions-section">
+        <div class="promotions-placeholder">
+            Promotions section - Content to be added
+        </div>
+    </div>
+</div>
+
+{% endblock %}

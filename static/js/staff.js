@@ -124,51 +124,21 @@ function renderStaff() {
         return;
     }
 
-    // Group staff by year
-    const staffByYear = { '1': [], '2': [], '3': [], '4': [] };
-    staffData.forEach(staff => {
-        // Determine year from first subject
-        let year = '1';
-        if (staff.subjects && staff.subjects.length > 0) {
-            for (const key in ALL_SUBJECTS) {
-                if (ALL_SUBJECTS[key].some(s => s.code === staff.subjects[0].code)) {
-                    year = key.split('-')[0];
-                    break;
-                }
-            }
-        }
-        staffByYear[year].push(staff);
-    });
-
+    // Render staff cards directly without year grouping
     let html = '';
+    staffData.forEach(staff => {
+        const photoHtml = staff.photo_url
+            ? `<img src="${staff.photo_url}" class="staff-photo" alt="${staff.fullName}">`
+            : `<div class="staff-photo-placeholder">${staff.fullName.charAt(0).toUpperCase()}</div>`;
 
-    // Render each year section
-    ['1', '2', '3', '4'].forEach(year => {
-        const yearStaff = staffByYear[year];
-        if (yearStaff.length > 0) {
-            const yearLabel = ['1st Year', '2nd Year', '3rd Year', '4th Year'][parseInt(year) - 1];
-            html += `
-                <div class="staff-year-section" style="grid-column: 1 / -1;">
-                    <div class="staff-year-header">${yearLabel}</div>
-                    <div class="staff-grid">
-                        ${yearStaff.map(staff => {
-                const photoHtml = staff.photo_url
-                    ? `<img src="${staff.photo_url}" class="staff-photo" alt="${staff.fullName}">`
-                    : `<div class="staff-photo-placeholder">${staff.fullName.charAt(0).toUpperCase()}</div>`;
-
-                return `
-                                <div class="staff-card" oncontextmenu="openStaffDetails('${staff.id}', event)">
-                                    <div class="staff-photo-container">
-                                        ${photoHtml}
-                                    </div>
-                                    <div class="staff-name">${staff.fullName}</div>
-                                </div>
-                            `;
-            }).join('')}
-                    </div>
+        html += `
+            <div class="staff-card" oncontextmenu="openStaffDetails('${staff.id}', event)">
+                <div class="staff-photo-container">
+                    ${photoHtml}
                 </div>
-            `;
-        }
+                <div class="staff-name">${staff.fullName}</div>
+            </div>
+        `;
     });
 
     grid.innerHTML = html;
@@ -680,93 +650,20 @@ async function confirmDeleteStaff() {
     }
 }
 
-// ── Staff Details Modal (Right-click) ─────────────────────────
+// ── Staff Details - Navigate to Detail Page (Right-click) ─────
 
 window.openStaffDetails = function (staffId, event) {
     event.preventDefault(); // Prevent default context menu
 
-    viewingStaffId = staffId;
     const staff = staffData.find(s => s.id === staffId);
     if (!staff) return;
 
-    // Set photo
-    const photoEl = document.getElementById('detail-staff-photo');
-    if (staff.photo_url) {
-        photoEl.src = staff.photo_url;
-        photoEl.style.display = 'block';
+    // Navigate to faculty detail page using memberId
+    if (staff.memberId) {
+        window.location.href = `/dashboard/faculty/${staff.memberId}`;
     } else {
-        photoEl.style.display = 'none';
-    }
-
-    // Set name
-    document.getElementById('detail-staff-name').textContent = staff.fullName;
-
-    // Determine year
-    let year = '1';
-    if (staff.subjects && staff.subjects.length > 0) {
-        for (const key in ALL_SUBJECTS) {
-            if (ALL_SUBJECTS[key].some(s => s.code === staff.subjects[0].code)) {
-                year = key.split('-')[0];
-                break;
-            }
-        }
-    }
-    const yearLabel = ['1st Year', '2nd Year', '3rd Year', '4th Year'][parseInt(year) - 1];
-    document.getElementById('detail-staff-year').textContent = yearLabel;
-
-    // Set availability as badges
-    const availabilityContainer = document.getElementById('detail-staff-availability');
-    if (staff.availability && staff.availability.length > 0) {
-        availabilityContainer.innerHTML = staff.availability.map(time =>
-            `<span class="detail-availability-badge">${time}</span>`
-        ).join('');
-    } else {
-        availabilityContainer.innerHTML = '<span style="color:#9ca3af;font-size:0.85rem;">No availability set</span>';
-    }
-
-    // Set subjects as chips
-    const subjectsContainer = document.getElementById('detail-staff-subjects');
-    if (staff.subjects && staff.subjects.length > 0) {
-        subjectsContainer.innerHTML = staff.subjects.map(s =>
-            `<span class="detail-subject-chip">${s.code}</span>`
-        ).join('');
-    } else {
-        subjectsContainer.innerHTML = '<span style="color:#9ca3af;font-size:0.85rem;">No subjects assigned</span>';
-    }
-
-    document.getElementById('staff-details-modal').classList.add('open');
-};
-
-window.closeStaffDetailsModal = function () {
-    document.getElementById('staff-details-modal').classList.remove('open');
-    viewingStaffId = null;
-};
-
-window.deleteStaffFromDetails = async function () {
-    if (!viewingStaffId) return;
-    if (!confirm('Are you sure you want to delete this staff member?')) return;
-
-    if (isSubmitting) return;
-    isSubmitting = true;
-
-    // Show loading state on button
-    const deleteBtn = document.getElementById('delete-staff-details-btn');
-    const originalText = deleteBtn.textContent;
-    deleteBtn.classList.add('btn-loading');
-    deleteBtn.textContent = 'Deleting...';
-
-    try {
-        const res = await fetch(`/api/staff/${viewingStaffId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error();
-        closeStaffDetailsModal();
-        await loadStaff();
-        showSuccessModal('Staff member deleted successfully!');
-    } catch {
-        alert('Failed to delete staff. Please try again.');
-    } finally {
-        isSubmitting = false;
-        deleteBtn.classList.remove('btn-loading');
-        deleteBtn.textContent = originalText;
+        console.error('Staff member has no memberId:', staff);
+        alert('Unable to view details: memberId not found');
     }
 };
 

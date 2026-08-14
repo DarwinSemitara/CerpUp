@@ -163,6 +163,60 @@ def dashboard():
                            active_page='dashboard')
 
 
+@app.route('/dashboard/faculty/<member_id>')
+@login_required
+def faculty_detail(member_id):
+    """Display detailed view of a faculty member."""
+    try:
+        # Get member data
+        member_doc = db.collection('members').document(member_id).get()
+
+        if not member_doc.exists:
+            return "Faculty member not found", 404
+
+        member_data = member_doc.to_dict()
+        member_data['id'] = member_id
+
+        # Staff data comes from member data (no separate staff table)
+        # Extract availability and photo from member data
+        staff_data = {
+            'photo_url': member_data.get('photo_url', ''),
+            'availability': member_data.get('availability', []) if member_data.get('availability') else [],
+            'subjects': []  # Subjects are no longer tracked
+        }
+
+        # Get research count
+        uid = member_data.get('uid', '')
+        research_count = 0
+        if uid:
+            research_docs = db.collection(
+                'research').where('uid', '==', uid).stream()
+            research_count = len(list(research_docs))
+
+        # Get extensions count
+        extensions_count = 0
+        if uid:
+            ext_docs = db.collection('extensions').where(
+                'uid', '==', uid).stream()
+            extensions_count = len(list(ext_docs))
+
+        email = session.get('email', '')
+        initial = email[0].upper() if email else 'A'
+
+        return render_template('pages/faculty_detail.html',
+                               member=member_data,
+                               staff=staff_data,
+                               research_count=research_count,
+                               extensions_count=extensions_count,
+                               email=email,
+                               initial=initial,
+                               page_title=f"{member_data.get('first', '')} {member_data.get('last', '')}",
+                               active_page='dashboard')
+    except Exception as e:
+        logger.error(f"Error loading faculty detail: {e}")
+        return f"Error loading faculty: {str(e)}", 500
+
+
 # â”€â”€ Partial views (AJAX) â€” mirrors Django's X-Partial pattern â”€â”€
 
 @app.route('/research/')
@@ -1045,7 +1099,9 @@ def create_member_account(member_id):
         )
 
         # Create Supabase Auth user
+        user_id = None
         try:
+            logger.info(f"Attempting to create user for email: {email}")
             response = supabase.auth.admin.create_user({
                 "email": email,
                 "password": password,
@@ -1056,38 +1112,78 @@ def create_member_account(member_id):
             })
 
             if not response.user:
+                logger.error("No user object in create response")
                 return jsonify({'error': 'Failed to create user account.'}), 500
 
             user_id = response.user.id
+            logger.info(f"Created user successfully with ID: {user_id}")
 
         except Exception as create_error:
             # If user already exists, try to update
             error_msg = str(create_error)
-            if 'already registered' in error_msg.lower() or 'already exists' in error_msg.lower():
+            logger.info(f"Create user error: {error_msg}")
+
+            if 'already registered' in error_msg.lower() or 'already exists' in error_msg.lower() or 'already been registered' in error_msg.lower():
                 # Try to get existing user and update password
+                logger.info(
+                    f"User already exists, attempting update for: {email}")
                 try:
-                    # Get user by email
+                    # Get user by email - Supabase returns response with data attribute
                     users_response = supabase.auth.admin.list_users()
                     existing_user = None
-                    for user in users_response:
-                        if hasattr(user, 'email') and user.email == email:
+
+                    # Extract users from response
+                    users_list = []
+                    if hasattr(users_response, 'data'):
+                        users_list = users_response.data
+                    elif hasattr(users_response, '__iter__'):
+                        users_list = list(users_response)
+                    else:
+                        users_list = [users_response]
+
+                    logger.info(f"Found {len(users_list)} total users")
+
+                    # Find user by email
+                    for user in users_list:
+                        user_email = getattr(user, 'email', None) or (
+                            user.get('email') if isinstance(user, dict) else None)
+                        if user_email == email:
                             existing_user = user
+                            logger.info(f"Found existing user: {email}")
                             break
 
                     if existing_user:
                         # Update password
-                        supabase.auth.admin.update_user_by_id(
-                            existing_user.id,
-                            {"password": password}
-                        )
-                        user_id = existing_user.id
+                        user_id = getattr(existing_user, 'id', None) or (
+                            existing_user.get('id') if isinstance(existing_user, dict) else None)
+                        if user_id:
+                            logger.info(
+                                f"Updating password for user: {user_id}")
+                            supabase.auth.admin.update_user_by_id(
+                                user_id,
+                                {"password": password}
+                            )
+                            logger.info("Password updated successfully")
+                        else:
+                            logger.error("Could not extract user ID")
+                            return jsonify({'error': 'Could not extract user ID.'}), 500
                     else:
-                        return jsonify({'error': 'User exists but could not be found.'}), 500
+                        logger.error(f"User {email} not found in list")
+                        return jsonify({'error': 'User exists but could not be found in system.'}), 500
 
                 except Exception as update_error:
+                    logger.error(
+                        f"Error updating existing user: {update_error}", exc_info=True)
                     return jsonify({'error': f'User exists. {str(update_error)}'}), 500
             else:
+                logger.error(
+                    f"Error creating user: {create_error}", exc_info=True)
                 return jsonify({'error': str(create_error)}), 500
+
+        # Verify we have user_id
+        if not user_id:
+            logger.error("No user_id after create/update")
+            return jsonify({'error': 'Failed to obtain user ID'}), 500
 
         # Store user profile in Supabase database
         db.collection('users').document(user_id).set({
@@ -1105,6 +1201,8 @@ def create_member_account(member_id):
 
         return jsonify({'status': 'ok', 'uid': user_id})
     except Exception as e:
+        logger.error(
+            f"Unexpected error in create_member_account: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -1466,8 +1564,13 @@ def generate_fsr(member_id):
         semester = data.get('semester', '2nd Semester')
         academic_year = data.get('academic_year', '2025-2026')
 
+        logger.info(
+            f"Generating FSR for member {member_id}, semester: {semester}, year: {academic_year}")
+
         # Generate FSR
         output_path = generate_member_fsr(member_id, semester, academic_year)
+
+        logger.info(f"FSR generated successfully at: {output_path}")
 
         # Return file for download
         from flask import send_file
@@ -1478,7 +1581,9 @@ def generate_fsr(member_id):
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
     except Exception as e:
-        print(f"Error generating FSR: {e}")
+        logger.error(f"Error generating FSR: {e}", exc_info=True)
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -1682,11 +1787,23 @@ def update_schedule(entry_id):
         if not update_data:
             return jsonify({'error': 'No valid fields to update.'}), 400
 
+        # Don't add updated_at for Supabase - it doesn't have this field by default
         # Update the document
-        doc_ref.update(update_data)
+        try:
+            doc_ref.update(update_data)
+        except Exception as e:
+            logger.error(f"Supabase update error: {e}")
+            # If update fails, try to get current doc and use upsert instead
+            current_doc = doc.to_dict()
+            current_doc.update(update_data)
+            current_doc['id'] = entry_id
+            doc_ref.set(current_doc, merge=True)
 
         return jsonify({'status': 'ok', 'id': entry_id})
     except Exception as e:
+        logger.error(f"Update schedule error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -1729,6 +1846,129 @@ def generate_schedule():
         )
         return jsonify({'status': 'ok', 'schedule': result})
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Configured Subjects API ──────────────────────────────────────────────
+@app.route('/api/configured-subjects', methods=['GET'])
+@login_required
+def get_configured_subjects():
+    """Get all configured subjects for a specific school year and semester."""
+    try:
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
+
+        if not school_year or not semester:
+            return jsonify({'error': 'school_year and semester are required'}), 400
+
+        logger.info(
+            f"Fetching configured subjects for {school_year}, semester {semester}")
+
+        # Use direct Supabase query
+        try:
+            response = supabase.table('configured_subjects')\
+                .select('*')\
+                .eq('school_year', school_year)\
+                .eq('semester', semester)\
+                .execute()
+
+            subjects = []
+            for data in (response.data or []):
+                subjects.append({
+                    'id': data.get('id'),
+                    'subjCode': data.get('subj_code'),
+                    'subjName': data.get('subj_name'),
+                    'prof': data.get('prof'),
+                    'section': data.get('section'),
+                    'units': data.get('units'),
+                    'school_year': data.get('school_year'),
+                    'semester': data.get('semester')
+                })
+
+            logger.info(f"Found {len(subjects)} configured subjects")
+            return jsonify(subjects)
+        except Exception as table_error:
+            # Table might not exist yet, return empty list
+            logger.warning(f"Table might not exist yet: {table_error}")
+            return jsonify([])
+
+    except Exception as e:
+        logger.error(f"Error fetching configured subjects: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/configured-subjects', methods=['POST'])
+@login_required
+def save_configured_subject():
+    """Save a configured subject (unscheduled subject from staging area)."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided.'}), 400
+
+        logger.info(f"Saving configured subject: {data}")
+
+        required = ['subjCode', 'subjName', 'prof',
+                    'section', 'units', 'school_year', 'semester']
+        for field in required:
+            if not data.get(field):
+                logger.error(f"Missing required field: {field}")
+                return jsonify({'error': f'Missing field: {field}'}), 400
+
+        # Check if entry already exists (to avoid duplicates)
+        existing = supabase.table('configured_subjects')\
+            .select('id')\
+            .eq('subj_code', data['subjCode'])\
+            .eq('prof', data['prof'])\
+            .eq('school_year', data['school_year'])\
+            .eq('semester', data['semester'])\
+            .eq('section', data['section'])\
+            .execute()
+
+        if existing.data and len(existing.data) > 0:
+            # Update existing entry
+            entry_id = existing.data[0]['id']
+            doc_data = {
+                'subj_name': data['subjName'],
+                'units': data['units']
+            }
+            supabase.table('configured_subjects').update(
+                doc_data).eq('id', entry_id).execute()
+            logger.info(f"Updated configured subject with ID: {entry_id}")
+        else:
+            # Insert new entry (let DB generate UUID)
+            doc_data = {
+                'subj_code': data['subjCode'],
+                'subj_name': data['subjName'],
+                'prof': data['prof'],
+                'section': data['section'],
+                'units': data['units'],
+                'school_year': data['school_year'],
+                'semester': data['semester']
+            }
+            result = supabase.table('configured_subjects').insert(
+                doc_data).execute()
+            entry_id = result.data[0]['id'] if result.data else None
+            logger.info(f"Inserted configured subject with ID: {entry_id}")
+
+        return jsonify({'status': 'ok', 'id': str(entry_id)})
+    except Exception as e:
+        logger.error(f"Error saving configured subject: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/configured-subjects/<entry_id>', methods=['DELETE'])
+@login_required
+def delete_configured_subject(entry_id):
+    """Delete a configured subject."""
+    try:
+        logger.info(f"Deleting configured subject: {entry_id}")
+        supabase.table('configured_subjects').delete().eq(
+            'id', entry_id).execute()
+        logger.info(f"Deleted configured subject: {entry_id}")
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        logger.error(f"Error deleting configured subject: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -1865,10 +2105,32 @@ def api_generate_full_schedule():
 
 # ── Dashboard Stats API ────────────────────────────────────────
 
+@app.route('/api/debug/extensions', methods=['GET'])
+@login_required
+def debug_extensions():
+    """Debug endpoint to see actual extension types in database."""
+    try:
+        ext_docs = db.collection('extensions').stream()
+        extensions = []
+        for d in ext_docs:
+            ed = d.to_dict()
+            extensions.append({
+                'id': d.id,
+                'type': ed.get('type', ''),
+                'type_repr': repr(ed.get('type', '')),
+                'created_at': ed.get('created_at', ''),
+                'title': ed.get('title', '')
+            })
+        return jsonify({'extensions': extensions, 'count': len(extensions)})
+    except Exception as e:
+        logger.error(f"debug_extensions error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/dashboard/stats', methods=['GET'])
 @login_required
 def dashboard_stats():
-    """Return real counts for dashboard charts (research by month + TAP status)."""
+    """Return real counts for dashboard charts (research by month + extensions count)."""
     try:
         from collections import defaultdict
 
@@ -1888,25 +2150,135 @@ def dashboard_stats():
 
         pub_this_year = [monthly_counts.get(m, 0) for m in range(1, 13)]
 
-        # TAP projects status
-        tap_docs = db.collection('tap_projects').stream()
-        tap_ongoing = tap_finished = tap_pending = 0
-        for d in tap_docs:
-            td = d.to_dict()
-            status = (td.get('status') or 'ongoing').lower()
-            if status in ('finished', 'completed', 'done'):
-                tap_finished += 1
-            elif status in ('pending', 'planned'):
-                tap_pending += 1
-            else:
-                tap_ongoing += 1
+        # Extensions submitted count (total number of all member-submitted extensions)
+        ext_docs = db.collection('extensions').stream()
+        total_extensions = sum(1 for _ in ext_docs)
 
         return jsonify({
             'pub_this_year': pub_this_year,
-            'tap': [tap_ongoing, tap_finished, tap_pending]
+            # [total_extensions, 0, 0] for now - can be expanded later
+            'tap': [total_extensions, 0, 0]
         })
     except Exception as e:
         return jsonify({'pub_this_year': [0]*12, 'tap': [0, 0, 0], 'error': str(e)})
+
+
+@app.route('/api/dashboard/stats-by-year', methods=['GET'])
+@login_required
+def dashboard_stats_by_year():
+    """Return chart data grouped by year for admin dashboard (2000 to current year)."""
+    try:
+        from collections import defaultdict
+
+        current_year = datetime.utcnow().year
+        publications_by_year = {}
+        extensions_by_year = {}
+
+        # Initialize years from 2000 to current
+        for year in range(2000, current_year + 1):
+            publications_by_year[year] = {
+                'proposal': [0] * 12,
+                'implementation': [0] * 12,
+                'oral_poster': [0] * 12,
+                'proceedings': [0] * 12,
+                'monographs': [0] * 12,
+                'journals': [0] * 12,
+                'chapters': [0] * 12,
+                'books': [0] * 12,
+            }
+            extensions_by_year[year] = {
+                'extensions': 0,
+                'training': 0,
+                'information_dissemination': 0,
+                'workshop': 0,
+                'symposium': 0,
+                'others': 0
+            }
+
+        # Count research/publications by year, month, and type
+        research_docs = db.collection('research').stream()
+        for d in research_docs:
+            rd = d.to_dict()
+            created = rd.get('created_at', '')
+            # Default to implementation
+            research_type = rd.get('research_type', 'implementation')
+
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                    year = dt.year
+                    if 2000 <= year <= current_year:
+                        if research_type in publications_by_year[year]:
+                            publications_by_year[year][research_type][dt.month - 1] += 1
+                        else:
+                            # If type not recognized, count as implementation
+                            publications_by_year[year]['implementation'][dt.month - 1] += 1
+                except (ValueError, TypeError):
+                    pass
+
+        # Count extensions by type and year
+        ext_docs = db.collection('extensions').stream()
+        for d in ext_docs:
+            ed = d.to_dict()
+            # Read from 'extension_type' field (the actual column in database)
+            ext_type_raw = ed.get('extension_type', '').strip()
+            ext_type = ext_type_raw.lower()
+
+            # Get the date - try multiple fields
+            created = ed.get('created_at') or ed.get(
+                'start_date') or ed.get('date_submitted')
+
+            # Debug logging
+            logger.info(
+                f"Extension ID: {d.id}, Type raw: '{ext_type_raw}', Normalized: '{ext_type}', Date: {created}")
+
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                    year = dt.year
+                    if 2000 <= year <= current_year:
+                        # Map extension types (case-insensitive with multiple variations)
+                        if ext_type in ['extensions', 'extension', 'extension/community service', 'community service']:
+                            extensions_by_year[year]['extensions'] += 1
+                            logger.info(
+                                f"✓ Counted as 'extensions' for year {year}")
+                        elif ext_type == 'training':
+                            extensions_by_year[year]['training'] += 1
+                            logger.info(
+                                f"✓ Counted as 'training' for year {year}")
+                        elif ext_type in ['information_dissemination', 'information dissemination']:
+                            extensions_by_year[year]['information_dissemination'] += 1
+                            logger.info(
+                                f"✓ Counted as 'information_dissemination' for year {year}")
+                        elif ext_type == 'workshop':
+                            extensions_by_year[year]['workshop'] += 1
+                            logger.info(
+                                f"✓ Counted as 'workshop' for year {year}")
+                        elif ext_type == 'symposium':
+                            extensions_by_year[year]['symposium'] += 1
+                            logger.info(
+                                f"✓ Counted as 'symposium' for year {year}")
+                        else:
+                            logger.warning(
+                                f"✗ Extension type '{ext_type_raw}' (normalized: '{ext_type}') NOT recognized, categorizing as 'others'")
+                            extensions_by_year[year]['others'] += 1
+                    else:
+                        logger.info(
+                            f"Extension year {year} outside range 2000-{current_year}")
+                except (ValueError, TypeError) as e:
+                    logger.error(
+                        f"Date parsing error for extension {d.id}: {e}, date value: {created}")
+            else:
+                logger.warning(
+                    f"Extension {d.id} has no date field (checked: created_at, start_date, date_submitted)")
+
+        return jsonify({
+            'publications_by_year': publications_by_year,
+            'extensions_by_year': extensions_by_year
+        })
+    except Exception as e:
+        logger.error(f"dashboard_stats_by_year error: {e}")
+        return jsonify({'publications_by_year': {}, 'extensions_by_year': {}, 'error': str(e)}), 500
 
 
 @app.route('/api/news', methods=['GET'])
@@ -2388,6 +2760,254 @@ def member_fsr_data():
     except Exception as e:
         logger.error(f"member_fsr_data error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/fsr-footnotes', methods=['GET', 'POST', 'DELETE'])
+@login_required
+def fsr_footnotes_api():
+    """
+    Manage FSR footnotes for a member.
+    GET: Retrieve footnotes for member/semester/year
+    POST: Save/update footnotes
+    DELETE: Delete a footnote
+    """
+    try:
+        uid = session.get('uid')
+        if not uid:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        if request.method == 'GET':
+            # Get footnotes for specific member/semester/year
+            semester = request.args.get('semester', '2nd Semester')
+            academic_year = request.args.get('academic_year', '2025-2026')
+            member_id = request.args.get('member_id', uid)
+
+            # First get or create FSR record
+            fsr_result = supabase.table('fsr').select('id').eq(
+                'member_id', member_id
+            ).eq('semester', semester).eq('academic_year', academic_year).execute()
+
+            if not fsr_result.data:
+                # No FSR record exists yet
+                return jsonify({'footnotes': []}), 200
+
+            fsr_id = fsr_result.data[0]['id']
+
+            # Get footnotes
+            footnotes_result = supabase.table('fsr_footnotes').select(
+                '*'
+            ).eq('fsr_id', fsr_id).order('footnote_number').execute()
+
+            return jsonify({'footnotes': footnotes_result.data or []}), 200
+
+        elif request.method == 'POST':
+            # Save/update footnote
+            data = request.get_json()
+            semester = data.get('semester', '2nd Semester')
+            academic_year = data.get('academic_year', '2025-2026')
+            footnote_number = data.get('footnote_number')
+            footnote_type = data.get('footnote_type')
+            faculty_name = data.get('faculty_name')
+            load_sharing = data.get('load_sharing', '50-50 load sharing')
+
+            if not all([footnote_number, footnote_type, faculty_name]):
+                return jsonify({'error': 'Missing required fields'}), 400
+
+            # Get or create FSR record
+            fsr_result = supabase.table('fsr').select('id').eq(
+                'member_id', uid
+            ).eq('semester', semester).eq('academic_year', academic_year).execute()
+
+            if not fsr_result.data:
+                # Create FSR record
+                fsr_insert = supabase.table('fsr').insert({
+                    'member_id': uid,
+                    'semester': semester,
+                    'academic_year': academic_year
+                }).execute()
+                fsr_id = fsr_insert.data[0]['id']
+            else:
+                fsr_id = fsr_result.data[0]['id']
+
+            # Upsert footnote
+            footnote_data = {
+                'fsr_id': fsr_id,
+                'footnote_number': footnote_number,
+                'footnote_type': footnote_type,
+                'faculty_name': faculty_name,
+                'load_sharing': load_sharing
+            }
+
+            result = supabase.table('fsr_footnotes').upsert(
+                footnote_data,
+                on_conflict='fsr_id,footnote_number'
+            ).execute()
+
+            return jsonify({'success': True, 'footnote': result.data[0] if result.data else None}), 200
+
+        elif request.method == 'DELETE':
+            # Delete footnote
+            data = request.get_json()
+            semester = data.get('semester', '2nd Semester')
+            academic_year = data.get('academic_year', '2025-2026')
+            footnote_number = data.get('footnote_number')
+
+            if not footnote_number:
+                return jsonify({'error': 'footnote_number required'}), 400
+
+            # Get FSR record
+            fsr_result = supabase.table('fsr').select('id').eq(
+                'member_id', uid
+            ).eq('semester', semester).eq('academic_year', academic_year).execute()
+
+            if not fsr_result.data:
+                return jsonify({'success': True}), 200
+
+            fsr_id = fsr_result.data[0]['id']
+
+            # Delete footnote
+            supabase.table('fsr_footnotes').delete().eq(
+                'fsr_id', fsr_id
+            ).eq('footnote_number', footnote_number).execute()
+
+            return jsonify({'success': True}), 200
+
+    except Exception as e:
+        logger.error(f"fsr_footnotes_api error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/member-dashboard-stats')
+def member_dashboard_stats():
+    """Return chart data for member dashboard (research by month + extensions count)."""
+    if 'uid' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    try:
+        from collections import defaultdict
+        uid = session['uid']
+        current_year = datetime.utcnow().year
+        last_year = current_year - 1
+
+        # Research by month for current year and last year
+        research_docs = db.collection(
+            'research').where('uid', '==', uid).stream()
+        this_year_counts = defaultdict(int)
+        last_year_counts = defaultdict(int)
+
+        for d in research_docs:
+            rd = d.to_dict()
+            created = rd.get('created_at', '')
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                    if dt.year == current_year:
+                        this_year_counts[dt.month] += 1
+                    elif dt.year == last_year:
+                        last_year_counts[dt.month] += 1
+                except (ValueError, TypeError):
+                    pass
+
+        research_this_year = [this_year_counts.get(m, 0) for m in range(1, 13)]
+        research_last_year = [last_year_counts.get(m, 0) for m in range(1, 13)]
+
+        # Total extensions count
+        ext_docs = db.collection('extensions').where('uid', '==', uid).stream()
+        total_extensions = sum(1 for _ in ext_docs)
+
+        return jsonify({
+            'research_this_year': research_this_year,
+            'research_last_year': research_last_year,
+            'total_extensions': total_extensions
+        })
+    except Exception as e:
+        logger.error(f"member_dashboard_stats error: {e}")
+        return jsonify({
+            'research_this_year': [0]*12,
+            'research_last_year': [0]*12,
+            'total_extensions': 0,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/member-dashboard-stats-by-year')
+def member_dashboard_stats_by_year():
+    """Return chart data grouped by year for member dashboard (2000 to current year)."""
+    if 'uid' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    try:
+        from collections import defaultdict
+
+        uid = session['uid']
+        current_year = datetime.utcnow().year
+        publications_by_year = {}
+        extensions_by_year = {}
+
+        # Initialize years from 2000 to current
+        for year in range(2000, current_year + 1):
+            publications_by_year[year] = [0] * 12
+            extensions_by_year[year] = {
+                'extensions': 0,
+                'training': 0,
+                'information_dissemination': 0,
+                'workshop': 0,
+                'symposium': 0,
+                'others': 0
+            }
+
+        # Count research/publications by year and month for this member
+        research_docs = db.collection(
+            'research').where('uid', '==', uid).stream()
+        for d in research_docs:
+            rd = d.to_dict()
+            created = rd.get('created_at', '')
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                    year = dt.year
+                    if 2000 <= year <= current_year:
+                        publications_by_year[year][dt.month - 1] += 1
+                except (ValueError, TypeError):
+                    pass
+
+        # Count extensions by type and year for this member
+        ext_docs = db.collection('extensions').where('uid', '==', uid).stream()
+        for d in ext_docs:
+            ed = d.to_dict()
+            created = ed.get('created_at', '')
+            # Read from 'extension_type' field (the actual column in database)
+            ext_type_raw = ed.get('extension_type', '').strip()
+            ext_type = ext_type_raw.lower()
+
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                    year = dt.year
+                    if 2000 <= year <= current_year:
+                        # Map extension types (case-insensitive with multiple variations)
+                        if ext_type in ['extensions', 'extension', 'extension/community service', 'community service']:
+                            extensions_by_year[year]['extensions'] += 1
+                        elif ext_type == 'training':
+                            extensions_by_year[year]['training'] += 1
+                        elif ext_type in ['information_dissemination', 'information dissemination']:
+                            extensions_by_year[year]['information_dissemination'] += 1
+                        elif ext_type == 'workshop':
+                            extensions_by_year[year]['workshop'] += 1
+                        elif ext_type == 'symposium':
+                            extensions_by_year[year]['symposium'] += 1
+                        else:
+                            extensions_by_year[year]['others'] += 1
+                except (ValueError, TypeError):
+                    pass
+
+        return jsonify({
+            'publications_by_year': publications_by_year,
+            'extensions_by_year': extensions_by_year
+        })
+    except Exception as e:
+        logger.error(f"member_dashboard_stats_by_year error: {e}")
+        return jsonify({'publications_by_year': {}, 'extensions_by_year': {}, 'error': str(e)}), 500
 
 
 def user_required(f):

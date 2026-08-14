@@ -15,23 +15,26 @@
     padding: 1.5rem 2rem;
     margin-bottom: 2rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
 }
 
 .fsr-generator-section h2 {
     color: #6b0f1a;
     font-size: 1.1rem;
-    margin: 0;
+    margin: 0 0 1.5rem 0;
     font-weight: 600;
-    white-space: nowrap;
+}
+
+.fsr-controls-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
 }
 
 .fsr-control-group {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 200px;
 }
 
 .fsr-control-group label {
@@ -56,51 +59,140 @@
     border-color: #6b0f1a;
 }
 
-.fsr-btn {
-    padding: 0.75rem 1.5rem;
+/* Download Button Group */
+.fsr-download-group {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.fsr-download-btn {
+    width: 50px;
+    height: 50px;
+    padding: 0;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
     background: #6b0f1a;
     color: white;
-    margin-top: auto;
 }
 
-.fsr-btn:disabled {
+.fsr-download-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.fsr-btn:hover:not(:disabled) {
+.fsr-download-btn:hover:not(:disabled) {
     background: #8b1424;
+    transform: translateY(-1px);
 }
 
-/* Preview Section */
-.fsr-preview-section {
+.fsr-download-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
     background: white;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
-    padding: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    min-height: 600px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    min-width: 200px;
+    display: none;
+    z-index: 10;
     overflow: hidden;
+}
+
+.fsr-download-dropdown.open {
+    display: block;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fsr-download-option {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.fsr-download-option:hover {
+    background: #fef3f2;
+    color: #6b0f1a;
+}
+
+.fsr-download-option svg {
+    flex-shrink: 0;
+}
+
+.fsr-download-option:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.fsr-download-option:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+
+/* Preview Section - Paged Document Style */
+.fsr-preview-section {
+    background: #e5e7eb;
+    border-radius: 0;
+    padding: 2rem;
+    box-shadow: none;
+    min-height: 600px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Paper-like pages */
+#fsrPreviewContent {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.fsr-page {
+    width: 100%;
+    max-width: 1200px;
+    min-height: auto;
+    background: white;
+    margin: 0 auto 2rem;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    page-break-after: always;
 }
 
 /* Spreadsheet */
 .fsr-spreadsheet {
-    overflow: auto;
-    max-height: 900px;
+    overflow: visible;
+    max-height: none;
 }
 
 .fsr-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     background: white;
 }
 
@@ -117,7 +209,7 @@
     background: #e8e8e8;
     color: #000;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
 }
 
 .fsr-table td {
@@ -271,4 +363,133 @@
     color: #9ca3af;
     font-style: italic;
     padding: 0.75rem;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   PRINT STYLES for PDF Export
+   ══════════════════════════════════════════════════════════════ */
+
+@media print {
+
+    /* Hide everything except the FSR preview */
+    body * {
+        visibility: hidden;
+    }
+
+    .fsr-preview-section,
+    .fsr-preview-section * {
+        visibility: visible;
+    }
+
+    .fsr-preview-section {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Hide controls and UI elements */
+    .fsr-generator-section,
+    .fsr-download-group,
+    button,
+    nav,
+    aside,
+    header,
+    footer,
+    .sidebar {
+        display: none !important;
+    }
+
+    /* Page setup - LANDSCAPE for wide tables */
+    @page {
+        size: A4 landscape;
+        margin: 12mm 10mm;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+    }
+
+    /* Remove page styling for print */
+    .fsr-page {
+        width: 100%;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        page-break-after: auto;
+        background: white;
+    }
+
+    #fsrPreviewContent {
+        max-width: 100%;
+        margin: 0;
+    }
+
+    /* FSR table print styles */
+    .fsr-spreadsheet {
+        width: 100%;
+        background: white;
+    }
+
+    .fsr-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8pt;
+        page-break-inside: auto;
+    }
+
+    .fsr-table thead {
+        display: table-header-group;
+    }
+
+    .fsr-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    .fsr-table th,
+    .fsr-table td {
+        border: 1px solid #000 !important;
+        padding: 3px 5px;
+        color: #000 !important;
+        background: white !important;
+    }
+
+    /* Section headers should stay with content */
+    .fsr-section-row {
+        page-break-after: avoid;
+        page-break-before: auto;
+        background: #f0f0f0 !important;
+        font-weight: bold;
+    }
+
+    .fsr-column-header-row {
+        page-break-after: avoid;
+        page-break-before: avoid;
+        background: #e8e8e8 !important;
+    }
+
+    .fsr-header-row {
+        page-break-after: avoid;
+    }
+
+    /* Ensure background colors print */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    /* Remove any shadows or effects */
+    * {
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
 }

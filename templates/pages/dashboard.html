@@ -148,23 +148,51 @@
             <div>
                 <div class="chart-title">Publications Report</div>
                 <div class="chart-subtitle">
-                    <span id="pub-year-label">This Year</span> vs <span id="pub-prev-year-label">Last Year</span>
+                    <span id="pub-year-label">2025</span> vs <span id="pub-prev-year-label">2024</span>
                 </div>
             </div>
-            <div class="year-selector">
-                <button class="year-btn" onclick="toggleYearDropdown('pub')">
-                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span id="pub-year-btn-label">This Year</span>
-                    <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                <div class="year-dropdown" id="pub-year-dropdown"></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <!-- Research Type Filter -->
+                <div class="year-selector">
+                    <button class="year-btn" onclick="toggleYearDropdown('type')"
+                        style="min-width:140px;justify-content:space-between;">
+                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        <span id="type-filter-label">All Types</span>
+                        <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="year-dropdown" id="type-year-dropdown"
+                        style="max-height:300px;overflow-y:auto;min-width:200px;">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+                <!-- Year Filter -->
+                <div class="year-selector">
+                    <button class="year-btn" onclick="toggleYearDropdown('pub')"
+                        style="min-width:120px;justify-content:space-between;">
+                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span id="pub-year-btn-label">2025</span>
+                        <svg style="width:12px;height:12px;flex-shrink:0;" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="year-dropdown" id="pub-year-dropdown" style="max-height:300px;overflow-y:auto;">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
             </div>
         </div>
         <!-- Inline legend -->
@@ -184,44 +212,20 @@
         </div>
     </div>
 
-    <!-- TAP-HSP Pie Chart -->
+    <!-- Extensions Pie Chart -->
     <div class="chart-card" style="display:flex;flex-direction:column;">
         <div class="chart-header" style="margin-bottom:12px;">
             <div>
-                <div class="chart-title">TAP-HSP Progress</div>
-                <div class="chart-subtitle" id="tap-year-label">2025</div>
-            </div>
-            <div class="year-selector">
-                <button class="year-btn" onclick="toggleYearDropdown('tap')" style="padding:6px;">
-                    <svg style="width:16px;height:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                </button>
-                <div class="year-dropdown" id="tap-year-dropdown"></div>
+                <div class="chart-title">Extensions</div>
+                <div class="chart-subtitle" id="ext-year-label">2025</div>
             </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:16px;flex:1;justify-content:center;">
             <div style="width:200px;height:200px;position:relative;">
                 <canvas id="tapChart"></canvas>
             </div>
-            <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:12px;">
-                <div class="legend-item">
-                    <div class="legend-dot" style="background:#6b0f1a;"></div>
-                    <span>Ongoing</span>
-                    <span style="margin-left:auto;font-weight:700;color:#111827;" id="tap-ongoing-count">18</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background:#9b1a2a;"></div>
-                    <span>Finished</span>
-                    <span style="margin-left:auto;font-weight:700;color:#111827;" id="tap-finished-count">12</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background:#d4a0a8;"></div>
-                    <span>Pending</span>
-                    <span style="margin-left:auto;font-weight:700;color:#111827;" id="tap-pending-count">6</span>
-                </div>
+            <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:12px;" id="ext-legend">
+                <!-- Legend populated dynamically -->
             </div>
         </div>
     </div>
@@ -635,85 +639,24 @@
         font-weight: 700;
     }
 
-    .staff-name-container {
-        padding: 10px;
-        text-align: center;
-        transition: all 0.3s ease;
-        position: relative;
-        background: white;
-        border-radius: 0 0 8px 8px;
-    }
-
     .staff-name {
+        padding: 12px 10px;
+        text-align: center;
         font-size: 0.85rem;
         font-weight: 600;
         color: #111827;
         line-height: 1.3;
         margin: 0;
+        background: white;
+        border-radius: 0 0 8px 8px;
     }
 
-    .staff-stats {
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height 0.3s ease, padding 0.3s ease;
-        padding: 0 10px;
-    }
-
-    .staff-card:hover .staff-stats {
-        max-height: 120px;
-        padding: 10px 10px 10px;
-    }
-
-    .staff-stat-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-bottom: 8px;
-        padding: 6px 8px;
-        background: #f9fafb;
-        border-radius: 6px;
-        opacity: 0;
-        transform: translateY(-5px);
-        transition: all 0.3s ease;
-    }
-
-    .staff-card:hover .staff-stat-item {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .staff-card:hover .staff-stat-item:nth-child(1) {
-        transition-delay: 0.1s;
-    }
-
-    .staff-card:hover .staff-stat-item:nth-child(2) {
-        transition-delay: 0.15s;
-    }
-
-    .staff-stat-label {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .staff-stat-value {
-        font-weight: 700;
-        color: #6b0f1a;
-    }
-
-    /* Checkbox styling */
-    .staff-card-checkbox {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-        z-index: 20;
-        opacity: 0;
-        transition: opacity 0.2s;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.2s;
     }
 
     .staff-card:hover .staff-card-checkbox {

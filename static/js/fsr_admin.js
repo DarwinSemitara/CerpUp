@@ -5,9 +5,30 @@
 let fsrMembers = [];
 let fsrCurrentMemberId = null;
 let fsrCurrentMemberData = null;
+// Default to current school year: if month >= August, use current year, otherwise previous year
+let _currentYear = new Date().getFullYear();
+let _month = new Date().getMonth(); // 0-11, where 7 = August
+let _schoolYearStart = _month >= 7 ? _currentYear : _currentYear - 1;
+let fsrCurrentYear = _schoolYearStart + '-' + (_schoolYearStart + 1);
+// Default to 1st semester (August-December) if month >= 7 and < 0 (Jan), otherwise 2nd semester
+let fsrCurrentSemester = (_month >= 7 || _month < 1) ? '1st Semester' : '2nd Semester';
 
 // ── Init ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', fsrLoadMembers);
+document.addEventListener('DOMContentLoaded', () => {
+    fsrLoadMembers();
+    fsrPopulateYears();
+    // Set default semester based on current date
+    const semSelect = document.getElementById('fsrSemesterSelect');
+    if (semSelect) {
+        semSelect.value = fsrCurrentSemester;
+    }
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.fsr-download-group')) {
+            document.getElementById('fsrDownloadDropdown')?.classList.remove('open');
+        }
+    });
+});
 
 async function fsrLoadMembers() {
     try {
@@ -24,16 +45,45 @@ async function fsrLoadMembers() {
 function fsrPopulateDropdown() {
     const sel = document.getElementById('fsrMemberSelect');
     if (!sel) return;
-    const def = sel.querySelector('option[value=""]');
-    sel.innerHTML = '';
-    sel.appendChild(def);
+
+    // Sort alphabetically by last name
     fsrMembers.sort((a, b) => (a.last || '').localeCompare(b.last || ''));
-    fsrMembers.forEach(m => {
+
+    // Clear and populate
+    sel.innerHTML = '';
+    fsrMembers.forEach((m, index) => {
         const o = document.createElement('option');
         o.value = m.uid;
         o.textContent = `${m.last || ''}, ${m.first || ''} ${m.middle || ''}`.trim();
         sel.appendChild(o);
     });
+
+    // Select first member by default
+    if (fsrMembers.length > 0) {
+        sel.value = fsrMembers[0].uid;
+        fsrOnMemberChange();
+    }
+}
+
+function fsrPopulateYears() {
+    const sel = document.getElementById('fsrYearSelect');
+    if (!sel) return;
+
+    const currentYear = new Date().getFullYear();
+    const month = new Date().getMonth();
+    const schoolYearStart = month >= 7 ? currentYear : currentYear - 1;
+    const startYear = 2020;
+
+    sel.innerHTML = '';
+    for (let year = currentYear; year >= startYear; year--) {
+        const o = document.createElement('option');
+        const academicYear = `${year}-${year + 1}`;
+        o.value = academicYear;
+        o.textContent = academicYear;
+        // Select current school year by default
+        if (year === schoolYearStart) o.selected = true;
+        sel.appendChild(o);
+    }
 }
 
 function fsrOnMemberChange() {
@@ -50,25 +100,91 @@ function fsrOnMemberChange() {
     }
 }
 
+function fsrOnFilterChange() {
+    const yearSel = document.getElementById('fsrYearSelect');
+    const semSel = document.getElementById('fsrSemesterSelect');
+    fsrCurrentYear = yearSel.value;
+    fsrCurrentSemester = semSel.value;
+    if (fsrCurrentMemberId) {
+        fsrLoadPreview();
+    }
+}
+
+// Download dropdown toggle
+window.toggleDownloadDropdown = function (event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('fsrDownloadDropdown');
+    dropdown.classList.toggle('open');
+};
+
+
 // ── Data Loading ──────────────────────────────────────────────
 async function fsrLoadPreview() {
     if (!fsrCurrentMemberId) return;
     fsrShowLoading();
     try {
-        const [resR, resE, resS] = await Promise.all([
+        const semNum = fsrCurrentSemester.charAt(0); // "1st Semester" -> "1"
+        const [resR, resE, resS, resC] = await Promise.all([
             fetch(`/api/research?member_id=${fsrCurrentMemberId}`),
             fetch(`/api/extensions?member_id=${fsrCurrentMemberId}`),
-            fetch('/api/schedules')
+            fetch('/api/schedules'),
+            fetch(`/api/configured-subjects?school_year=${fsrCurrentYear}&semester=${semNum}`)
         ]);
         const research = resR.ok ? await resR.json() : [];
         const extensions = resE.ok ? await resE.json() : [];
+        const configuredSubjects = resC.ok ? await resC.json() : [];
+        console.log('📦 Configured subjects loaded:', configuredSubjects.length, configuredSubjects);
+
         let schedules = [];
         if (resS.ok) {
             const all = await resS.json();
             const ln = (fsrCurrentMemberData.last || '').toLowerCase();
-            schedules = all.filter(s => ln && (s.prof || '').toLowerCase().includes(ln));
+            // Filter schedules by year and semester
+            schedules = all.filter(s => {
+                const profMatch = ln && (s.prof || '').toLowerCase().includes(ln);
+                // API returns schoolYear (camelCase)
+                const yearMatch = s.schoolYear === fsrCurrentYear;
+                // Semester format: database stores "1" or "2", UI displays "1st Semester"/"2nd Semester"
+                // Extract just the number from the filter
+                const semesterMatch = s.semester === semNum;
+                console.log('Schedule filter:', {
+                    prof: s.prof,
+                    profMatch,
+                    schoolYear: s.schoolYear,
+                    yearMatch,
+                    semester: s.semester,
+                    semesterMatch,
+                    filterYear: fsrCurrentYear,
+                    filterSem: fsrCurrentSemester,
+                    extractedSemNum: semNum
+                });
+                return profMatch && yearMatch && semesterMatch;
+            });
+            console.log('Filtered schedules:', schedules.length, 'out of', all.length);
         }
-        fsrRender(fsrCurrentMemberData, research, extensions, schedules);
+
+        // Filter configured subjects for this faculty
+        const ln = (fsrCurrentMemberData.last || '').toLowerCase();
+        console.log('🔍 Filtering configured subjects for faculty:', ln);
+        console.log('📦 All configured subjects:', configuredSubjects);
+        console.log('📦 All schedules:', schedules);
+
+        const unscheduledSubjects = configuredSubjects.filter(cs => {
+            const profMatch = ln && (cs.prof || '').toLowerCase().includes(ln);
+            console.log('  - Subject:', cs.subjCode, 'Section:', cs.section, 'Prof:', cs.prof, 'Match:', profMatch);
+            // Check if this subject is already scheduled (match by subject code only, ignore section)
+            // Because the same subject can be scheduled with different sections
+            const isScheduled = schedules.some(s => {
+                const codeMatch = s.subjCode === cs.subjCode;
+                console.log('    Comparing with schedule:', s.subjCode, s.section, 'CodeMatch:', codeMatch);
+                return codeMatch;
+            });
+            console.log('    Already scheduled:', isScheduled);
+            return profMatch && !isScheduled;
+        });
+        console.log('📦 Unscheduled configured subjects:', unscheduledSubjects.length, unscheduledSubjects);
+
+        fsrRender(fsrCurrentMemberData, research, extensions, schedules, unscheduledSubjects);
     } catch (e) {
         console.error('FSR load error:', e);
         fsrShowError('Failed to load FSR data');
@@ -76,30 +192,54 @@ async function fsrLoadPreview() {
 }
 
 // ── Download ──────────────────────────────────────────────────
-async function fsrDownload() {
+async function fsrDownload(format) {
     if (!fsrCurrentMemberId) return;
+
+    // Close dropdown
+    document.getElementById('fsrDownloadDropdown').classList.remove('open');
+
     const btn = document.getElementById('fsrDownloadBtn');
-    btn.disabled = true; btn.textContent = 'Generating...';
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>';
+
     try {
-        const res = await fetch(`/api/generate-fsr/${fsrCurrentMemberId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ semester: '2nd Semester', academic_year: '2025-2026' })
-        });
-        if (!res.ok) throw new Error('Generation failed');
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `FSR_${fsrCurrentMemberData.last || 'Member'}_2nd_Semester_2025-2026.xlsx`;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
+        if (format === 'pdf') {
+            // Client-side PDF generation from the preview
+            await fsrDownloadPDF();
+        } else {
+            // Server-side Excel generation
+            const res = await fetch(`/api/generate-fsr/${fsrCurrentMemberId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    semester: fsrCurrentSemester,
+                    academic_year: fsrCurrentYear,
+                    format: format
+                })
+            });
+            if (!res.ok) throw new Error('Generation failed');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ext = 'xlsx';
+            const sem = fsrCurrentSemester.replace(' ', '_');
+            const year = fsrCurrentYear.replace('-', '_');
+            a.download = `FSR_${fsrCurrentMemberData.last || 'Member'}_${sem}_${year}.${ext}`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
     } catch (e) {
         alert('Failed to download FSR: ' + e.message);
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Download Excel';
+        btn.innerHTML = '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
     }
+}
+
+async function fsrDownloadPDF() {
+    // Use browser's native print dialog for better control and preview
+    window.print();
 }
 
 
@@ -158,7 +298,8 @@ function fsrShowError(msg) {
 // ══════════════════════════════════════════════════════════════
 // MAIN RENDER — Full FSR Structure (Sections I through IX)
 // ══════════════════════════════════════════════════════════════
-function fsrRender(member, research, extensions, schedules) {
+function fsrRender(member, research, extensions, schedules, unscheduledSubjects) {
+    unscheduledSubjects = unscheduledSubjects || [];
     const el = document.getElementById('fsrPreviewContent');
 
     // Categorize extensions
@@ -185,11 +326,11 @@ function fsrRender(member, research, extensions, schedules) {
     // Consolidated schedules
     const teachingRows = fsrConsolidateSchedules(schedules);
 
-    let html = `<div class="fsr-spreadsheet"><table class="fsr-table">`;
+    let html = `<div class="fsr-page"><div class="fsr-spreadsheet"><table class="fsr-table">`;
 
     // ── HEADER ──
     html += `
-        <tr class="fsr-header-row"><th colspan="11">FACULTY SERVICE RECORD - 2nd Semester 2025-2026</th></tr>
+        <tr class="fsr-header-row"><th colspan="11">${member.last || ''}, ${member.first || ''} - ${fsrCurrentSemester} ${fsrCurrentYear}</th></tr>
         <tr>
             <th class="fsr-info-label">PRINTED NAME:</th>
             <th class="fsr-info-label" style="font-size:0.7rem;">(Family)</th>
@@ -218,7 +359,8 @@ function fsrRender(member, research, extensions, schedules) {
             <th>STUDENT CREDIT UNITS</th><th>TEACHING LOAD CREDITS</th>
         </tr>`;
 
-    if (teachingRows.length > 0) {
+    if (teachingRows.length > 0 || unscheduledSubjects.length > 0) {
+        // First show scheduled subjects
         teachingRows.forEach(row => {
             html += `<tr>
                 <td colspan="2" style="font-weight:600;">${row.subjCode || ''}</td>
@@ -227,6 +369,23 @@ function fsrRender(member, research, extensions, schedules) {
                 <td style="text-align:center;">${row.days.join('/')}</td>
                 <td style="text-align:center;">${fsrFmtRange(row.start, row.end)}</td>
                 <td style="text-align:center;">—</td><td style="text-align:center;">—</td>
+                <td style="text-align:center;">—</td><td style="text-align:center;">—</td>
+                <td style="text-align:center;">—</td>
+            </tr>`;
+        });
+
+        // Then show unscheduled subjects as TBA
+        console.log('🎨 Rendering', unscheduledSubjects.length, 'unscheduled subjects in FSR');
+        unscheduledSubjects.forEach(subj => {
+            console.log('  - Adding TBA row for:', subj.subjCode, subj.subjName);
+            html += `<tr style="background:#fef9e7;">
+                <td colspan="2" style="font-weight:600;">${subj.subjCode || ''} - ${subj.subjName || ''}</td>
+                <td style="text-align:center;">TBA</td>
+                <td style="text-align:center;">TBA</td>
+                <td style="text-align:center;">TBA</td>
+                <td style="text-align:center;">TBA</td>
+                <td style="text-align:center;">TBA</td>
+                <td style="text-align:center;">—</td>
                 <td style="text-align:center;">—</td><td style="text-align:center;">—</td>
                 <td style="text-align:center;">—</td>
             </tr>`;
@@ -466,7 +625,7 @@ function fsrRender(member, research, extensions, schedules) {
     // ── SECTION IX: CERTIFICATION ──
     html += fsrSectionIX();
 
-    html += `</table></div>`;
+    html += `</table></div></div>`; // Close table, fsr-spreadsheet, and fsr-page
     el.innerHTML = html;
 }
 

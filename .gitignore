@@ -24,3 +24,10 @@ archive_firebase/
 
 # Test files
 TEST_BLOCKS.js
+
+# Test/debug scripts
+check_fsr_structure.py
+build_template_section_by_section.py
+
+# Generated FSR files (local only)
+generated_fsr/

@@ -1,24 +1,65 @@
 <link rel="stylesheet" href="/static/css/fsr_admin.css">
 
+<!-- Add html2pdf.js library for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <div class="fsr-container">
     <!-- Generator Section -->
     <div class="fsr-generator-section">
         <h2>Faculty Service Record</h2>
 
-        <div class="fsr-control-group">
-            <label for="fsrMemberSelect">Member</label>
-            <select id="fsrMemberSelect" onchange="fsrOnMemberChange()">
-                <option value="">-- Select a member --</option>
-            </select>
-        </div>
+        <div class="fsr-controls-row">
+            <!-- Member Selection -->
+            <div class="fsr-control-group">
+                <label for="fsrMemberSelect">Member</label>
+                <select id="fsrMemberSelect" onchange="fsrOnMemberChange()">
+                    <option value="">-- Select a member --</option>
+                </select>
+            </div>
 
-        <button id="fsrDownloadBtn" class="fsr-btn" onclick="fsrDownload()" disabled>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download Excel
-        </button>
+            <!-- Academic Year -->
+            <div class="fsr-control-group">
+                <label for="fsrYearSelect">Academic Year</label>
+                <select id="fsrYearSelect" onchange="fsrOnFilterChange()">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Semester -->
+            <div class="fsr-control-group">
+                <label for="fsrSemesterSelect">Semester</label>
+                <select id="fsrSemesterSelect" onchange="fsrOnFilterChange()">
+                    <option value="1st Semester">1st Semester</option>
+                    <option value="2nd Semester">2nd Semester</option>
+                </select>
+            </div>
+
+            <!-- Download Button with Dropdown -->
+            <div class="fsr-download-group">
+                <button id="fsrDownloadBtn" class="fsr-download-btn" onclick="toggleDownloadDropdown()" disabled>
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </button>
+                <div class="fsr-download-dropdown" id="fsrDownloadDropdown">
+                    <div class="fsr-download-option" onclick="fsrDownload('excel')">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Excel Spreadsheet</span>
+                    </div>
+                    <div class="fsr-download-option" onclick="fsrDownload('pdf')">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span>PDF Document</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Preview Section -->
