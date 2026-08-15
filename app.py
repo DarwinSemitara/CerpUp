@@ -1567,22 +1567,32 @@ def generate_fsr(member_id):
         logger.info(
             f"Generating FSR for member {member_id}, semester: {semester}, year: {academic_year}")
 
-        # Generate FSR
-        output_path = generate_member_fsr(member_id, semester, academic_year)
+        # Generate FSR - returns file metadata dict with download_url
+        result = generate_member_fsr(member_id, semester, academic_year)
 
-        logger.info(f"FSR generated successfully at: {output_path}")
+        logger.info(f"FSR generated successfully: {result}")
 
-        # Return file for download
-        from flask import send_file
-        return send_file(
-            output_path,
-            as_attachment=True,
-            download_name=os.path.basename(output_path),
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+        # Return the download URL for client to fetch
+        if isinstance(result, dict) and 'download_url' in result:
+            return jsonify({
+                'success': True,
+                'download_url': result['download_url'],
+                'file_name': result.get('file_name', 'FSR.xlsx')
+            })
+        else:
+            # Fallback for old behavior (if local file path returned)
+            from flask import send_file
+            return send_file(
+                result,
+                as_attachment=True,
+                download_name=os.path.basename(result),
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
     except Exception as e:
         logger.error(f"Error generating FSR: {e}", exc_info=True)
         import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
