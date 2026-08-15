@@ -3440,7 +3440,9 @@
                 filtered = schedules.filter(function (s) {
                     var matchSchoolYear = !currentSchoolYear || s.schoolYear === currentSchoolYear || !s.schoolYear;
                     var matchSemester = !currentSemester || s.semester === currentSemester || !s.semester;
-                    var matchSection = !currentSection || s.section === currentSection;
+                    // Always filter by section if currentSection is set, even if empty use default 'A'
+                    var sectionToMatch = currentSection || 'A';
+                    var matchSection = s.section === sectionToMatch;
                     return matchSchoolYear && matchSemester && matchSection;
                 });
 
@@ -3640,7 +3642,18 @@
                 for (var i = 1; i <= 3; i++) {
                     var select = document.getElementById('modal-footnote-' + i + '-subject');
                     if (select) {
-                        select.innerHTML = '<option value="">Select subject...</option>';
+                        // Clear all options first
+                        select.innerHTML = '';
+
+                        // Add placeholder as first option (disabled, selected by default)
+                        var placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.textContent = 'Select subject...';
+                        placeholder.disabled = true;
+                        placeholder.selected = true;
+                        select.appendChild(placeholder);
+
+                        // Add actual subject options
                         Object.keys(subjects).sort().forEach(function (subj) {
                             var opt = document.createElement('option');
                             opt.value = subj;
@@ -3919,11 +3932,27 @@
 
             function populateModalFootnoteFaculty(footnoteNum, currentProf) {
                 var select = document.getElementById('modal-footnote-' + footnoteNum + '-faculty');
-                if (!select) return;
+                if (!select) {
+                    console.warn('Faculty select not found for footnote:', footnoteNum);
+                    return;
+                }
 
-                select.innerHTML = '<option value="">Select faculty...</option>';
+                // Clear all options first
+                select.innerHTML = '';
+
+                // Add placeholder as first option (disabled, selected by default)
+                var placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Select faculty...';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                select.appendChild(placeholder);
 
                 if (typeof staffData !== 'undefined' && staffData) {
+                    console.log('Populating faculty dropdown, excluding:', currentProf);
+                    console.log('Total staff:', staffData.length);
+
+                    var addedCount = 0;
                     staffData.forEach(function (staff) {
                         var profName = (staff.fullName || '').split(',')[0].trim();
                         if (profName !== currentProf) {
@@ -3931,8 +3960,13 @@
                             opt.value = profName;
                             opt.textContent = staff.fullName || profName;
                             select.appendChild(opt);
+                            addedCount++;
                         }
                     });
+
+                    console.log('Added', addedCount, 'faculty options to dropdown');
+                } else {
+                    console.error('staffData is not available!');
                 }
             }
 
