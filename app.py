@@ -1651,31 +1651,19 @@ def save_fsr_footnotes():
         if not member_id or not semester or not academic_year:
             return jsonify({'error': 'Missing required fields'}), 400
 
-        # Get or create FSR record
-        fsr_result = supabase.table('fsr').select('id').eq(
+        # Delete existing footnotes for this member/semester/year
+        supabase.table('fsr_footnotes').delete().eq(
             'member_id', member_id
         ).eq('semester', semester).eq('academic_year', academic_year).execute()
-
-        if fsr_result.data and len(fsr_result.data) > 0:
-            fsr_id = fsr_result.data[0]['id']
-        else:
-            # Create FSR record
-            fsr_insert = supabase.table('fsr').insert({
-                'member_id': member_id,
-                'semester': semester,
-                'academic_year': academic_year
-            }).execute()
-            fsr_id = fsr_insert.data[0]['id']
-
-        # Delete existing footnotes for this FSR
-        supabase.table('fsr_footnotes').delete().eq('fsr_id', fsr_id).execute()
 
         # Insert new footnotes
         if footnotes:
             footnotes_to_insert = []
             for fn in footnotes:
                 footnotes_to_insert.append({
-                    'fsr_id': fsr_id,
+                    'member_id': member_id,
+                    'semester': semester,
+                    'academic_year': academic_year,
                     'footnote_number': fn['number'],
                     'footnote_type': fn['type'],
                     'faculty_name': fn['faculty_name'],
@@ -1688,8 +1676,7 @@ def save_fsr_footnotes():
 
         return jsonify({
             'success': True,
-            'message': 'Footnotes saved successfully',
-            'fsr_id': fsr_id
+            'message': 'Footnotes saved successfully'
         })
 
     except Exception as e:
@@ -1705,20 +1692,15 @@ def get_fsr_footnotes(member_id):
         semester = request.args.get('semester', '2nd Semester')
         academic_year = request.args.get('academic_year', '2025-2026')
 
-        # Get FSR record
-        fsr_result = supabase.table('fsr').select('id').eq(
-            'member_id', member_id
-        ).eq('semester', semester).eq('academic_year', academic_year).execute()
+        # Extract semester number (e.g., "1st Semester" -> "1")
+        sem_num = semester.split()[0][0]
 
-        if not fsr_result.data or len(fsr_result.data) == 0:
-            return jsonify({'footnotes': []}), 200
-
-        fsr_id = fsr_result.data[0]['id']
-
-        # Get footnotes
+        # Get footnotes directly
         footnotes_result = supabase.table('fsr_footnotes').select(
-            'footnote_number', 'footnote_type', 'faculty_name', 'subject', 'load_sharing'
-        ).eq('fsr_id', fsr_id).order('footnote_number').execute()
+            'footnote_number, footnote_type, faculty_name, subject, load_sharing'
+        ).eq('member_id', member_id).eq(
+            'semester', sem_num
+        ).eq('academic_year', academic_year).order('footnote_number').execute()
 
         return jsonify({
             'success': True,

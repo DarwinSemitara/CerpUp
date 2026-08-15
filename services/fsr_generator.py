@@ -250,20 +250,24 @@ class FSRGenerator:
         # Fetch footnotes from Supabase
         footnotes_data = []
         try:
-            # First get the FSR record for this member/semester/year
-            fsr_result = supabase.table('fsr').select('id').eq(
-                'member_id', member_id
-            ).eq('semester', semester).eq('academic_year', academic_year).execute()
+            # Extract semester number (e.g., "1st Semester" -> "1")
+            sem_num = semester.split()[0][0]  # Get first character
 
-            if fsr_result.data and len(fsr_result.data) > 0:
-                fsr_id = fsr_result.data[0]['id']
+            # Get footnotes directly for this member/semester/year
+            footnotes_result = supabase.table('fsr_footnotes').select(
+                '*'
+            ).eq('member_id', member_id).eq(
+                'semester', sem_num
+            ).eq('academic_year', academic_year).order('footnote_number').execute()
 
-                # Get footnotes for this FSR
-                footnotes_result = supabase.table('fsr_footnotes').select(
-                    'footnote_number, footnote_type, faculty_name, load_sharing'
-                ).eq('fsr_id', fsr_id).order('footnote_number').execute()
-
-                footnotes_data = footnotes_result.data or []
+            # Format footnotes for FSR
+            for fn in (footnotes_result.data or []):
+                footnotes_data.append({
+                    'footnote_number': fn.get('footnote_number', 1),
+                    'footnote_type': fn.get('footnote_type', 'team'),
+                    'faculty_name': fn.get('faculty_name', ''),
+                    'subject': fn.get('subject', '')
+                })
         except Exception as e:
             print(f"Warning: Could not fetch footnotes: {e}")
             footnotes_data = []
@@ -633,7 +637,7 @@ class FSRGenerator:
         Args:
             ws: Worksheet object
             footnotes_data: List of footnote dicts from database with keys:
-                           footnote_number, footnote_type, faculty_name, load_sharing
+                           footnote_number, footnote_type, faculty_name, subject
         """
         if not footnotes_data:
             return
@@ -651,13 +655,23 @@ class FSRGenerator:
         # Write each footnote to column A
         for footnote in footnotes_data:
             number = footnote.get('footnote_number', 1)
-            ftype = footnote.get('footnote_type', 'Team teaching')
+            ftype = footnote.get('footnote_type', 'team')
             faculty = footnote.get('faculty_name', '')
-            sharing = footnote.get('load_sharing', '50-50 load sharing')
+            subject = footnote.get('subject', '')
 
             symbol = footnote_symbols.get(number, str(number))
-            # Format: "¹Team teaching with JA SCANw/o, 50-50 load sharing"
-            text = f"{symbol}{ftype} with {faculty}, {sharing}"
+
+            # Format type text
+            if ftype == 'relay':
+                type_text = 'Relay teaching'
+            else:
+                type_text = 'Team teaching'
+
+            # Format: "¹Team teaching with John Doe (CE 101)"
+            if subject:
+                text = f"{symbol}{type_text} with {faculty} ({subject})"
+            else:
+                text = f"{symbol}{type_text} with {faculty}"
 
             row = footnote_start + (number - 1)
             self._write_cell(ws, f"A{row}", text)
