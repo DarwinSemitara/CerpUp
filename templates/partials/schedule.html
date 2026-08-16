@@ -3818,7 +3818,7 @@
                         return p.last === selectedProf;
                     });
 
-                    if (!memberData || !memberData.uid) {
+                    if (!memberData || (!memberData.uid && !memberData.memberId)) {
                         throw new Error('Could not find member ID for selected professor');
                     }
 
@@ -4103,7 +4103,10 @@
 
                     console.log('Member Data found:', memberData);
 
-                    if (!memberData || !memberData.uid) {
+                    // Check for uid or memberId (different property names)
+                    var memberId = memberData ? (memberData.uid || memberData.memberId) : null;
+
+                    if (!memberData || !memberId) {
                         console.error('Could not find staff member:', selectedProf);
                         console.error('Available staff:', staffData.map(function (s) {
                             return {
@@ -4119,13 +4122,13 @@
                     // Extract semester number (e.g., "2nd Semester" -> "2")
                     var semNum = currentSemester.split(' ')[0][0]; // Get first character
 
-                    console.log('Saving with member_id:', memberData.uid, 'semester:', semNum, 'year:', currentSchoolYear);
+                    console.log('Saving with member_id:', memberId, 'semester:', semNum, 'year:', currentSchoolYear);
 
                     var response = await fetch('/api/fsr-footnotes', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            member_id: memberData.uid,
+                            member_id: memberId,
                             semester: semNum,
                             academic_year: currentSchoolYear,
                             footnotes: footnotes
@@ -4161,15 +4164,17 @@
                         return (staff.fullName || '').split(',')[0].trim() === selectedProf;
                     });
 
-                    if (!memberData || !memberData.uid) {
+                    if (!memberData || (!memberData.uid && !memberData.memberId)) {
                         console.warn('Could not find member UID for:', selectedProf);
                         return;
                     }
 
+                    var memberId = memberData.uid || memberData.memberId;
+
                     // Extract semester number (e.g., "2nd Semester" -> "2")
                     var semNum = currentSemester.split(' ')[0][0]; // Get first character
 
-                    var response = await fetch(`/api/fsr-footnotes/${memberData.uid}?semester=${semNum}&academic_year=${encodeURIComponent(currentSchoolYear)}`);
+                    var response = await fetch(`/api/fsr-footnotes/${memberId}?semester=${semNum}&academic_year=${encodeURIComponent(currentSchoolYear)}`);
 
                     if (!response.ok) {
                         console.warn('No footnotes found or error loading');
