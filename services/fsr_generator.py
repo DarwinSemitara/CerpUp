@@ -268,6 +268,11 @@ class FSRGenerator:
                     'faculty_name': fn.get('faculty_name', ''),
                     'subject': fn.get('subject', '')
                 })
+
+            print(
+                f"📝 Fetched {len(footnotes_data)} footnotes for member {member_id}, semester {sem_num}, year {academic_year}")
+            if footnotes_data:
+                print(f"   Footnotes: {footnotes_data}")
         except Exception as e:
             print(f"Warning: Could not fetch footnotes: {e}")
             footnotes_data = []
@@ -639,12 +644,17 @@ class FSRGenerator:
             footnotes_data: List of footnote dicts from database with keys:
                            footnote_number, footnote_type, faculty_name, subject
         """
+        print(f"🔖 _fill_footnotes called with {len(footnotes_data)} footnotes")
+
         if not footnotes_data:
+            print("   No footnotes to write")
             return
 
         # Footnotes start right after TOTAL row
         total_row = self.positions['teaching_total_row']
         footnote_start = total_row + 1
+
+        print(f"   TOTAL row: {total_row}, footnote_start: {footnote_start}")
 
         # Unicode footnote symbols
         footnote_symbols = {
@@ -674,6 +684,7 @@ class FSRGenerator:
                 text = f"{symbol}{type_text} with {faculty}"
 
             row = footnote_start + (number - 1)
+            print(f"   Writing footnote {number} to A{row}: {text}")
             self._write_cell(ws, f"A{row}", text)
 
 
