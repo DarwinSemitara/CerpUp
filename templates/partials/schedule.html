@@ -4178,7 +4178,16 @@
                 }
             };
 
-                });
+            async function loadModalFootnotes(selectedProf) {
+                try {
+                    console.log('?? loadModalFootnotes called for:', selectedProf);
+
+                    // Find the member data
+                    var memberData = staffData.find(function (staff) {
+                        return (staff.fullName || '').split(',')[0].trim() === selectedProf;
+                    });
+
+
 
                 if (!memberData || (!memberData.uid && !memberData.memberId)) {
                     console.warn('Could not find member UID for:', selectedProf);
