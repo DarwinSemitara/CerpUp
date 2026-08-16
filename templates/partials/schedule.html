@@ -2891,7 +2891,7 @@
 
                 // Sum up allocated units from schedules FOR CURRENT SEMESTER + SELECTED FACULTY ONLY
                 schedules.forEach(function (sch) {
-                    var matchesSemester = (sch.schoolYear === currentSchoolYear) && sch.semester === currentSemester;
+                    var matchesSemester = ((sch.school_year || sch.schoolYear) === currentSchoolYear) && sch.semester === currentSemester;
 
                     // Match professor (normalize name by removing suffix)
                     var schProf = sch.prof || '';
@@ -3473,7 +3473,7 @@
                         sProfName = sProfName.split(',')[0].trim();
                     }
                     var matchProf = sProfName === selectedProf;
-                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
+                    var matchSchoolYear = (s.school_year || s.schoolYear) === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
                     // Must have valid time to be "placed"
                     var hasValidTime = s.start && s.end && slotIdx(s.start) >= 0 && slotIdx(s.end) > slotIdx(s.start);
@@ -4657,7 +4657,7 @@
                 // Calculate FIC loads for current school year + semester
                 ficLoadData = {};
                 schedules.forEach(function (s) {
-                    var matchSchoolYear = s.schoolYear === currentSchoolYear;
+                    var matchSchoolYear = (s.school_year || s.schoolYear) === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
                     if (matchSchoolYear && matchSemester) {
                         if (!ficLoadData[s.prof]) {
@@ -4675,7 +4675,7 @@
 
                 // Filter schedules by current school year + semester
                 var currentSemesterSchedules = schedules.filter(function (s) {
-                    return s.schoolYear === currentSchoolYear && s.semester === currentSemester;
+                    return (s.school_year || s.schoolYear) === currentSchoolYear && s.semester === currentSemester;
                 });
 
                 if (!currentSemesterSchedules.length) {
