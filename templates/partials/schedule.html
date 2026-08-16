@@ -4085,16 +4085,41 @@
                 btn.textContent = 'Saving...';
 
                 try {
+                    console.log('=== Saving Footnotes ===');
+                    console.log('Selected Prof:', selectedProf);
+                    console.log('Staff Data available:', staffData ? staffData.length : 0);
+
+                    // Try to find the member by matching full name (without suffix)
                     var memberData = staffData.find(function (staff) {
-                        return (staff.fullName || '').split(',')[0].trim() === selectedProf;
+                        var staffFullName = (staff.fullName || '').split(',')[0].trim();
+                        var match = staffFullName === selectedProf;
+                        if (!match) {
+                            // Try alternate matching - sometimes it's stored differently
+                            match = staff.fullName === selectedProf ||
+                                (staff.first + ' ' + staff.last) === selectedProf;
+                        }
+                        return match;
                     });
 
+                    console.log('Member Data found:', memberData);
+
                     if (!memberData || !memberData.uid) {
-                        throw new Error('Could not find member ID');
+                        console.error('Could not find staff member:', selectedProf);
+                        console.error('Available staff:', staffData.map(function (s) {
+                            return {
+                                fullName: s.fullName,
+                                uid: s.uid,
+                                first: s.first,
+                                last: s.last
+                            };
+                        }));
+                        throw new Error('Could not find member ID for: ' + selectedProf);
                     }
 
                     // Extract semester number (e.g., "2nd Semester" -> "2")
                     var semNum = currentSemester.split(' ')[0][0]; // Get first character
+
+                    console.log('Saving with member_id:', memberData.uid, 'semester:', semNum, 'year:', currentSchoolYear);
 
                     var response = await fetch('/api/fsr-footnotes', {
                         method: 'POST',
