@@ -601,6 +601,12 @@ class FSRGenerator:
             rows_added = rows_difference  # Negative value
 
         # Now populate data into rows starting at DATA_START (row 12)
+        # FIRST: Clear ALL template data rows to remove sample data
+        for clear_row in range(DATA_START, DATA_START + num_subjects):
+            for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
+                self._write_cell(ws, f"{col}{clear_row}", '')
+
+        # THEN: Populate with actual data
         for i, item in enumerate(rows_to_write):
             row = DATA_START + i
             entry = item['entry']

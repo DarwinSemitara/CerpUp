@@ -124,16 +124,19 @@ async function fsrLoadPreview() {
     fsrShowLoading();
     try {
         const semNum = fsrCurrentSemester.charAt(0); // "1st Semester" -> "1"
-        const [resR, resE, resS, resC] = await Promise.all([
+        const [resR, resE, resS, resC, resF] = await Promise.all([
             fetch(`/api/research?member_id=${fsrCurrentMemberId}`),
             fetch(`/api/extensions?member_id=${fsrCurrentMemberId}`),
             fetch('/api/schedules'),
-            fetch(`/api/configured-subjects?school_year=${fsrCurrentYear}&semester=${semNum}`)
+            fetch(`/api/configured-subjects?school_year=${fsrCurrentYear}&semester=${semNum}`),
+            fetch(`/api/fsr-footnotes?member_id=${fsrCurrentMemberId}&semester=${semNum}&academic_year=${fsrCurrentYear}`)
         ]);
         const research = resR.ok ? await resR.json() : [];
         const extensions = resE.ok ? await resE.json() : [];
         const configuredSubjects = resC.ok ? await resC.json() : [];
+        const footnotes = resF.ok ? await resF.json() : [];
         console.log('📦 Configured subjects loaded:', configuredSubjects.length, configuredSubjects);
+        console.log('📝 Footnotes loaded:', footnotes.length, footnotes);
 
         let schedules = [];
         if (resS.ok) {
@@ -184,7 +187,7 @@ async function fsrLoadPreview() {
         });
         console.log('📦 Unscheduled configured subjects:', unscheduledSubjects.length, unscheduledSubjects);
 
-        fsrRender(fsrCurrentMemberData, research, extensions, schedules, unscheduledSubjects);
+        fsrRender(fsrCurrentMemberData, research, extensions, schedules, unscheduledSubjects, footnotes);
     } catch (e) {
         console.error('FSR load error:', e);
         fsrShowError('Failed to load FSR data');
@@ -311,8 +314,9 @@ function fsrShowError(msg) {
 // ══════════════════════════════════════════════════════════════
 // MAIN RENDER — Full FSR Structure (Sections I through IX)
 // ══════════════════════════════════════════════════════════════
-function fsrRender(member, research, extensions, schedules, unscheduledSubjects) {
+function fsrRender(member, research, extensions, schedules, unscheduledSubjects, footnotes) {
     unscheduledSubjects = unscheduledSubjects || [];
+    footnotes = footnotes || [];
     const el = document.getElementById('fsrPreviewContent');
 
     // Categorize extensions
@@ -412,11 +416,28 @@ function fsrRender(member, research, extensions, schedules, unscheduledSubjects)
             <td colspan="6">TOTAL Teaching Load Credits</td>
             <td style="text-align:center;">—</td><td style="text-align:center;">—</td>
             <td style="text-align:center;">—</td><td colspan="2" style="text-align:center;">—</td>
-        </tr>
-        <tr class="fsr-no-border"><td colspan="11" style="height:18px;font-size:.78rem;color:#6b7280;font-style:italic;padding:2px 8px;">¹</td></tr>
-        <tr class="fsr-no-border"><td colspan="11" style="height:18px;font-size:.78rem;color:#6b7280;font-style:italic;padding:2px 8px;">²</td></tr>
-        <tr class="fsr-no-border"><td colspan="11" style="height:18px;font-size:.78rem;color:#6b7280;font-style:italic;padding:2px 8px;">³</td></tr>
-        <tr class="fsr-no-border"><td colspan="11" style="padding:6px 8px;font-size:.8rem;">
+        </tr>`;
+
+    // Dynamic footnotes from database
+    const footnoteSymbols = { 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹', 10: '¹⁰' };
+    if (footnotes && footnotes.length > 0) {
+        console.log('🔖 Rendering', footnotes.length, 'footnotes in preview');
+        footnotes.forEach(fn => {
+            const symbol = footnoteSymbols[fn.footnote_number] || fn.footnote_number;
+            const typeText = fn.footnote_type === 'relay' ? 'Relay teaching' : 'Team teaching';
+            const text = fn.subject
+                ? `${symbol}${typeText} with ${fn.faculty_name} (${fn.subject})`
+                : `${symbol}${typeText} with ${fn.faculty_name}`;
+            html += `<tr class="fsr-no-border"><td colspan="11" style="height:18px;font-size:.78rem;color:#6b7280;font-style:italic;padding:2px 8px;">${text}</td></tr>`;
+        });
+    } else {
+        // Show placeholder empty footnote rows
+        html += `<tr class="fsr-no-border"><td colspan="11" style="height:18px;font-size:.78rem;color:#6b7280;font-style:italic;padding:2px 8px;">¹</td></tr>`;
+        html += `<tr class="fsr-no-border"><td colspan="11" style="height:18px;font-size:.78rem;color:#6b7280;font-style:italic;padding:2px 8px;">²</td></tr>`;
+        html += `<tr class="fsr-no-border"><td colspan="11" style="height:18px;font-size:.78rem;color:#6b7280;font-style:italic;padding:2px 8px;">³</td></tr>`;
+    }
+
+    html += `
             <strong>Concurrent teaching load outside the college.</strong>&nbsp;Write NONE whenever applicable.
         </td></tr>
         <tr class="fsr-no-border"><td colspan="11" style="height:6px;"></td></tr>
