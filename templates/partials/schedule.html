@@ -3438,7 +3438,9 @@
             function applyFilters() {
                 // Filter schedules based on school year, semester, and section
                 filtered = schedules.filter(function (s) {
-                    var matchSchoolYear = !currentSchoolYear || s.schoolYear === currentSchoolYear || !s.schoolYear;
+                    // Handle both property name variations
+                    var sSchoolYear = s.school_year || s.schoolYear;
+                    var matchSchoolYear = !currentSchoolYear || sSchoolYear === currentSchoolYear || !sSchoolYear;
                     var matchSemester = !currentSemester || s.semester === currentSemester || !s.semester;
                     // Always filter by section if currentSection is set, even if empty use default 'A'
                     var sectionToMatch = currentSection || 'A';
@@ -3447,6 +3449,9 @@
                 });
 
                 window.filtered = filtered;
+
+                console.log('applyFilters: Total schedules:', schedules.length, 'Filtered:', filtered.length);
+                console.log('Filters - School Year:', currentSchoolYear, 'Semester:', currentSemester, 'Section:', currentSection || 'A');
 
                 // Update unit tracking and draggable blocks when filter changes
                 calculateAllocatedUnits();
@@ -3617,26 +3622,42 @@
 
             // Populate subject dropdowns with current professor's subjects  
             function populateModalFootnoteSubjects(selectedProf) {
-                // Get professor's schedules from the filtered schedules
+                console.log('=== Populating Modal Subjects ===');
+                console.log('Selected Professor:', selectedProf);
+                console.log('Total schedules:', schedules.length);
+                console.log('Current School Year:', currentSchoolYear);
+                console.log('Current Semester:', currentSemester);
+
+                // Get professor's schedules from ALL schedules
                 var profSchedules = schedules.filter(function (s) {
                     var sProfName = s.prof || '';
                     if (sProfName.indexOf(',') > -1) {
                         sProfName = sProfName.split(',')[0].trim();
                     }
                     var matchProf = sProfName === selectedProf;
-                    var matchSchoolYear = s.school_year === currentSchoolYear;
+                    // Check both property name variations
+                    var matchSchoolYear = s.school_year === currentSchoolYear || s.schoolYear === currentSchoolYear;
                     var matchSemester = s.semester === currentSemester;
+
                     return matchProf && matchSchoolYear && matchSemester;
                 });
+
+                console.log('Filtered schedules for professor:', profSchedules.length);
+                if (profSchedules.length > 0) {
+                    console.log('Sample schedule:', profSchedules[0]);
+                }
 
                 // Get unique subjects
                 var subjects = {};
                 profSchedules.forEach(function (sched) {
-                    var subjCode = sched.subj_code || sched.subjCode;
+                    // Try multiple property names
+                    var subjCode = sched.subj_code || sched.subjCode || sched.subjectCode;
                     if (subjCode) {
                         subjects[subjCode] = true;
                     }
                 });
+
+                console.log('Unique subjects found:', Object.keys(subjects));
 
                 // Populate all 3 modal subject dropdowns
                 for (var i = 1; i <= 3; i++) {
@@ -3654,12 +3675,23 @@
                         select.appendChild(placeholder);
 
                         // Add actual subject options
-                        Object.keys(subjects).sort().forEach(function (subj) {
-                            var opt = document.createElement('option');
-                            opt.value = subj;
-                            opt.textContent = subj;
-                            select.appendChild(opt);
-                        });
+                        var subjectList = Object.keys(subjects).sort();
+                        if (subjectList.length === 0) {
+                            console.warn('No subjects found for professor:', selectedProf);
+                            // Add a message option
+                            var noSubjOpt = document.createElement('option');
+                            noSubjOpt.value = '';
+                            noSubjOpt.textContent = 'No subjects found';
+                            noSubjOpt.disabled = true;
+                            select.appendChild(noSubjOpt);
+                        } else {
+                            subjectList.forEach(function (subj) {
+                                var opt = document.createElement('option');
+                                opt.value = subj;
+                                opt.textContent = subj;
+                                select.appendChild(opt);
+                            });
+                        }
 
                         // Reset type and faculty dropdowns
                         var typeSelect = document.getElementById('modal-footnote-' + i + '-type');
