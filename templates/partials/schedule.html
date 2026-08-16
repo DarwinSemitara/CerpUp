@@ -3231,7 +3231,7 @@
             var _defaultSY = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
             var currentSchoolYear = localStorage.getItem('cerp_schoolYear') || _defaultSY;
             var currentSemester = localStorage.getItem('cerp_semester') || '1';
-            var currentSection = localStorage.getItem('cerp_section') || ''; // Empty means all sections
+            var currentSection = localStorage.getItem('cerp_section') || ''; // Empty means show all sections
 
             // Populate school year dropdown dynamically
             function populateSchoolYears() {
@@ -3449,9 +3449,8 @@
                     var sSchoolYear = s.school_year || s.schoolYear;
                     var matchSchoolYear = !currentSchoolYear || sSchoolYear === currentSchoolYear || !sSchoolYear;
                     var matchSemester = !currentSemester || s.semester === currentSemester || !s.semester;
-                    // Always filter by section if currentSection is set, even if empty use default 'A'
-                    var sectionToMatch = currentSection || 'A';
-                    var matchSection = s.section === sectionToMatch;
+                    // Only filter by section if currentSection is set and not empty
+                    var matchSection = !currentSection || s.section === currentSection;
 
                     // Debug each schedule
                     if (!matchSchoolYear || !matchSemester || !matchSection) {
