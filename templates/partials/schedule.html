@@ -4177,17 +4177,7 @@
                     btn.textContent = 'Save Configuration';
                 }
             };
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Save';
-        }
-            };
 
-        async function loadModalFootnotes(selectedProf) {
-            try {
-                // Get member UID from staffData
-                var memberData = staffData.find(function (staff) {
-                    return (staff.fullName || '').split(',')[0].trim() === selectedProf;
                 });
 
                 if (!memberData || (!memberData.uid && !memberData.memberId)) {
