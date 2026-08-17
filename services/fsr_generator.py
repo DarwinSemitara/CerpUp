@@ -39,6 +39,7 @@ Critical Rules:
 """
 
 import openpyxl
+from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime
@@ -66,9 +67,9 @@ FSR_TEMPLATE = {
     'teaching_header_row': 11,
     'teaching_template_row': 12,        # Template data row for copying formatting
     'teaching_data_start': 12,          # First data row
-    # Last data row in template (2 rows total)
-    'teaching_data_end': 13,
-    'teaching_total_row': 14,           # TOTAL row (fixed relative position)
+    # Last data row in template (10 rows: 12-21)
+    'teaching_data_end': 21,
+    'teaching_total_row': 22,           # TOTAL row (fixed relative position)
 
     # ── Teaching Footnotes Section (fixed - 3 rows) ──
     'footnotes_start': 23,
@@ -164,7 +165,7 @@ class FSRGenerator:
         # Fetch member from Supabase
         try:
             member_response = supabase.table('members').select(
-                '*').eq('uid', member_id).execute()
+                '*').eq('id', member_id).execute()  # Use 'id' not 'uid'
             if not member_response.data or len(member_response.data) == 0:
                 raise ValueError(f"Member {member_id} not found")
             member_data = member_response.data[0]
@@ -533,6 +534,7 @@ class FSRGenerator:
         DATA_END = self.positions['teaching_data_end']          # Row 21
         TOTAL_ROW = self.positions['teaching_total_row']        # Row 22
         TEMPLATE_DATA_ROWS = DATA_END - DATA_START + 1          # 10 rows
+        ORIGINAL_DATA_END = 21  # Always use original template end row for clearing
 
         # Day abbreviations mapping
         DAY_ABBR = {
@@ -581,6 +583,15 @@ class FSRGenerator:
         rows_difference = num_subjects - TEMPLATE_DATA_ROWS
         rows_added = 0
 
+        # FIRST: Clear ALL 10 template data rows BEFORE any insertions/deletions
+        print(
+            f"🧹 Clearing template rows {DATA_START} to {DATA_END} (before row modifications)")
+        for clear_row in range(DATA_START, DATA_END + 1):
+            for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
+                self._write_cell(ws, f"{col}{clear_row}", None)
+        print(f"✓ Template rows cleared")
+
+        # THEN: Adjust row count if needed
         if rows_difference > 0:
             # Need MORE rows - insert after the last template data row (row 21)
             insert_position = DATA_END + 1
@@ -592,25 +603,199 @@ class FSRGenerator:
                 insert_position += 1
             rows_added = rows_difference
 
+            # UPDATE: Adjust TOTAL row position after insertion
+            self.positions['teaching_total_row'] = TOTAL_ROW + rows_difference
+
         elif rows_difference < 0:
-            # Need FEWER rows - delete from the END (preserve template row 12)
-            # Delete starting from row 21 going backwards
+            # Need FEWER rows - delete them and manually restore concurrent teaching merges
             delete_start = DATA_END
             delete_count = abs(rows_difference)
+
+            print(
+                f"🗑️ Deleting {delete_count} rows from {delete_start - delete_count + 1} to {delete_start}")
+
+            # BEFORE DELETION: Save ALL merge structures from row 23 onwards
+            # This includes footnotes (23-25) + concurrent teaching (26-51) + rest
+            below_teaching_start = 23
+            merges_to_restore = []
+
+            for merged_range in list(ws.merged_cells.ranges):
+                if merged_range.min_row >= below_teaching_start:
+                    merges_to_restore.append({
+                        'min_row': merged_range.min_row,
+                        'max_row': merged_range.max_row,
+                        'min_col': merged_range.min_col,
+                        'max_col': merged_range.max_col
+                    })
+
+            print(
+                f"💾 Saved {len(merges_to_restore)} merge structures from row {below_teaching_start} onwards")
+
+            # PERFORM DELETION
             ws.delete_rows(delete_start - delete_count + 1, delete_count)
-            rows_added = rows_difference  # Negative value
+            rows_added = rows_difference  # Negative value (e.g., -7)
 
-        # Now populate data into rows starting at DATA_START (row 12)
-        # FIRST: Clear ALL 10 template data rows to remove sample data
-        # Clear rows 12-21 (all 10 template rows)
-        print(f"🧹 Clearing template rows {DATA_START} to {DATA_END}")
-        for clear_row in range(DATA_START, DATA_END + 1):
-            for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
-                # Use _write_cell for safety
-                self._write_cell(ws, f"{col}{clear_row}", None)
-        print(f"✓ Template rows cleared")
+            # AFTER DELETION: Concurrent teaching section (27-41) gets corrupted
+            # This is 15 rows total with complex merge structure
+            # Row 27 shifts to 20 (with -7 shift)
+            r_base = 27 + rows_difference
 
-        # THEN: Populate with actual data
+            print(
+                f"   🔧 Recreating concurrent teaching at rows {r_base}-{r_base+14}")
+
+            # Save font styles from template BEFORE they get corrupted
+            from copy import copy
+            template_wb = load_workbook(self.template_path)
+            template_ws = template_wb.active
+
+            font_a27 = copy(template_ws['A27'].font)
+            font_a30 = copy(template_ws['A30'].font)
+            font_e30 = copy(template_ws['E30'].font)
+            font_h30 = copy(template_ws['H30'].font)
+            font_a31 = copy(template_ws['A31'].font)
+            font_e31 = copy(template_ws['E31'].font)
+            font_h31 = copy(template_ws['H31'].font)
+            font_a34 = copy(template_ws['A34'].font)
+            font_a35 = copy(template_ws['A35'].font)
+
+            # Also save border styles
+            border_a30 = copy(template_ws['A30'].border)
+            border_e30 = copy(template_ws['E30'].border)
+            border_h30 = copy(template_ws['H30'].border)
+            border_a31 = copy(template_ws['A31'].border)
+            border_e31 = copy(template_ws['E31'].border)
+            border_h31 = copy(template_ws['H31'].border)
+
+            # Unmerge any broken merges in this range
+            for row in range(r_base, r_base+15):
+                try:
+                    ws.unmerge_cells(f"A{row}:K{row}")
+                except:
+                    pass
+
+            # Row 27→r_base: A27:K27 - "Concurrent teaching load..."
+            ws.merge_cells(start_row=r_base, start_column=1,
+                           end_row=r_base, end_column=11)
+            self._write_cell(
+                ws, f'A{r_base}', 'Concurrent teaching load outside the college.   Write NONE whenever applicable.  Please do not leave any blank')
+
+            # Row 28→r_base+1: A28:K28 - " "
+            ws.merge_cells(start_row=r_base+1, start_column=1,
+                           end_row=r_base+1, end_column=11)
+            self._write_cell(ws, f'A{r_base+1}', ' ')
+
+            # Row 29→r_base+2: No merges, all "None"
+
+            # Row 30→r_base+3: A30:C30, E30:F30, H30:K30 - "(NONE)"
+            ws.merge_cells(start_row=r_base+3, start_column=1,
+                           end_row=r_base+3, end_column=3)
+            self._write_cell(ws, f'A{r_base+3}', '(NONE)')
+            ws.merge_cells(start_row=r_base+3, start_column=5,
+                           end_row=r_base+3, end_column=6)
+            self._write_cell(ws, f'E{r_base+3}', '(NONE)')
+            ws[f'E{r_base+3}'].font = font_e30
+            ws[f'E{r_base+3}'].border = border_e30
+            ws.merge_cells(start_row=r_base+3, start_column=8,
+                           end_row=r_base+3, end_column=11)
+            self._write_cell(ws, f'H{r_base+3}', '(NONE)')
+            ws[f'H{r_base+3}'].font = font_h30
+            ws[f'H{r_base+3}'].border = border_h30
+
+            # Row 31→r_base+4: A31, E31:F31, H31:K31
+            self._write_cell(ws, f'A{r_base+4}', 'COLLEGE OUTSIDE U.P. SYSTEM')
+            ws.merge_cells(start_row=r_base+4, start_column=5,
+                           end_row=r_base+4, end_column=6)
+            self._write_cell(ws, f'E{r_base+4}', 'No. of subjects')
+            ws[f'E{r_base+4}'].font = font_e31
+            ws[f'E{r_base+4}'].border = border_e31
+            ws.merge_cells(start_row=r_base+4, start_column=8,
+                           end_row=r_base+4, end_column=11)
+            self._write_cell(ws, f'H{r_base+4}',
+                             'No. of units (w/o multipliers)')
+            ws[f'H{r_base+4}'].font = font_h31
+            ws[f'H{r_base+4}'].border = border_h31
+
+            # Row 32→r_base+5: No merges, all "None"
+
+            # Row 33→r_base+6: A33:C33, E33:F33, H33:K33 - "(NONE)"
+            ws.merge_cells(start_row=r_base+6, start_column=1,
+                           end_row=r_base+6, end_column=3)
+            self._write_cell(ws, f'A{r_base+6}', '(NONE)')
+            ws.merge_cells(start_row=r_base+6, start_column=5,
+                           end_row=r_base+6, end_column=6)
+            self._write_cell(ws, f'E{r_base+6}', '(NONE)')
+            ws[f'E{r_base+6}'].font = font_e30
+            ws[f'E{r_base+6}'].border = border_e30
+            ws.merge_cells(start_row=r_base+6, start_column=8,
+                           end_row=r_base+6, end_column=11)
+            self._write_cell(ws, f'H{r_base+6}', '(NONE)')
+            ws[f'H{r_base+6}'].font = font_h30
+            ws[f'H{r_base+6}'].border = border_h30
+
+            # Row 34→r_base+7: A34:C34, E34:F34, H34:K34
+            ws.merge_cells(start_row=r_base+7, start_column=1,
+                           end_row=r_base+7, end_column=3)
+            self._write_cell(ws, f'A{r_base+7}', 'U.P. COLLEGE/DEPT.')
+            ws.merge_cells(start_row=r_base+7, start_column=5,
+                           end_row=r_base+7, end_column=6)
+            self._write_cell(ws, f'E{r_base+7}', 'No. of subjects')
+            ws[f'E{r_base+7}'].font = font_e31
+            ws[f'E{r_base+7}'].border = border_e31
+            ws.merge_cells(start_row=r_base+7, start_column=8,
+                           end_row=r_base+7, end_column=11)
+            self._write_cell(ws, f'H{r_base+7}',
+                             'No. of units (w/o multipliers)')
+            ws[f'H{r_base+7}'].font = font_h31
+            ws[f'H{r_base+7}'].border = border_h31
+
+            # Row 35→r_base+8: A35:K35 - NOTE text
+            ws.merge_cells(start_row=r_base+8, start_column=1,
+                           end_row=r_base+8, end_column=11)
+            self._write_cell(ws, f'A{r_base+8}', 'NOTE:   A faculty member teaching in another college and/or another Constituent University (CU) should file a separate  Form 67 (FSR) in that college and/or CU. In the event that a 2nd or 3rd FSR needs to be prepared, only the teaching load and consultation hours should be  completed. Permission fromf the Chancellor should be sought before teaching outside the University.')
+
+            # Row 36→r_base+9: H36 only
+            self._write_cell(ws, f'H{r_base+9}', 'Certified Correct:')
+
+            # Row 37→r_base+10: No merges
+            # Row 38→r_base+11: No merges
+
+            # Row 39→r_base+12: G39:J39
+            ws.merge_cells(start_row=r_base+12, start_column=7,
+                           end_row=r_base+12, end_column=10)
+            self._write_cell(ws, f'G{r_base+12}',
+                             'MARGARITA CARMEN S. PATERNO')
+
+            # Row 40→r_base+13: G40:J40
+            ws.merge_cells(start_row=r_base+13, start_column=7,
+                           end_row=r_base+13, end_column=10)
+            self._write_cell(ws, f'G{r_base+13}', 'University Registrar')
+
+            # Row 41→r_base+14: No merges
+
+            # Restore other merges (skip rows 27-41)
+            restored_count = 0
+            for merge in merges_to_restore:
+                new_min_row = merge['min_row'] + rows_difference
+                if new_min_row < 1 or (r_base <= new_min_row <= r_base+14):
+                    continue
+                try:
+                    ws.merge_cells(
+                        start_row=new_min_row,
+                        start_column=merge['min_col'],
+                        end_row=new_min_row +
+                        (merge['max_row'] - merge['min_row']),
+                        end_column=merge['max_col']
+                    )
+                    restored_count += 1
+                except:
+                    pass
+
+            print(f"✅ Restored {restored_count} other merges")
+
+            # Adjust TOTAL row position
+            self.positions['teaching_total_row'] = TOTAL_ROW + rows_difference
+
+        # Now populate with actual data
         print(
             f"📝 Populating {num_subjects} subjects starting at row {DATA_START}")
         for i, item in enumerate(rows_to_write):
@@ -665,15 +850,27 @@ class FSRGenerator:
         """
         print(f"🔖 _fill_footnotes called with {len(footnotes_data)} footnotes")
 
-        if not footnotes_data:
-            print("   No footnotes to write")
-            return
-
-        # Footnotes start right after TOTAL row
+        # Footnotes start right after TOTAL row - ALWAYS 3 rows
         total_row = self.positions['teaching_total_row']
         footnote_start = total_row + 1
+        footnote_end = footnote_start + 2  # Always exactly 3 rows
 
-        print(f"   TOTAL row: {total_row}, footnote_start: {footnote_start}")
+        print(
+            f"   TOTAL row: {total_row}, clearing footnote rows: {footnote_start} to {footnote_end}")
+
+        # FIRST: Clear the 3 template footnote rows (remove sample data)
+        # Footnotes are merged cells A:K - just clear the top-left cell (A) without unmerging
+        print(
+            f"🧹 Clearing template footnote rows {footnote_start} to {footnote_end}")
+        for clear_row in range(footnote_start, footnote_end + 1):
+            # Use _write_cell to handle merged cells properly - preserves formatting
+            self._write_cell(ws, f"A{clear_row}", "")  # Empty string, not None
+        print(f"✓ Template footnote rows cleared")
+
+        # THEN: Write actual footnotes (if any)
+        if not footnotes_data:
+            print("   No footnotes to write - leaving blank")
+            return
 
         # Unicode footnote symbols
         footnote_symbols = {
@@ -704,6 +901,7 @@ class FSRGenerator:
 
             row = footnote_start + (number - 1)
             print(f"   Writing footnote {number} to A{row}: {text}")
+            # Use _write_cell to handle merged cells properly
             self._write_cell(ws, f"A{row}", text)
 
 

@@ -53,14 +53,14 @@ function fsrPopulateDropdown() {
     sel.innerHTML = '';
     fsrMembers.forEach((m, index) => {
         const o = document.createElement('option');
-        o.value = m.uid;
+        o.value = m.id;  // Use 'id' (Supabase primary key), not 'uid'
         o.textContent = `${m.last || ''}, ${m.first || ''} ${m.middle || ''}`.trim();
         sel.appendChild(o);
     });
 
     // Select first member by default
     if (fsrMembers.length > 0) {
-        sel.value = fsrMembers[0].uid;
+        sel.value = fsrMembers[0].id;  // Use 'id', not 'uid'
         fsrOnMemberChange();
     }
 }
@@ -90,7 +90,7 @@ function fsrOnMemberChange() {
     const sel = document.getElementById('fsrMemberSelect');
     fsrCurrentMemberId = sel.value;
     if (fsrCurrentMemberId) {
-        fsrCurrentMemberData = fsrMembers.find(m => m.uid === fsrCurrentMemberId);
+        fsrCurrentMemberData = fsrMembers.find(m => m.id === fsrCurrentMemberId);  // Use 'id', not 'uid'
         document.getElementById('fsrDownloadBtn').disabled = false;
         fsrLoadPreview();
     } else {
@@ -134,7 +134,7 @@ async function fsrLoadPreview() {
         const research = resR.ok ? await resR.json() : [];
         const extensions = resE.ok ? await resE.json() : [];
         const configuredSubjects = resC.ok ? await resC.json() : [];
-        const footnotesData = resF.ok ? await resF.json() : {footnotes: []};
+        const footnotesData = resF.ok ? await resF.json() : { footnotes: [] };
         const footnotes = footnotesData.footnotes || [];
         console.log('📦 Configured subjects loaded:', configuredSubjects.length, configuredSubjects);
         console.log('📝 Footnotes loaded:', footnotes.length, footnotes);

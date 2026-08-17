@@ -895,31 +895,41 @@ def delete_staff(staff_id):
 
 @app.route('/api/members', methods=['GET'])
 def get_members():
-    """Return all members from Firestore (public endpoint for faculty page). 
+    """Return all members from Supabase (public endpoint for faculty page). 
     Supports filtering by type via query parameter or faculty status."""
     try:
         member_type = request.args.get('type', None)
         faculty_only = request.args.get('faculty', None)
 
+        # Query Supabase instead of Firestore
+        query = supabase.table('members').select('*')
+
         if faculty_only and faculty_only.lower() == 'true':
-            # Filter by is_faculty = true (no order_by to avoid index requirement)
-            docs = db.collection('members').where(
-                'is_faculty', '==', True).stream()
-            members = [{'id': d.id, **d.to_dict()} for d in docs]
-            # Sort in Python instead
-            members.sort(key=lambda x: x.get('created_at', ''))
+            # Filter by is_faculty = true
+            query = query.eq('is_faculty', True)
         elif member_type:
             # Filter by type
-            docs = db.collection('members').where(
-                'type', '==', member_type).order_by('created_at').stream()
-            members = [{'id': d.id, **d.to_dict()} for d in docs]
-        else:
-            # Return all members
-            docs = db.collection('members').order_by('created_at').stream()
-            members = [{'id': d.id, **d.to_dict()} for d in docs]
+            query = query.eq('type', member_type)
+
+        # Order by created_at
+        query = query.order('created_at', desc=False)
+
+        result = query.execute()
+        members = result.data or []
+
+        # Ensure 'uid' field exists (use 'id' as fallback for compatibility)
+        for m in members:
+            if 'uid' not in m and 'id' in m:
+                m['uid'] = m['id']
+
+        print(f"\n👥 GET /api/members returned {len(members)} members:")
+        for m in members[:3]:  # Show first 3
+            print(
+                f"   - {m.get('first')} {m.get('last')}: id={m.get('id', 'N/A')}, uid={m.get('uid', 'N/A')}")
 
         return jsonify(members)
     except Exception as e:
+        logger.error(f"Error in get_members: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -1579,6 +1589,9 @@ def generate_fsr(member_id):
                 'download_url': result['download_url'],
                 'file_name': result.get('file_name', 'FSR.xlsx')
             })
+        elif isinstance(result, dict):
+            # New behavior: returns metadata dict
+            return jsonify(result), 200
         else:
             # Fallback for old behavior (if local file path returned)
             from flask import send_file
@@ -2872,12 +2885,35 @@ def fsr_footnotes_api():
             if not semester or not academic_year:
                 return jsonify({'error': 'semester and academic_year required'}), 400
 
+            print(f"\n🔍 QUERYING FOOTNOTES:")
+            print(
+                f"   member_id: {member_id} (type: {type(member_id).__name__})")
+            print(f"   semester: {semester} (type: {type(semester).__name__})")
+            print(
+                f"   academic_year: {academic_year} (type: {type(academic_year).__name__})")
+
             # Query footnotes directly using member_id, semester, academic_year
             footnotes_result = supabase.table('fsr_footnotes').select(
-                'footnote_number, footnote_type, faculty_name, subject'
+                'footnote_number, footnote_type, faculty_name, subject, member_id, semester, academic_year'
             ).eq('member_id', member_id).eq(
                 'semester', semester
             ).eq('academic_year', academic_year).order('footnote_number').execute()
+
+            print(
+                f"   📊 Query returned: {len(footnotes_result.data or [])} footnotes")
+            if footnotes_result.data:
+                for fn in footnotes_result.data:
+                    print(
+                        f"      - Footnote {fn.get('footnote_number')}: {fn.get('faculty_name')} ({fn.get('subject')})")
+
+            # Also check what's in the table without filters
+            all_footnotes = supabase.table('fsr_footnotes').select(
+                'member_id, semester, academic_year').execute()
+            print(
+                f"\n   📋 All footnotes in table ({len(all_footnotes.data or [])} total):")
+            for fn in (all_footnotes.data or [])[:5]:  # Show first 5
+                print(
+                    f"      member_id: {fn.get('member_id')}, semester: {fn.get('semester')}, year: {fn.get('academic_year')}")
 
             return jsonify({'footnotes': footnotes_result.data or []}), 200
 
