@@ -134,7 +134,8 @@ async function fsrLoadPreview() {
         const research = resR.ok ? await resR.json() : [];
         const extensions = resE.ok ? await resE.json() : [];
         const configuredSubjects = resC.ok ? await resC.json() : [];
-        const footnotes = resF.ok ? await resF.json() : [];
+        const footnotesData = resF.ok ? await resF.json() : {footnotes: []};
+        const footnotes = footnotesData.footnotes || [];
         console.log('📦 Configured subjects loaded:', configuredSubjects.length, configuredSubjects);
         console.log('📝 Footnotes loaded:', footnotes.length, footnotes);
 

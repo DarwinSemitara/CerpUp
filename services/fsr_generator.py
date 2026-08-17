@@ -606,7 +606,8 @@ class FSRGenerator:
         print(f"🧹 Clearing template rows {DATA_START} to {DATA_END}")
         for clear_row in range(DATA_START, DATA_END + 1):
             for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
-                ws[f"{col}{clear_row}"].value = None  # Use None to truly clear
+                # Use _write_cell for safety
+                self._write_cell(ws, f"{col}{clear_row}", None)
         print(f"✓ Template rows cleared")
 
         # THEN: Populate with actual data
