@@ -603,11 +603,15 @@ class FSRGenerator:
         # Now populate data into rows starting at DATA_START (row 12)
         # FIRST: Clear ALL 10 template data rows to remove sample data
         # Clear rows 12-21 (all 10 template rows)
+        print(f"🧹 Clearing template rows {DATA_START} to {DATA_END}")
         for clear_row in range(DATA_START, DATA_END + 1):
             for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
-                self._write_cell(ws, f"{col}{clear_row}", '')
+                ws[f"{col}{clear_row}"].value = None  # Use None to truly clear
+        print(f"✓ Template rows cleared")
 
         # THEN: Populate with actual data
+        print(
+            f"📝 Populating {num_subjects} subjects starting at row {DATA_START}")
         for i, item in enumerate(rows_to_write):
             row = DATA_START + i
             entry = item['entry']
@@ -616,12 +620,19 @@ class FSRGenerator:
 
             # Only populate if we have actual data
             if entry:
+                subjCode = entry.get('subjCode', '')
+                section = entry.get('section', '')
+                room = entry.get('room', 'TBA')
+
+                print(
+                    f"  Row {row}: {subjCode} - {section} - {room} - {days} - {time}")
+
                 # Column A: Subject Code
-                self._write_cell(ws, f"A{row}", entry.get('subjCode', ''))
+                self._write_cell(ws, f"A{row}", subjCode)
                 # Column B: Section Code
-                self._write_cell(ws, f"B{row}", entry.get('section', ''))
+                self._write_cell(ws, f"B{row}", section)
                 # Column C: Room
-                self._write_cell(ws, f"C{row}", entry.get('room', 'TBA'))
+                self._write_cell(ws, f"C{row}", room)
                 # Column D: Days
                 self._write_cell(ws, f"D{row}", days)
                 # Column E: Time
