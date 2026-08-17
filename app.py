@@ -2865,102 +2865,61 @@ def fsr_footnotes_api():
 
         if request.method == 'GET':
             # Get footnotes for specific member/semester/year
-            semester = request.args.get('semester', '2nd Semester')
-            academic_year = request.args.get('academic_year', '2025-2026')
+            semester = request.args.get('semester')
+            academic_year = request.args.get('academic_year')
             member_id = request.args.get('member_id', uid)
 
-            # First get or create FSR record
-            fsr_result = supabase.table('fsr').select('id').eq(
-                'member_id', member_id
-            ).eq('semester', semester).eq('academic_year', academic_year).execute()
+            if not semester or not academic_year:
+                return jsonify({'error': 'semester and academic_year required'}), 400
 
-            if not fsr_result.data:
-                # No FSR record exists yet
-                return jsonify({'footnotes': []}), 200
-
-            fsr_id = fsr_result.data[0]['id']
-
-            # Get footnotes
+            # Query footnotes directly using member_id, semester, academic_year
             footnotes_result = supabase.table('fsr_footnotes').select(
-                '*'
-            ).eq('fsr_id', fsr_id).order('footnote_number').execute()
+                'footnote_number, footnote_type, faculty_name, subject'
+            ).eq('member_id', member_id).eq(
+                'semester', semester
+            ).eq('academic_year', academic_year).order('footnote_number').execute()
 
             return jsonify({'footnotes': footnotes_result.data or []}), 200
 
         elif request.method == 'POST':
-            # Save/update footnote
+            # Save/update multiple footnotes at once
             data = request.get_json()
-            semester = data.get('semester', '2nd Semester')
-            academic_year = data.get('academic_year', '2025-2026')
-            footnote_number = data.get('footnote_number')
-            footnote_type = data.get('footnote_type')
-            faculty_name = data.get('faculty_name')
-            load_sharing = data.get('load_sharing', '50-50 load sharing')
+            member_id = data.get('member_id')
+            semester = data.get('semester')  # Should be "1" or "2"
+            academic_year = data.get('academic_year')
+            footnotes = data.get('footnotes', [])
 
-            if not all([footnote_number, footnote_type, faculty_name]):
-                return jsonify({'error': 'Missing required fields'}), 400
+            if not all([member_id, semester, academic_year]):
+                return jsonify({'error': 'member_id, semester, and academic_year required'}), 400
 
-            # Get or create FSR record
-            fsr_result = supabase.table('fsr').select('id').eq(
-                'member_id', uid
-            ).eq('semester', semester).eq('academic_year', academic_year).execute()
-
-            if not fsr_result.data:
-                # Create FSR record
-                fsr_insert = supabase.table('fsr').insert({
-                    'member_id': uid,
-                    'semester': semester,
-                    'academic_year': academic_year
-                }).execute()
-                fsr_id = fsr_insert.data[0]['id']
-            else:
-                fsr_id = fsr_result.data[0]['id']
-
-            # Upsert footnote
-            footnote_data = {
-                'fsr_id': fsr_id,
-                'footnote_number': footnote_number,
-                'footnote_type': footnote_type,
-                'faculty_name': faculty_name,
-                'load_sharing': load_sharing
-            }
-
-            result = supabase.table('fsr_footnotes').upsert(
-                footnote_data,
-                on_conflict='fsr_id,footnote_number'
-            ).execute()
-
-            return jsonify({'success': True, 'footnote': result.data[0] if result.data else None}), 200
-
-        elif request.method == 'DELETE':
-            # Delete footnote
-            data = request.get_json()
-            semester = data.get('semester', '2nd Semester')
-            academic_year = data.get('academic_year', '2025-2026')
-            footnote_number = data.get('footnote_number')
-
-            if not footnote_number:
-                return jsonify({'error': 'footnote_number required'}), 400
-
-            # Get FSR record
-            fsr_result = supabase.table('fsr').select('id').eq(
-                'member_id', uid
-            ).eq('semester', semester).eq('academic_year', academic_year).execute()
-
-            if not fsr_result.data:
-                return jsonify({'success': True}), 200
-
-            fsr_id = fsr_result.data[0]['id']
-
-            # Delete footnote
+            # Delete existing footnotes for this member/semester/year
             supabase.table('fsr_footnotes').delete().eq(
-                'fsr_id', fsr_id
-            ).eq('footnote_number', footnote_number).execute()
+                'member_id', member_id
+            ).eq('semester', semester).eq('academic_year', academic_year).execute()
 
-            return jsonify({'success': True}), 200
+            # Insert new footnotes
+            if footnotes:
+                footnote_records = []
+                for fn in footnotes:
+                    footnote_records.append({
+                        'member_id': member_id,
+                        'semester': semester,
+                        'academic_year': academic_year,
+                        'footnote_number': fn.get('number'),
+                        'footnote_type': fn.get('type'),
+                        'faculty_name': fn.get('faculty_name'),
+                        'subject': fn.get('subject', '')
+                    })
+
+                result = supabase.table('fsr_footnotes').insert(
+                    footnote_records).execute()
+
+                return jsonify({'success': True, 'footnotes': result.data}), 200
+
+            return jsonify({'success': True, 'footnotes': []}), 200
 
     except Exception as e:
-        logger.error(f"fsr_footnotes_api error: {e}")
+        logger.error(f"fsr_footnotes_api error: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
