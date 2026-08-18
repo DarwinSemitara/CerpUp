@@ -146,8 +146,11 @@ class FSRGenerator:
         # Footnotes section (dynamic - from database)
         self._fill_footnotes(ws, footnotes_data or [])
 
-        # DO NOT modify anything below teaching load section
-        # Research, extensions, and other sections remain as-is in the template
+        # Research proposals section (dynamic)
+        self._fill_research_proposals(ws, research_data or [])
+
+        # DO NOT modify anything below research section yet
+        # Extensions and other sections remain as-is in the template
 
         # Save to new file (never overwrite template)
         wb.save(output_path)
@@ -903,6 +906,124 @@ class FSRGenerator:
             print(f"   Writing footnote {number} to A{row}: {text}")
             # Use _write_cell to handle merged cells properly
             self._write_cell(ws, f"A{row}", text)
+
+    def _fill_research_proposals(self, ws, research_data):
+        """
+        Fill research proposals section dynamically (rows 42-49).
+
+        Template structure:
+        - Row 42: Section header "II. RESEARCH/TEXTBOOK WRITING/CREATIVE WORK:"
+        - Row 43: Subsection "II.A RESEARCH"
+        - Row 44: Sub-subsection "II.A1 RESEARCH PROPOSAL"
+        - Row 45: Table headers
+        - Rows 46-47: 2 template data rows
+        - Row 48: Total row with formula
+        - Row 49: Empty
+
+        Args:
+            ws: Worksheet object
+            research_data: List of research dicts from database
+        """
+        print(
+            f"📚 _fill_research_proposals called with {len(research_data)} research items")
+
+        # Filter for proposals only
+        proposals = [r for r in research_data if r.get(
+            'research_type') == 'proposal']
+        print(f"   Found {len(proposals)} research proposals")
+
+        # Template positions (before any modifications)
+        HEADER_ROW = 42  # "II. RESEARCH/TEXTBOOK WRITING/CREATIVE WORK:"
+        SUBSECTION_ROW = 43  # "II.A RESEARCH"
+        SUBSUBSECTION_ROW = 44  # "II.A1 RESEARCH PROPOSAL"
+        TABLE_HEADER_ROW = 45
+        DATA_START_ROW = 46  # First data row
+        TEMPLATE_DATA_ROWS = 2  # Rows 46-47
+        TOTAL_ROW = 48  # Total row
+
+        num_proposals = len(proposals)
+
+        # Calculate row adjustment needed
+        rows_difference = num_proposals - TEMPLATE_DATA_ROWS
+
+        if rows_difference == 0:
+            print("   No row adjustment needed - exact match with template")
+        elif rows_difference > 0:
+            print(f"   Need to INSERT {rows_difference} rows")
+        else:
+            print(f"   Need to DELETE {abs(rows_difference)} rows")
+
+        # STEP 1: Clear template data rows (46-47)
+        print(
+            f"🧹 Clearing template data rows {DATA_START_ROW} to {DATA_START_ROW+TEMPLATE_DATA_ROWS-1}")
+        for clear_row in range(DATA_START_ROW, DATA_START_ROW + TEMPLATE_DATA_ROWS):
+            # Clear each cell while preserving formatting
+            self._write_cell(ws, f"A{clear_row}", "")
+            self._write_cell(ws, f"E{clear_row}", "")
+            self._write_cell(ws, f"F{clear_row}", "")
+            self._write_cell(ws, f"I{clear_row}", "")
+            self._write_cell(ws, f"K{clear_row}", "")
+        print("✓ Template data rows cleared")
+
+        # STEP 2: Adjust rows if needed
+        if rows_difference > 0:
+            # Insert additional rows
+            print(f"➕ Inserting {rows_difference} rows at row {TOTAL_ROW}")
+            ws.insert_rows(TOTAL_ROW, rows_difference)
+
+            # Copy formatting from row 47 to new rows
+            from copy import copy
+            for offset in range(rows_difference):
+                new_row = TOTAL_ROW + offset
+                # Copy cell formatting from row 47
+                for col_letter in ['A', 'E', 'F', 'I', 'K']:
+                    template_cell = ws[f"{col_letter}47"]
+                    new_cell = ws[f"{col_letter}{new_row}"]
+                    new_cell.font = copy(template_cell.font)
+                    new_cell.border = copy(template_cell.border)
+                    new_cell.alignment = copy(template_cell.alignment)
+                    new_cell.fill = copy(template_cell.fill)
+
+            # Recreate merged cells in new rows
+            for offset in range(rows_difference):
+                new_row = TOTAL_ROW + offset
+                ws.merge_cells(f"A{new_row}:D{new_row}")
+                ws.merge_cells(f"F{new_row}:H{new_row}")
+                ws.merge_cells(f"I{new_row}:J{new_row}")
+
+            print(f"✓ Inserted {rows_difference} rows with formatting")
+
+        elif rows_difference < 0:
+            # Delete excess rows
+            delete_count = abs(rows_difference)
+            delete_start = TOTAL_ROW - delete_count
+            print(f"➖ Deleting {delete_count} rows from {delete_start}")
+            ws.delete_rows(delete_start, delete_count)
+            print(f"✓ Deleted {delete_count} rows")
+
+        # STEP 3: Populate with actual proposal data
+        print(
+            f"📝 Populating {num_proposals} proposals starting at row {DATA_START_ROW}")
+        for i, proposal in enumerate(proposals):
+            row = DATA_START_ROW + i
+
+            # Write data to merged cells
+            self._write_cell(ws, f"A{row}", proposal.get('title', ''))
+            self._write_cell(ws, f"E{row}", proposal.get('role', ''))
+            self._write_cell(ws, f"F{row}", proposal.get('co_workers', ''))
+            self._write_cell(ws, f"I{row}", proposal.get('funding_agency', ''))
+            self._write_cell(ws, f"K{row}", proposal.get('credit_units', ''))
+
+            print(f"  Row {row}: {proposal.get('title', '')[:50]}")
+
+        # STEP 4: Update TOTAL formula
+        new_total_row = DATA_START_ROW + num_proposals
+        if num_proposals > 0:
+            formula = f"=SUM(K{DATA_START_ROW}:K{DATA_START_ROW+num_proposals-1})"
+        else:
+            formula = "0"
+        ws[f"K{new_total_row}"].value = formula
+        print(f"✓ Updated TOTAL formula at K{new_total_row}: {formula}")
 
 
 # ── Convenience function ──────────────────────────────────────────────────────

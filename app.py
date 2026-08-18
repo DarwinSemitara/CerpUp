@@ -1223,10 +1223,12 @@ def create_member_account(member_id):
 def get_research():
     """Get all research papers for the current logged-in member OR all research for admin."""
     try:
+        from services.supabase_service import supabase
+
         uid = session.get('uid')
-        role = session.get('role')  # Get role directly from session
-        # Optional filter by member_id
+        role = session.get('role')
         member_id = request.args.get('member_id')
+
         print(
             f"🔍 GET Research - UID from session: {uid}, Role: {role}, Member filter: {member_id}")
 
@@ -1234,53 +1236,43 @@ def get_research():
             print("❌ No UID in session!")
             return jsonify({'error': 'Not authenticated'}), 401
 
-        # Check if user is admin (check session role first for hardcoded admin)
-        print(f"🔍 Checking if user is admin...")
-        is_admin = False
-
-        if role == 'admin':
-            # Admin from session (hardcoded or from database)
-            is_admin = True
-            print(f"🔐 Is admin (from session): True")
-        else:
-            # For regular users, double-check from database
-            user_doc = db.collection('users').where(
-                'uid', '==', uid).limit(1).stream()
-            user_list = [d.to_dict() for d in user_doc]
-            print(f"👤 User list from DB: {user_list}")
-            is_admin = user_list and user_list[0].get('role') == 'admin'
-            print(f"🔐 Is admin (from DB): {is_admin}")
+        # Check if user is admin
+        is_admin = role == 'admin'
+        print(f"🔐 Is admin: {is_admin}")
 
         if is_admin:
             # Admin can filter by member_id or see all research
             if member_id:
                 print(
                     f"📚 Fetching research for member: {member_id} (admin view)...")
-                docs = db.collection('research').where(
-                    'uid', '==', member_id).stream()
+                response = supabase.table('research').select(
+                    '*').eq('member_id', member_id).execute()
             else:
                 print("📚 Fetching ALL research (admin view)...")
-                docs = db.collection('research').stream()
+                response = supabase.table('research').select('*').execute()
         else:
-            # Members see only their own research
-            print(f"📚 Fetching research for UID: {uid} (member view)...")
-            docs = db.collection('research').where('uid', '==', uid).stream()
+            # Find member_id from uid
+            member_response = supabase.table('members').select(
+                'id').eq('uid', uid).execute()
+            if not member_response.data:
+                return jsonify({'error': 'Member not found'}), 404
+            member_id = member_response.data[0]['id']
 
-        research_list = []
-        for doc in docs:
-            data = doc.to_dict()
-            data['id'] = doc.id
-            research_list.append(data)
             print(
-                f"  📄 Added research: {data.get('title', 'N/A')} (ID: {data.get('id')})")
+                f"📚 Fetching research for member_id: {member_id} (member view)...")
+            response = supabase.table('research').select(
+                '*').eq('member_id', member_id).execute()
+
+        research_list = response.data or []
+
+        for item in research_list:
+            print(f"  📄 Research: {item.get('title', 'N/A')}")
 
         print(f"✅ Found {len(research_list)} research items")
-
-        # Sort in Python instead of Firestore
-        research_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-
         print(f"📤 Returning {len(research_list)} research items to client")
+
         return jsonify(research_list)
+
     except Exception as e:
         print(f"❌ Error fetching research: {e}")
         import traceback
@@ -1293,6 +1285,9 @@ def get_research():
 def add_research():
     """Add a new research paper for the current member."""
     try:
+        from services.supabase_service import supabase
+        from datetime import datetime
+
         uid = session.get('uid')
         print(f"🔍 Add research - UID from session: {uid}")
 
@@ -1303,30 +1298,20 @@ def add_research():
         data = request.get_json()
         print(f"📥 Received data: {data}")
 
-        # Get current member info
-        print(f"🔍 Querying members with UID: {uid}")
-        members = db.collection('members').where(
-            'uid', '==', uid).limit(1).stream()
-        member_list = [{'id': d.id, **d.to_dict()} for d in members]
-
-        if not member_list:
+        # Find member by uid
+        member_response = supabase.table(
+            'members').select('*').eq('uid', uid).execute()
+        if not member_response.data:
             print(f"❌ Member not found for UID: {uid}")
             return jsonify({'error': 'Member not found'}), 404
 
-        member = member_list[0]
-        print(
-            f"✅ Found member: {member.get('first')} {member.get('last')} (ID: {member.get('id')})")
-
-        # Prepare research document
-        from datetime import datetime
-
-        # Get member name properly
+        member = member_response.data[0]
         member_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
         )
-        print(f"📝 Member name: {member_name}")
+        print(f"✅ Found member: {member_name} (ID: {member.get('id')})")
 
+        # Prepare research document
         research_doc = {
-            'uid': uid,
             'member_id': member['id'],
             'member_name': member_name,
             'research_type': data.get('research_type'),
@@ -1334,11 +1319,8 @@ def add_research():
             'role': data.get('role', ''),
             'co_workers': data.get('co_workers', ''),
             'co_authors': data.get('co_authors', ''),
-            # Convert empty string to None
             'start_date': data.get('start_date') or None,
-            # Convert empty string to None
             'end_date': data.get('end_date') or None,
-            # Convert empty string to None
             'date_completion': data.get('date_completion') or None,
             'funding_agency': data.get('funding_agency', ''),
             'credit_units': data.get('credit_units', ''),
@@ -1346,8 +1328,24 @@ def add_research():
             'updated_at': datetime.utcnow().isoformat()
         }
 
-        # Add to database
-        print(f"📄 Creating document reference...")
+        # Insert into Supabase
+        print(f"📄 Inserting research into Supabase...")
+        insert_response = supabase.table(
+            'research').insert(research_doc).execute()
+
+        if not insert_response.data:
+            raise Exception("Failed to insert research")
+
+        new_research = insert_response.data[0]
+        print(f"✅ Research added with ID: {new_research.get('id')}")
+
+        return jsonify(new_research), 201
+
+    except Exception as e:
+        print(f"❌ Error adding research: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
         doc_ref = db.collection('research').document()
         print(f"✅ Doc ref created with ID: {doc_ref.doc_id}")
 
@@ -1370,6 +1368,8 @@ def add_research():
 def delete_research(research_id):
     """Delete a research paper."""
     try:
+        from services.supabase_service import supabase
+
         uid = session.get('uid')
         print(f"🗑️ Delete research - ID: {research_id}, UID: {uid}")
 
@@ -1377,26 +1377,37 @@ def delete_research(research_id):
             print("❌ Not authenticated")
             return jsonify({'error': 'Not authenticated'}), 401
 
-        # Verify ownership
+        # Verify ownership by checking member_id
         print(f"🔍 Checking if research exists...")
-        doc = db.collection('research').document(research_id).get()
-        print(f"📄 Doc exists: {doc.exists}")
+        research_response = supabase.table('research').select(
+            '*').eq('id', research_id).execute()
 
-        if not doc.exists:
+        if not research_response.data:
             print(f"❌ Research not found: {research_id}")
             return jsonify({'error': 'Research not found'}), 404
 
-        doc_data = doc.to_dict()
-        print(f"📝 Research UID: {doc_data.get('uid')}, Session UID: {uid}")
+        research = research_response.data[0]
 
-        if doc_data.get('uid') != uid:
-            print("❌ Unauthorized - UID mismatch")
+        # Get member_id from uid
+        member_response = supabase.table('members').select(
+            'id').eq('uid', uid).execute()
+        if not member_response.data:
+            return jsonify({'error': 'Member not found'}), 404
+        member_id = member_response.data[0]['id']
+
+        print(
+            f"📝 Research member_id: {research.get('member_id')}, Session member_id: {member_id}")
+
+        if research.get('member_id') != member_id:
+            print("❌ Unauthorized - member_id mismatch")
             return jsonify({'error': 'Unauthorized'}), 403
 
         print(f"🗑️ Deleting research...")
-        db.collection('research').document(research_id).delete()
+        supabase.table('research').delete().eq('id', research_id).execute()
         print(f"✅ Research deleted successfully")
+
         return jsonify({'status': 'ok'})
+
     except Exception as e:
         print(f"❌ Error deleting research: {e}")
         import traceback
