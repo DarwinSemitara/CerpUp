@@ -301,7 +301,7 @@ class FSRGenerator:
                                         f"FSR_{member_data.get('last', 'Faculty')}_{ts}.xlsx")
 
         # Generate FSR to temporary local file
-        self.generate_fsr(faculty_data, [], [],
+        self.generate_fsr(faculty_data, research_data, extensions_data,
                           temp_output_path, schedule_data=all_schedule_data,
                           footnotes_data=footnotes_data)
 
@@ -927,6 +927,11 @@ class FSRGenerator:
         print(
             f"📚 _fill_research_proposals called with {len(research_data)} research items")
 
+        # Debug: print research types
+        for r in research_data:
+            print(
+                f"   Research item: type='{r.get('research_type')}', title='{r.get('title')}'")
+
         # Filter for proposals only
         proposals = [r for r in research_data if r.get(
             'research_type') == 'proposal']
@@ -997,7 +1002,7 @@ class FSRGenerator:
             from copy import copy
             for offset in range(rows_difference):
                 new_row = TOTAL_ROW + offset
-                # Copy cell formatting from row 47
+                # Copy cell formatting from row 47 (including merged cell formatting)
                 for col_letter in ['A', 'E', 'F', 'I', 'K']:
                     template_cell = ws[f"{col_letter}47"]
                     new_cell = ws[f"{col_letter}{new_row}"]
