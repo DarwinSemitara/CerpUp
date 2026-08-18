@@ -305,6 +305,8 @@ class FSRGenerator:
                           temp_output_path, schedule_data=all_schedule_data,
                           footnotes_data=footnotes_data)
 
+        print(f"✅ FSR saved to: {temp_output_path}")
+
         # Upload to Supabase Storage and save metadata
         try:
             file_metadata = self._upload_fsr_to_storage(
@@ -315,10 +317,11 @@ class FSRGenerator:
                 academic_year
             )
 
-            # Delete local file after successful upload
-            if os.path.exists(temp_output_path):
-                os.remove(temp_output_path)
-                print(f"✓ Deleted local file: {temp_output_path}")
+            # KEEP the local file for debugging - don't delete it
+            # if os.path.exists(temp_output_path):
+            #     os.remove(temp_output_path)
+            #     print(f"✓ Deleted local file: {temp_output_path}")
+            print(f"✓ Local file kept for inspection: {temp_output_path}")
 
             return file_metadata
         except Exception as e:
@@ -447,10 +450,13 @@ class FSRGenerator:
                     # Write to the top-left cell of the merged range
                     top_left = merged_range.start_cell
                     ws[top_left.coordinate].value = value
+                    print(
+                        f"      _write_cell: Wrote '{value}' to merged cell {cell_ref} (top-left: {top_left.coordinate})")
                     return
 
         # Not a merged cell, write directly
         cell.value = value
+        print(f"      _write_cell: Wrote '{value}' to cell {cell_ref}")
 
     def _copy_row_style(self, ws, source_row, target_row, start_col=1, end_col=None):
         """
@@ -937,14 +943,21 @@ class FSRGenerator:
             'research_type') == 'proposal']
         print(f"   Found {len(proposals)} research proposals")
 
-        # Template positions (before any modifications)
-        HEADER_ROW = 42  # "II. RESEARCH/TEXTBOOK WRITING/CREATIVE WORK:"
-        SUBSECTION_ROW = 43  # "II.A RESEARCH"
-        SUBSUBSECTION_ROW = 44  # "II.A1 RESEARCH PROPOSAL"
-        TABLE_HEADER_ROW = 45
-        DATA_START_ROW = 46  # First data row
+        # Template positions (BEFORE teaching load modifications)
+        TEMPLATE_DATA_START_ROW = 46
         TEMPLATE_DATA_ROWS = 2  # Rows 46-47
-        TOTAL_ROW = 48  # Total row
+        TEMPLATE_TOTAL_ROW = 48
+
+        # Calculate ACTUAL row positions after teaching load section deleted 7 rows
+        # Teaching load section: deletes from row 15-21 (7 rows)
+        # Everything below row 21 shifts up by 7
+        teaching_row_shift = -7
+
+        DATA_START_ROW = TEMPLATE_DATA_START_ROW + teaching_row_shift  # 46 - 7 = 39
+        TOTAL_ROW = TEMPLATE_TOTAL_ROW + teaching_row_shift  # 48 - 7 = 41
+
+        print(
+            f"   📍 Calculated row positions: Template row {TEMPLATE_DATA_START_ROW} → Actual row {DATA_START_ROW}")
 
         num_proposals = len(proposals)
 
@@ -958,21 +971,19 @@ class FSRGenerator:
         else:
             print(f"   Need to DELETE {abs(rows_difference)} rows")
 
-        # STEP 1: Clear template data rows (46-47) but DON'T delete yet
-        print(
-            f"🧹 Clearing template data rows {DATA_START_ROW} to {DATA_START_ROW+TEMPLATE_DATA_ROWS-1}")
-        for clear_row in range(DATA_START_ROW, DATA_START_ROW + TEMPLATE_DATA_ROWS):
-            # Clear each cell while preserving formatting
-            self._write_cell(ws, f"A{clear_row}", "")
-            self._write_cell(ws, f"E{clear_row}", "")
-            self._write_cell(ws, f"F{clear_row}", "")
-            self._write_cell(ws, f"I{clear_row}", "")
-            self._write_cell(ws, f"K{clear_row}", "")
-        print("✓ Template data rows cleared")
+        # STEP 1: Don't clear - we'll overwrite directly
+        # Clearing breaks the MergedCell references
 
-        # STEP 2: Populate with actual proposal data FIRST (before deleting rows)
+        # STEP 2: Populate with actual proposal data (overwrites template data)
         print(
             f"📝 Populating {num_proposals} proposals starting at row {DATA_START_ROW}")
+
+        # Debug: Check if merges exist
+        print(f"   🔍 Checking merges around row {DATA_START_ROW}:")
+        for merge in ws.merged_cells.ranges:
+            if DATA_START_ROW <= merge.min_row <= DATA_START_ROW + 2:
+                print(f"      Found merge: {merge}")
+
         for i, proposal in enumerate(proposals):
             row = DATA_START_ROW + i
 
@@ -988,6 +999,15 @@ class FSRGenerator:
             self._write_cell(ws, f"F{row}", co_workers)
             self._write_cell(ws, f"I{row}", funding)
             self._write_cell(ws, f"K{row}", credits)
+
+            # Copy borders from template row 47 (which is now at row 40 after shift)
+            from copy import copy
+            template_row = TEMPLATE_DATA_START_ROW + 1 + teaching_row_shift  # Row 47 → 40
+            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
+                template_cell = ws[f"{col_letter}{template_row}"]
+                current_cell = ws[f"{col_letter}{row}"]
+                if template_cell.border:
+                    current_cell.border = copy(template_cell.border)
 
             print(
                 f"  Row {row}: {title[:50] if title else '(empty)'} | Role: {role} | Credits: {credits}")
