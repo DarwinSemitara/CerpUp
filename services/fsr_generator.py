@@ -953,7 +953,7 @@ class FSRGenerator:
         else:
             print(f"   Need to DELETE {abs(rows_difference)} rows")
 
-        # STEP 1: Clear template data rows (46-47)
+        # STEP 1: Clear template data rows (46-47) but DON'T delete yet
         print(
             f"🧹 Clearing template data rows {DATA_START_ROW} to {DATA_START_ROW+TEMPLATE_DATA_ROWS-1}")
         for clear_row in range(DATA_START_ROW, DATA_START_ROW + TEMPLATE_DATA_ROWS):
@@ -965,7 +965,29 @@ class FSRGenerator:
             self._write_cell(ws, f"K{clear_row}", "")
         print("✓ Template data rows cleared")
 
-        # STEP 2: Adjust rows if needed
+        # STEP 2: Populate with actual proposal data FIRST (before deleting rows)
+        print(
+            f"📝 Populating {num_proposals} proposals starting at row {DATA_START_ROW}")
+        for i, proposal in enumerate(proposals):
+            row = DATA_START_ROW + i
+
+            # Write data to merged cells
+            title = proposal.get('title', '') or ''
+            role = proposal.get('role', '') or ''
+            co_workers = proposal.get('co_workers', '') or ''
+            funding = proposal.get('funding_agency', '') or ''
+            credits = proposal.get('credit_units', '') or ''
+
+            self._write_cell(ws, f"A{row}", title)
+            self._write_cell(ws, f"E{row}", role)
+            self._write_cell(ws, f"F{row}", co_workers)
+            self._write_cell(ws, f"I{row}", funding)
+            self._write_cell(ws, f"K{row}", credits)
+
+            print(
+                f"  Row {row}: {title[:50] if title else '(empty)'} | Role: {role} | Credits: {credits}")
+
+        # STEP 3: Adjust rows if needed (AFTER populating data)
         if rows_difference > 0:
             # Insert additional rows
             print(f"➕ Inserting {rows_difference} rows at row {TOTAL_ROW}")
@@ -994,27 +1016,12 @@ class FSRGenerator:
             print(f"✓ Inserted {rows_difference} rows with formatting")
 
         elif rows_difference < 0:
-            # Delete excess rows
+            # Delete excess rows (AFTER data is written)
             delete_count = abs(rows_difference)
-            delete_start = TOTAL_ROW - delete_count
-            print(f"➖ Deleting {delete_count} rows from {delete_start}")
+            delete_start = DATA_START_ROW + num_proposals  # Delete after the data
+            print(f"➖ Deleting {delete_count} excess rows from {delete_start}")
             ws.delete_rows(delete_start, delete_count)
             print(f"✓ Deleted {delete_count} rows")
-
-        # STEP 3: Populate with actual proposal data
-        print(
-            f"📝 Populating {num_proposals} proposals starting at row {DATA_START_ROW}")
-        for i, proposal in enumerate(proposals):
-            row = DATA_START_ROW + i
-
-            # Write data to merged cells
-            self._write_cell(ws, f"A{row}", proposal.get('title', ''))
-            self._write_cell(ws, f"E{row}", proposal.get('role', ''))
-            self._write_cell(ws, f"F{row}", proposal.get('co_workers', ''))
-            self._write_cell(ws, f"I{row}", proposal.get('funding_agency', ''))
-            self._write_cell(ws, f"K{row}", proposal.get('credit_units', ''))
-
-            print(f"  Row {row}: {proposal.get('title', '')[:50]}")
 
         # STEP 4: Update TOTAL formula
         new_total_row = DATA_START_ROW + num_proposals
