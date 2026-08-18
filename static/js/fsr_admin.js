@@ -496,15 +496,20 @@ function fsrRender(member, research, extensions, schedules, unscheduledSubjects,
             <th colspan="2">CO WORKERS INVOLVED</th><th colspan="2">FUNDING AGENCY</th><th colspan="2">APPROVED CREDIT UNITS</th>
         </tr>`;
     if (proposals.length > 0) {
+        let totalProposalRLC = 0;
         proposals.forEach((item, i) => {
+            const cr = parseFloat(item.credit_units) || 3;
+            totalProposalRLC += cr;
             html += `<tr>
                 <td colspan="4">${item.project_id ? `(${i + 1}) OVCRE ID: ${item.project_id}<br>` : `(${i + 1}) `}${item.title || 'Untitled'}</td>
                 <td>${item.role || 'Study Leader'}</td>
                 <td colspan="2">${item.co_authors || 'None'}</td>
                 <td colspan="2">${item.funding_agency || 'Core Funded'}</td>
-                <td colspan="2" style="text-align:center;">${item.credit_units || 3}</td>
+                <td colspan="2" style="text-align:center;">${cr}</td>
             </tr>`;
         });
+        // Add total row for proposals
+        html += `<tr class="fsr-total-row"><td colspan="9">Total Research Work Load Credits (RLC)</td><td colspan="2" style="text-align:center;">${totalProposalRLC}</td></tr>`;
     } else {
         html += `<tr><td colspan="11" class="fsr-italic-empty">No research proposals recorded</td></tr>`;
     }

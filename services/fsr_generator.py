@@ -149,6 +149,9 @@ class FSRGenerator:
         # Research proposals section (dynamic)
         self._fill_research_proposals(ws, research_data or [])
 
+        # Research implementation section (dynamic)
+        self._fill_research_implementation(ws, research_data or [])
+
         # DO NOT modify anything below research section yet
         # Extensions and other sections remain as-is in the template
 
@@ -317,11 +320,10 @@ class FSRGenerator:
                 academic_year
             )
 
-            # KEEP the local file for debugging - don't delete it
-            # if os.path.exists(temp_output_path):
-            #     os.remove(temp_output_path)
-            #     print(f"✓ Deleted local file: {temp_output_path}")
-            print(f"✓ Local file kept for inspection: {temp_output_path}")
+            # Delete the local file after successful upload
+            if os.path.exists(temp_output_path):
+                os.remove(temp_output_path)
+                print(f"✓ Deleted local file: {temp_output_path}")
 
             return file_metadata
         except Exception as e:
@@ -974,6 +976,69 @@ class FSRGenerator:
         # STEP 1: Don't clear - we'll overwrite directly
         # Clearing breaks the MergedCell references
 
+        # STEP 1.5: Fix corrupted merges - teaching load deletion corrupts these
+        # Need to unmerge and recreate the correct structure for data rows
+        print(
+            f"   🔧 Fixing merges for rows {DATA_START_ROW} to {DATA_START_ROW+TEMPLATE_DATA_ROWS-1}")
+
+        # Unmerge any broken ranges in data rows
+        for row in range(DATA_START_ROW, DATA_START_ROW + TEMPLATE_DATA_ROWS):
+            try:
+                # Try to unmerge various possible ranges
+                ws.unmerge_cells(f"A{row}:K{row}")
+            except:
+                pass
+            try:
+                # Wrong merge from registrar section
+                ws.unmerge_cells(f"G{row}:J{row}")
+            except:
+                pass
+
+        # Recreate correct merges for data rows
+        from copy import copy
+        template_row = TEMPLATE_DATA_START_ROW + teaching_row_shift  # Row 46 → 39
+
+        for row in range(DATA_START_ROW, DATA_START_ROW + TEMPLATE_DATA_ROWS):
+            ws.merge_cells(f"A{row}:D{row}")  # Title
+            ws.merge_cells(f"F{row}:H{row}")  # Co-workers
+            ws.merge_cells(f"I{row}:J{row}")  # Funding agency
+
+            # Copy borders from template row to preserve formatting
+            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
+                template_cell = ws[f"{col_letter}{template_row}"]
+                current_cell = ws[f"{col_letter}{row}"]
+                if template_cell.border:
+                    current_cell.border = copy(template_cell.border)
+
+            # CRITICAL: Explicitly set borders that get lost during merge operations
+            from openpyxl.styles import Border, Side
+
+            # 1. Right border on J (between funding and credits columns) + bottom border
+            j_cell = ws[f"J{row}"]
+            j_cell.border = Border(
+                left=j_cell.border.left if j_cell.border else None,
+                # Explicit right border
+                right=Side(style='thin', color='FF000000'),
+                top=j_cell.border.top if j_cell.border else None,
+                # Explicit bottom border
+                bottom=Side(style='thin', color='FF000000')
+            )
+
+            # 2. Ensure bottom borders for all cells in the row (horizontal lines)
+            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K']:
+                cell = ws[f"{col_letter}{row}"]
+                if cell.border:
+                    cell.border = Border(
+                        left=cell.border.left,
+                        right=cell.border.right,
+                        top=cell.border.top,
+                        # Ensure bottom border
+                        bottom=Side(style='thin', color='FF000000')
+                    )
+
+        print(
+            f"   ✓ Recreated merges: A:D, F:H, I:J for rows {DATA_START_ROW}-{DATA_START_ROW+TEMPLATE_DATA_ROWS-1}")
+
         # STEP 2: Populate with actual proposal data (overwrites template data)
         print(
             f"📝 Populating {num_proposals} proposals starting at row {DATA_START_ROW}")
@@ -992,22 +1057,20 @@ class FSRGenerator:
             role = proposal.get('role', '') or ''
             co_workers = proposal.get('co_workers', '') or ''
             funding = proposal.get('funding_agency', '') or ''
-            credits = proposal.get('credit_units', '') or ''
+            credits_raw = proposal.get('credit_units', '') or ''
+
+            # Convert credits to number for proper formula calculation
+            try:
+                credits = float(credits_raw) if credits_raw else 0
+            except (ValueError, TypeError):
+                credits = 0
 
             self._write_cell(ws, f"A{row}", title)
             self._write_cell(ws, f"E{row}", role)
             self._write_cell(ws, f"F{row}", co_workers)
             self._write_cell(ws, f"I{row}", funding)
+            # Write as number, not string
             self._write_cell(ws, f"K{row}", credits)
-
-            # Copy borders from template row 47 (which is now at row 40 after shift)
-            from copy import copy
-            template_row = TEMPLATE_DATA_START_ROW + 1 + teaching_row_shift  # Row 47 → 40
-            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
-                template_cell = ws[f"{col_letter}{template_row}"]
-                current_cell = ws[f"{col_letter}{row}"]
-                if template_cell.border:
-                    current_cell.border = copy(template_cell.border)
 
             print(
                 f"  Row {row}: {title[:50] if title else '(empty)'} | Role: {role} | Credits: {credits}")
@@ -1052,6 +1115,176 @@ class FSRGenerator:
         new_total_row = DATA_START_ROW + num_proposals
         if num_proposals > 0:
             formula = f"=SUM(K{DATA_START_ROW}:K{DATA_START_ROW+num_proposals-1})"
+        else:
+            formula = "0"
+        ws[f"K{new_total_row}"].value = formula
+        print(f"✓ Updated TOTAL formula at K{new_total_row}: {formula}")
+
+    def _fill_research_implementation(self, ws, research_data):
+        """
+        Fill research implementation section dynamically.
+        Template structure (after teaching_row_shift=-7):
+        - Header at row 42
+        - Data rows: 43-44 (2 template rows)
+        - Total row: 45
+
+        Columns: A:D (Title), E (Role), F:G (Co-workers), H (Start Date), I (End Date), J (Funding), K (Credits)
+        """
+        print(
+            f"📚 _fill_research_implementation called with {len(research_data)} research items")
+
+        # Filter for implementation items only
+        implementations = [r for r in research_data if r.get(
+            'research_type') == 'implementation']
+        print(f"   Found {len(implementations)} research implementations")
+
+        if not implementations:
+            print("   No implementations to fill")
+            return
+
+        # Template row numbers (in original template before teaching load shift)
+        TEMPLATE_SECTION_HEADER_ROW = 50
+        TEMPLATE_COLUMN_HEADER_ROW = 51
+        TEMPLATE_DATA_START_ROW = 52
+        TEMPLATE_DATA_ROWS = 16  # Template has 16 sample data rows (52-67)
+        TEMPLATE_TOTAL_ROW = 68
+
+        # Calculate actual positions after teaching load modifications
+        teaching_row_shift = -7  # We deleted 7 rows in teaching load section
+
+        SECTION_HEADER_ROW = TEMPLATE_SECTION_HEADER_ROW + teaching_row_shift  # 50 → 43
+        COLUMN_HEADER_ROW = TEMPLATE_COLUMN_HEADER_ROW + teaching_row_shift  # 51 → 44
+        DATA_START_ROW = TEMPLATE_DATA_START_ROW + teaching_row_shift  # 52 → 45
+        TOTAL_ROW = TEMPLATE_TOTAL_ROW + teaching_row_shift  # 68 → 61
+
+        print(f"   📍 Calculated row positions:")
+        print(
+            f"      Data start: Template row {TEMPLATE_DATA_START_ROW} → Actual row {DATA_START_ROW}")
+        print(
+            f"      Total row: Template row {TEMPLATE_TOTAL_ROW} → Actual row {TOTAL_ROW}")
+
+        num_implementations = len(implementations)
+
+        # Calculate row adjustment needed
+        rows_difference = num_implementations - TEMPLATE_DATA_ROWS
+
+        if rows_difference == 0:
+            print("   No row adjustment needed - exact match with template")
+        elif rows_difference > 0:
+            print(f"   Need to INSERT {rows_difference} rows")
+        else:
+            print(f"   Need to DELETE {abs(rows_difference)} rows")
+
+        # STEP 1: Clear template sample data (all 16 rows)
+        print(
+            f"🧹 Clearing template data rows {DATA_START_ROW} to {DATA_START_ROW + TEMPLATE_DATA_ROWS - 1}")
+        for row in range(DATA_START_ROW, DATA_START_ROW + TEMPLATE_DATA_ROWS):
+            for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
+                self._write_cell(ws, f"{col}{row}", "")
+        print("✓ Template data rows cleared")
+
+        # STEP 2: Adjust rows if needed (BEFORE fixing merges)
+        if rows_difference < 0:
+            # Delete excess rows (template has more rows than needed)
+            delete_count = abs(rows_difference)
+            delete_start = DATA_START_ROW + num_implementations
+            print(f"➖ Deleting {delete_count} excess rows from {delete_start}")
+            ws.delete_rows(delete_start, delete_count)
+            print(f"✓ Deleted {delete_count} rows")
+        elif rows_difference > 0:
+            # Insert additional rows (need more rows than template has)
+            insert_at = DATA_START_ROW + TEMPLATE_DATA_ROWS
+            print(f"➕ Inserting {rows_difference} rows at row {insert_at}")
+            ws.insert_rows(insert_at, rows_difference)
+            print(f"✓ Inserted {rows_difference} rows")
+
+        # STEP 3: Fix corrupted merges - teaching load deletion corrupts these
+        print(
+            f"   🔧 Fixing merges for rows {DATA_START_ROW} to {DATA_START_ROW+num_implementations-1}")
+
+        # Unmerge any broken ranges in data rows
+        for row in range(DATA_START_ROW, DATA_START_ROW + num_implementations):
+            try:
+                ws.unmerge_cells(f"A{row}:K{row}")
+            except:
+                pass
+            try:
+                # Wrong merge from registrar section
+                ws.unmerge_cells(f"G{row}:J{row}")
+            except:
+                pass
+
+        # Recreate correct merges for data rows
+        from copy import copy
+        template_row = TEMPLATE_DATA_START_ROW + teaching_row_shift  # Row 52 → 45
+
+        for row in range(DATA_START_ROW, DATA_START_ROW + num_implementations):
+            ws.merge_cells(f"A{row}:D{row}")  # Title
+            ws.merge_cells(f"F{row}:G{row}")  # Co-workers
+            # H, I, J, K are standalone
+
+            # Copy borders from template row to preserve formatting
+            from openpyxl.styles import Border, Side
+            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
+                template_cell = ws[f"{col_letter}{template_row}"]
+                current_cell = ws[f"{col_letter}{row}"]
+                if template_cell.border:
+                    current_cell.border = copy(template_cell.border)
+
+            # CRITICAL: Explicitly set borders that get lost during merge operations
+            # Ensure bottom borders for all cells in the row (horizontal lines)
+            for col_letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']:
+                cell = ws[f"{col_letter}{row}"]
+                if cell.border:
+                    cell.border = Border(
+                        left=cell.border.left,
+                        right=cell.border.right,
+                        top=cell.border.top,
+                        # Ensure bottom border
+                        bottom=Side(style='thin', color='FF000000')
+                    )
+
+        print(
+            f"   ✓ Recreated merges: A:D, F:G for rows {DATA_START_ROW}-{DATA_START_ROW+num_implementations-1}")
+
+        # STEP 4: Populate with actual implementation data
+        print(
+            f"📝 Populating {num_implementations} implementations starting at row {DATA_START_ROW}")
+
+        for i, implementation in enumerate(implementations):
+            row = DATA_START_ROW + i
+
+            # Write data to merged cells
+            title = implementation.get('title', '') or ''
+            role = implementation.get('role', '') or ''
+            co_workers = implementation.get('co_workers', '') or ''
+            start_date = implementation.get('start_date', '') or ''
+            end_date = implementation.get('end_date', '') or ''
+            funding = implementation.get('funding_agency', '') or ''
+            credits_raw = implementation.get('credit_units', '') or ''
+
+            # Convert credits to number for proper formula calculation
+            try:
+                credits = float(credits_raw) if credits_raw else 0
+            except (ValueError, TypeError):
+                credits = 0
+
+            self._write_cell(ws, f"A{row}", title)
+            self._write_cell(ws, f"E{row}", role)
+            self._write_cell(ws, f"F{row}", co_workers)
+            self._write_cell(ws, f"H{row}", start_date)
+            self._write_cell(ws, f"I{row}", end_date)
+            self._write_cell(ws, f"J{row}", funding)
+            # Write as number, not string
+            self._write_cell(ws, f"K{row}", credits)
+
+            print(
+                f"  Row {row}: {title[:50] if title else '(empty)'} | Role: {role} | Credits: {credits}")
+
+        # STEP 5: Update TOTAL formula
+        new_total_row = DATA_START_ROW + num_implementations
+        if num_implementations > 0:
+            formula = f"=SUM(K{DATA_START_ROW}:K{DATA_START_ROW+num_implementations-1})"
         else:
             formula = "0"
         ws[f"K{new_total_row}"].value = formula
