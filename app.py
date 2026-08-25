@@ -2,7 +2,7 @@
 from dotenv import load_dotenv
 from services.supabase_service import verify_access_token as verify_id_token, db, supabase
 from services.cloudinary_service import upload_member_photo, delete_member_photo
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import uuid
 import logging
@@ -438,7 +438,7 @@ def che_create_conversation():
             supabase.table('che_conversations').delete().eq(
                 'id', oldest_id).execute()
 
-        now = datetime.now(datetime.UTC).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         new_id = str(uuid.uuid4())
         supabase.table('che_conversations').insert({
             'id': new_id,
@@ -656,7 +656,7 @@ def che_execute_action():
                 new_id = str(uuid.uuid4())
 
                 # Auto-detect school year: current year to next year (matches frontend default)
-                now = datetime.now(datetime.UTC)
+                now = datetime.now(timezone.utc)
                 school_year = f"{now.year}-{now.year + 1}"
                 # Default to 1st semester (admin changes this on the schedule page)
                 semester = '1'
@@ -777,7 +777,7 @@ def che_execute_action():
                 if gen_params.get('save_to_db', False) and ga_result.get('success'):
                     target_sem = gen_params.get('target_semester', '1')
                     target_sy = gen_params.get('target_school_year',
-                                               f"{datetime.now(datetime.UTC).year}-{datetime.now(datetime.UTC).year + 1}")
+                                               f"{datetime.now(timezone.utc).year}-{datetime.now(timezone.utc).year + 1}")
                     saved = 0
                     for sched in ga_result['schedules']:
                         new_id = str(uuid.uuid4())
@@ -796,7 +796,7 @@ def che_execute_action():
                             'year': '1',
                             'semester': target_sem,
                             'school_year': target_sy,
-                            'created_at': datetime.now(datetime.UTC).isoformat(),
+                            'created_at': datetime.now(timezone.utc).isoformat(),
                         }).execute()
                         saved += 1
                     result['message'] += f" | Saved {saved} entries to database."
@@ -1655,7 +1655,7 @@ def generate_fsr_all():
 
         memory_file.seek(0)
 
-        timestamp = datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
         return send_file(
             memory_file,
             as_attachment=True,
@@ -1846,8 +1846,8 @@ def add_schedule():
             'section':   data['section'],
             'year':      data.get('year', '1'),
             'semester':  data.get('semester', '1'),
-            'school_year': data.get('schoolYear') or f"{datetime.now(datetime.UTC).year}-{datetime.now(datetime.UTC).year + 1}",
-            'created_at': datetime.now(datetime.UTC).isoformat(),
+            'school_year': data.get('schoolYear') or f"{datetime.now(timezone.utc).year}-{datetime.now(timezone.utc).year + 1}",
+            'created_at': datetime.now(timezone.utc).isoformat(),
         }
 
         # Insert into Supabase
@@ -2253,7 +2253,7 @@ def api_generate_full_schedule():
         # Optionally save to database
         target_semester = data.get('target_semester', '1')
         target_school_year = data.get('target_school_year',
-                                      f"{datetime.now(datetime.UTC).year}-{datetime.now(datetime.UTC).year + 1}")
+                                      f"{datetime.now(timezone.utc).year}-{datetime.now(timezone.utc).year + 1}")
 
         if data.get('save_to_db', False) and result.get('success'):
             saved_count = 0
@@ -2274,7 +2274,7 @@ def api_generate_full_schedule():
                     'year': '1',
                     'semester': target_semester,
                     'school_year': target_school_year,
-                    'created_at': datetime.now(datetime.UTC).isoformat(),
+                    'created_at': datetime.now(timezone.utc).isoformat(),
                 }).execute()
                 saved_count += 1
             result['message'] += f" | Saved {saved_count} entries to DB."
@@ -2330,7 +2330,7 @@ def dashboard_stats():
             if created:
                 try:
                     dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
-                    if dt.year == datetime.now(datetime.UTC).year:
+                    if dt.year == datetime.now(timezone.utc).year:
                         monthly_counts[dt.month] += 1
                 except (ValueError, TypeError):
                     pass
@@ -2357,7 +2357,7 @@ def dashboard_stats_by_year():
     try:
         from collections import defaultdict
 
-        current_year = datetime.now(datetime.UTC).year
+        current_year = datetime.now(timezone.utc).year
         publications_by_year = {}
         extensions_by_year = {}
 
@@ -3055,7 +3055,7 @@ def member_dashboard_stats():
     try:
         from collections import defaultdict
         uid = session['uid']
-        current_year = datetime.now(datetime.UTC).year
+        current_year = datetime.now(timezone.utc).year
         last_year = current_year - 1
 
         # Research by month for current year and last year
@@ -3109,7 +3109,7 @@ def member_dashboard_stats_by_year():
         from collections import defaultdict
 
         uid = session['uid']
-        current_year = datetime.now(datetime.UTC).year
+        current_year = datetime.now(timezone.utc).year
         publications_by_year = {}
         extensions_by_year = {}
 
