@@ -541,14 +541,13 @@ def che_chat():
         # Always inject schedule context for scheduling awareness
         context_data = {}
         try:
-            # Schedules (always loaded for GA awareness)
-            sched_docs = db.collection('schedules').stream()
+            # Schedules (always loaded for GA awareness) - FROM SUPABASE
+            result = supabase.table('schedules').select('*').execute()
             schedules_raw = []
-            for d in sched_docs:
-                data = d.to_dict()
+            for data in result.data:
                 # Normalize to camelCase for consistency with GA functions
                 schedules_raw.append({
-                    'id': d.id,
+                    'id': data.get('id'),
                     'prof': data.get('prof', ''),
                     'subjCode': data.get('subj_code', data.get('subjCode', '')),
                     'subjName': data.get('subj_name', data.get('subjName', '')),
@@ -626,13 +625,12 @@ def che_execute_action():
         if not action_data or 'action' not in action_data:
             return jsonify({'success': False, 'message': 'No action provided.'}), 400
 
-        # Get current schedules (normalized to camelCase)
-        sched_docs = db.collection('schedules').stream()
+        # Get current schedules from Supabase (normalized to camelCase)
+        result = supabase.table('schedules').select('*').execute()
         existing_schedules = []
-        for d in sched_docs:
-            data = d.to_dict()
+        for data in result.data:
             existing_schedules.append({
-                'id': d.id,
+                'id': data.get('id'),
                 'prof': data.get('prof', ''),
                 'subjCode': data.get('subj_code', data.get('subjCode', '')),
                 'subjName': data.get('subj_name', data.get('subjName', '')),
@@ -663,7 +661,7 @@ def che_execute_action():
                 # Default to 1st semester (admin changes this on the schedule page)
                 semester = '1'
 
-                db.collection('schedules').document(new_id).set({
+                supabase.table('schedules').insert({
                     'id': new_id,
                     'subj_code': sched.get('subjCode', ''),
                     'subj_name': sched.get('subjName', ''),
@@ -678,23 +676,24 @@ def che_execute_action():
                     'year': '1',
                     'semester': semester,
                     'school_year': school_year,
-                    'created_at': datetime.utcnow().isoformat(),
-                })
+                    'created_at': now.isoformat(),
+                }).execute()
                 result['message'] += f" Added as ID: {new_id[:8]}..."
 
             elif action_type == 'move_schedule' and result['data'].get('moved_schedules'):
                 for moved in result['data']['moved_schedules']:
                     sid = moved.get('id')
                     if sid:
-                        db.collection('schedules').document(sid).update({
+                        supabase.table('schedules').update({
                             'day': moved.get('day', ''),
                             'start': moved.get('start', ''),
                             'end': moved.get('end', ''),
-                        })
+                        }).eq('id', sid).execute()
 
             elif action_type == 'delete_schedule' and result['data'].get('schedules_to_delete'):
                 for sid in result['data']['schedules_to_delete']:
-                    db.collection('schedules').document(sid).delete()
+                    supabase.table('schedules').delete().eq(
+                        'id', sid).execute()
                 result['message'] = f"Deleted {len(result['data']['schedules_to_delete'])} schedule(s)."
 
             elif action_type == 'generate_full_schedule' and result['data'].get('redirect_to_endpoint'):
@@ -709,21 +708,20 @@ def che_execute_action():
                 ref_sy = gen_params.get('reference_school_year')
                 if ref_sem and ref_sy:
                     try:
-                        ref_docs = db.collection('schedules').stream()
-                        for d in ref_docs:
-                            rd = d.to_dict()
-                            if rd.get('semester') == ref_sem and rd.get('school_year') == ref_sy:
-                                reference_schedules.append({
-                                    'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
-                                    'subjName': rd.get('subj_name', rd.get('subjName', '')),
-                                    'prof': rd.get('prof', ''),
-                                    'room': rd.get('room', ''),
-                                    'section': rd.get('section', ''),
-                                    'units': rd.get('units', 3),
-                                    'day': rd.get('day', ''),
-                                    'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
-                                    'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
-                                })
+                        ref_result = supabase.table('schedules').select('*').eq(
+                            'semester', ref_sem).eq('school_year', ref_sy).execute()
+                        for rd in ref_result.data:
+                            reference_schedules.append({
+                                'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
+                                'subjName': rd.get('subj_name', rd.get('subjName', '')),
+                                'prof': rd.get('prof', ''),
+                                'room': rd.get('room', ''),
+                                'section': rd.get('section', ''),
+                                'units': rd.get('units', 3),
+                                'day': rd.get('day', ''),
+                                'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
+                                'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
+                            })
                     except Exception as e:
                         logger.warning(f"Ref semester load error: {e}")
 
@@ -779,11 +777,11 @@ def che_execute_action():
                 if gen_params.get('save_to_db', False) and ga_result.get('success'):
                     target_sem = gen_params.get('target_semester', '1')
                     target_sy = gen_params.get('target_school_year',
-                                               f"{datetime.utcnow().year}-{datetime.utcnow().year + 1}")
+                                               f"{datetime.now(datetime.UTC).year}-{datetime.now(datetime.UTC).year + 1}")
                     saved = 0
                     for sched in ga_result['schedules']:
                         new_id = str(uuid.uuid4())
-                        db.collection('schedules').document(new_id).set({
+                        supabase.table('schedules').insert({
                             'id': new_id,
                             'subj_code': sched.get('subjCode', ''),
                             'subj_name': sched.get('subjName', ''),
@@ -798,8 +796,8 @@ def che_execute_action():
                             'year': '1',
                             'semester': target_sem,
                             'school_year': target_sy,
-                            'created_at': datetime.utcnow().isoformat(),
-                        })
+                            'created_at': datetime.now(datetime.UTC).isoformat(),
+                        }).execute()
                         saved += 1
                     result['message'] += f" | Saved {saved} entries to database."
 
@@ -1751,23 +1749,37 @@ def get_fsr_footnotes(member_id):
 @app.route('/api/schedules', methods=['GET'])
 @login_required
 def get_schedules():
-    """Return all schedule entries from database. Optionally filter by professor name."""
+    """Return all schedule entries from Supabase. Optionally filter by professor name."""
     try:
-        docs = db.collection('schedules').order_by('created_at').stream()
-        entries = []
+        # Get filter parameters
         prof_filter = request.args.get('prof', '').strip().lower()
+        semester = request.args.get('semester', '').strip()
+        school_year = request.args.get('schoolYear', '').strip()
 
-        for d in docs:
-            data = d.to_dict()
+        # Build Supabase query
+        query = supabase.table('schedules').select('*').order('created_at')
 
-            def format_time(time_str):
-                if time_str and ':' in str(time_str):
-                    parts = str(time_str).split(':')
-                    return f"{parts[0]}:{parts[1]}"
-                return time_str
+        # Apply semester filter if provided
+        if semester:
+            query = query.eq('semester', semester)
 
+        # Apply school year filter if provided
+        if school_year:
+            query = query.eq('school_year', school_year)
+
+        # Execute query
+        result = query.execute()
+
+        def format_time(time_str):
+            if time_str and ':' in str(time_str):
+                parts = str(time_str).split(':')
+                return f"{parts[0]}:{parts[1]}"
+            return time_str
+
+        entries = []
+        for data in result.data:
             entry = {
-                'id': d.id,
+                'id': data.get('id'),
                 'prof': data.get('prof'),
                 'subjCode': data.get('subj_code', data.get('subjCode')),
                 'subjName': data.get('subj_name', data.get('subjName')),
@@ -1791,32 +1803,40 @@ def get_schedules():
                     continue
 
             entries.append(entry)
+
+        logger.info(f"✅ Found {len(entries)} schedules from Supabase")
         return jsonify(entries)
+
     except Exception as e:
+        logger.error(f"Get schedules error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/schedules', methods=['POST'])
 @login_required
 def add_schedule():
-    """Add a single schedule entry (manual mode)."""
+    """Add a single schedule entry (manual mode) - SUPABASE VERSION."""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided.'}), 400
+
         required = ['prof', 'subjCode', 'subjName', 'day',
                     'start', 'end', 'room', 'units', 'section']
         for field in required:
             if not data.get(field):
                 return jsonify({'error': f'Missing field: {field}'}), 400
+
         entry_id = str(uuid.uuid4())
 
-        # Save to database with snake_case (Supabase format)
+        # Save to Supabase with snake_case
         entry_db = {
             'id':        entry_id,
             'prof':      data['prof'],
-            'subj_code': data['subjCode'],  # Convert camelCase to snake_case
-            'subj_name': data['subjName'],  # Convert camelCase to snake_case
+            'subj_code': data['subjCode'],
+            'subj_name': data['subjName'],
             'type':      data.get('type', 'Lecture'),
             'day':       data['day'],
             'start':     data['start'],
@@ -1826,10 +1846,15 @@ def add_schedule():
             'section':   data['section'],
             'year':      data.get('year', '1'),
             'semester':  data.get('semester', '1'),
-            'school_year': data.get('schoolYear') or f"{__import__('datetime').datetime.now(__import__('datetime').datetime.UTC).year}-{__import__('datetime').datetime.now(__import__('datetime').datetime.UTC).year + 1}",
-            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
+            'school_year': data.get('schoolYear') or f"{datetime.now(datetime.UTC).year}-{datetime.now(datetime.UTC).year + 1}",
+            'created_at': datetime.now(datetime.UTC).isoformat(),
         }
-        db.collection('schedules').document(entry_id).set(entry_db)
+
+        # Insert into Supabase
+        result = supabase.table('schedules').insert(entry_db).execute()
+
+        if not result.data:
+            return jsonify({'error': 'Failed to insert schedule.'}), 500
 
         # Return with camelCase (frontend expects)
         entry_response = {
@@ -1846,8 +1871,19 @@ def add_schedule():
             'section':   data['section'],
             'year':      data.get('year', '1'),
             'semester':  data.get('semester', '1'),
+            'schoolYear': entry_db['school_year'],
             'created_at': entry_db['created_at'],
         }
+
+        logger.info(
+            f"✅ Added schedule {entry_id}: {data['prof']} - {data['subjCode']}")
+        return jsonify(entry_response), 201
+
+    except Exception as e:
+        logger.error(f"Add schedule error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
         return jsonify({'status': 'ok', 'id': entry_id, 'entry': entry_response}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1856,14 +1892,25 @@ def add_schedule():
 @app.route('/api/schedules/<entry_id>', methods=['DELETE'])
 @login_required
 def delete_schedule(entry_id):
-    """Delete a single schedule entry."""
+    """Delete a single schedule entry - SUPABASE VERSION."""
     try:
-        doc = db.collection('schedules').document(entry_id).get()
-        if not doc.exists:
+        # Check if exists
+        existing = supabase.table('schedules').select(
+            'id').eq('id', entry_id).execute()
+        if not existing.data or len(existing.data) == 0:
             return jsonify({'error': 'Not found.'}), 404
-        db.collection('schedules').document(entry_id).delete()
+
+        # Delete from Supabase
+        result = supabase.table('schedules').delete().eq(
+            'id', entry_id).execute()
+
+        logger.info(f"✅ Deleted schedule {entry_id}")
         return jsonify({'status': 'ok'})
+
     except Exception as e:
+        logger.error(f"Delete schedule error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -2134,21 +2181,20 @@ def api_generate_full_schedule():
         ref_school_year = data.get('reference_school_year')
         if ref_semester and ref_school_year:
             try:
-                ref_docs = db.collection('schedules').stream()
-                for d in ref_docs:
-                    rd = d.to_dict()
-                    if rd.get('semester') == ref_semester and rd.get('school_year') == ref_school_year:
-                        reference_schedules.append({
-                            'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
-                            'subjName': rd.get('subj_name', rd.get('subjName', '')),
-                            'prof': rd.get('prof', ''),
-                            'room': rd.get('room', ''),
-                            'section': rd.get('section', ''),
-                            'units': rd.get('units', 3),
-                            'day': rd.get('day', ''),
-                            'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
-                            'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
-                        })
+                ref_result = supabase.table('schedules').select('*').eq(
+                    'semester', ref_semester).eq('school_year', ref_school_year).execute()
+                for rd in ref_result.data:
+                    reference_schedules.append({
+                        'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
+                        'subjName': rd.get('subj_name', rd.get('subjName', '')),
+                        'prof': rd.get('prof', ''),
+                        'room': rd.get('room', ''),
+                        'section': rd.get('section', ''),
+                        'units': rd.get('units', 3),
+                        'day': rd.get('day', ''),
+                        'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
+                        'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
+                    })
             except Exception as e:
                 logger.warning(f"Failed to load reference semester: {e}")
 
@@ -2207,13 +2253,13 @@ def api_generate_full_schedule():
         # Optionally save to database
         target_semester = data.get('target_semester', '1')
         target_school_year = data.get('target_school_year',
-                                      f"{datetime.utcnow().year}-{datetime.utcnow().year + 1}")
+                                      f"{datetime.now(datetime.UTC).year}-{datetime.now(datetime.UTC).year + 1}")
 
         if data.get('save_to_db', False) and result.get('success'):
             saved_count = 0
             for sched in result['schedules']:
                 new_id = str(uuid.uuid4())
-                db.collection('schedules').document(new_id).set({
+                supabase.table('schedules').insert({
                     'id': new_id,
                     'subj_code': sched.get('subjCode', ''),
                     'subj_name': sched.get('subjName', ''),
@@ -2228,8 +2274,8 @@ def api_generate_full_schedule():
                     'year': '1',
                     'semester': target_semester,
                     'school_year': target_school_year,
-                    'created_at': datetime.utcnow().isoformat(),
-                })
+                    'created_at': datetime.now(datetime.UTC).isoformat(),
+                }).execute()
                 saved_count += 1
             result['message'] += f" | Saved {saved_count} entries to DB."
 
@@ -2646,11 +2692,11 @@ def process_chat_message():
         if not message:
             return jsonify({'error': 'Empty message.'}), 400
 
-        # Get current schedules for context
+        # Get current schedules for context - FROM SUPABASE
         current_schedules = []
-        docs = db.collection('schedules').stream()
-        for d in docs:
-            current_schedules.append({'id': d.id, **d.to_dict()})
+        result = supabase.table('schedules').select('*').execute()
+        for data in result.data:
+            current_schedules.append(data)
 
         # Process message with NLP
         intent_data = process_message(message)

@@ -582,10 +582,14 @@ def chat(
         messages.append({"role": "user", "content": message})
 
         # Try primary model first, fallback if not available
+        # Updated to current Groq production models (August 2026)
         models_to_try = [
-            "llama-3.3-70b-versatile",  # Primary: Latest Llama 3.3
-            "llama-3.1-70b-versatile",  # Fallback 1: Llama 3.1
-            "llama3-70b-8192",          # Fallback 2: Llama 3.0
+            # Primary: GPT OSS 120B (500 t/sec, production)
+            "openai/gpt-oss-120b",
+            # Fallback 1: GPT OSS 20B (1000 t/sec, production)
+            "openai/gpt-oss-20b",
+            # Fallback 2: Qwen 3.6 27B (500 t/sec, preview)
+            "qwen/qwen3.6-27b",
         ]
 
         last_error = None
