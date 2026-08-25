@@ -438,7 +438,7 @@ def che_create_conversation():
             supabase.table('che_conversations').delete().eq(
                 'id', oldest_id).execute()
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(datetime.UTC).isoformat()
         new_id = str(uuid.uuid4())
         supabase.table('che_conversations').insert({
             'id': new_id,
@@ -658,7 +658,7 @@ def che_execute_action():
                 new_id = str(uuid.uuid4())
 
                 # Auto-detect school year: current year to next year (matches frontend default)
-                now = datetime.utcnow()
+                now = datetime.now(datetime.UTC)
                 school_year = f"{now.year}-{now.year + 1}"
                 # Default to 1st semester (admin changes this on the schedule page)
                 semester = '1'
@@ -969,7 +969,7 @@ def add_member():
             'availability': request.form.getlist('availability'),
             'photo_url': None,
             'user_no':   request.form.get('user_no', ''),
-            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
         }
 
         print(f"✅ Converted is_faculty to boolean: {member['is_faculty']}")
@@ -1657,7 +1657,7 @@ def generate_fsr_all():
 
         memory_file.seek(0)
 
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')
         return send_file(
             memory_file,
             as_attachment=True,
@@ -1826,8 +1826,8 @@ def add_schedule():
             'section':   data['section'],
             'year':      data.get('year', '1'),
             'semester':  data.get('semester', '1'),
-            'school_year': data.get('schoolYear') or f"{__import__('datetime').datetime.utcnow().year}-{__import__('datetime').datetime.utcnow().year + 1}",
-            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+            'school_year': data.get('schoolYear') or f"{__import__('datetime').datetime.now(__import__('datetime').datetime.UTC).year}-{__import__('datetime').datetime.now(__import__('datetime').datetime.UTC).year + 1}",
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
         }
         db.collection('schedules').document(entry_id).set(entry_db)
 
@@ -1870,19 +1870,20 @@ def delete_schedule(entry_id):
 @app.route('/api/schedules/<entry_id>', methods=['PUT'])
 @login_required
 def update_schedule(entry_id):
-    """Update an existing schedule entry (for moving blocks)."""
+    """Update an existing schedule entry (for moving blocks) - SUPABASE VERSION."""
     try:
-        doc_ref = db.collection('schedules').document(entry_id)
-        doc = doc_ref.get()
-        if not doc.exists:
-            return jsonify({'error': 'Not found.'}), 404
+        # Check if schedule exists
+        existing = supabase.table('schedules').select(
+            '*').eq('id', entry_id).execute()
+        if not existing.data or len(existing.data) == 0:
+            return jsonify({'error': 'Schedule not found.'}), 404
 
         # Get the update data from request
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided.'}), 400
 
-        # Update only the provided fields
+        # Build update payload with only provided fields
         update_data = {}
         if 'day' in data:
             update_data['day'] = data['day']
@@ -1898,19 +1899,16 @@ def update_schedule(entry_id):
         if not update_data:
             return jsonify({'error': 'No valid fields to update.'}), 400
 
-        # Don't add updated_at for Supabase - it doesn't have this field by default
-        # Update the document
-        try:
-            doc_ref.update(update_data)
-        except Exception as e:
-            logger.error(f"Supabase update error: {e}")
-            # If update fails, try to get current doc and use upsert instead
-            current_doc = doc.to_dict()
-            current_doc.update(update_data)
-            current_doc['id'] = entry_id
-            doc_ref.set(current_doc, merge=True)
+        # Update in Supabase
+        result = supabase.table('schedules').update(
+            update_data).eq('id', entry_id).execute()
 
-        return jsonify({'status': 'ok', 'id': entry_id})
+        if not result.data:
+            return jsonify({'error': 'Update failed.'}), 500
+
+        logger.info(f"✅ Updated schedule {entry_id}: {update_data}")
+        return jsonify({'status': 'ok', 'id': entry_id, 'updated': update_data})
+
     except Exception as e:
         logger.error(f"Update schedule error: {e}")
         import traceback
@@ -1921,13 +1919,45 @@ def update_schedule(entry_id):
 @app.route('/api/schedules/clear', methods=['POST'])
 @login_required
 def clear_schedules():
-    """Delete all schedule entries (used before saving a GA result)."""
+    """Delete all schedule entries (used before saving a GA result) - SUPABASE VERSION."""
     try:
-        docs = db.collection('schedules').stream()
-        for d in docs:
-            d.reference.delete()
-        return jsonify({'status': 'ok'})
+        # Get current semester and school year from request or use defaults
+        data = request.get_json() or {}
+        semester = data.get('semester')
+        school_year = data.get('school_year')
+
+        # Build delete query
+        query = supabase.table('schedules').delete()
+
+        # If semester/school_year provided, delete only those
+        if semester:
+            # Need to select first, then delete by IDs (Supabase limitation)
+            schedules_to_delete = supabase.table(
+                'schedules').select('id').eq('semester', semester)
+            if school_year:
+                schedules_to_delete = schedules_to_delete.eq(
+                    'schoolYear', school_year)
+            result = schedules_to_delete.execute()
+
+            if result.data:
+                for sched in result.data:
+                    supabase.table('schedules').delete().eq(
+                        'id', sched['id']).execute()
+                logger.info(
+                    f"🗑️ Deleted {len(result.data)} schedules for semester {semester}, year {school_year}")
+        else:
+            # Delete all schedules (no filter)
+            all_schedules = supabase.table('schedules').select('id').execute()
+            if all_schedules.data:
+                for sched in all_schedules.data:
+                    supabase.table('schedules').delete().eq(
+                        'id', sched['id']).execute()
+                logger.info(
+                    f"🗑️ Deleted all {len(all_schedules.data)} schedules")
+
+        return jsonify({'status': 'ok', 'message': 'Schedules cleared'})
     except Exception as e:
+        logger.error(f"Clear schedules error: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -2254,7 +2284,7 @@ def dashboard_stats():
             if created:
                 try:
                     dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
-                    if dt.year == datetime.utcnow().year:
+                    if dt.year == datetime.now(datetime.UTC).year:
                         monthly_counts[dt.month] += 1
                 except (ValueError, TypeError):
                     pass
@@ -2281,7 +2311,7 @@ def dashboard_stats_by_year():
     try:
         from collections import defaultdict
 
-        current_year = datetime.utcnow().year
+        current_year = datetime.now(datetime.UTC).year
         publications_by_year = {}
         extensions_by_year = {}
 
@@ -2426,7 +2456,7 @@ def add_news():
             'description': description,
             'media_type': media_type,
             'media_url': None,
-            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
         }
 
         # Upload media if provided
@@ -2505,7 +2535,7 @@ def add_engagement():
             'partner': data.get('partner', '').strip(),
             'person_involved': data.get('person_involved', '').strip(),
             'period': data.get('period', '').strip(),
-            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
         }
 
         # Validate required fields
@@ -2568,7 +2598,7 @@ def add_tap_project():
             'person_involved': data.get('person_involved', '').strip(),
             'role': data.get('role', '').strip(),
             'document_url': data.get('document_url'),
-            'created_at': __import__('datetime').datetime.utcnow().isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
         }
 
         # Validate required fields
@@ -2979,7 +3009,7 @@ def member_dashboard_stats():
     try:
         from collections import defaultdict
         uid = session['uid']
-        current_year = datetime.utcnow().year
+        current_year = datetime.now(datetime.UTC).year
         last_year = current_year - 1
 
         # Research by month for current year and last year
@@ -3033,7 +3063,7 @@ def member_dashboard_stats_by_year():
         from collections import defaultdict
 
         uid = session['uid']
-        current_year = datetime.utcnow().year
+        current_year = datetime.now(datetime.UTC).year
         publications_by_year = {}
         extensions_by_year = {}
 

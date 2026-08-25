@@ -581,13 +581,37 @@ def chat(
         # Add the current message
         messages.append({"role": "user", "content": message})
 
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=0.3,       # Lower = more precise, less hallucination
-            max_tokens=2048,       # More room for detailed responses
-            top_p=0.85,            # Tighter nucleus for focused output
-        )
+        # Try primary model first, fallback if not available
+        models_to_try = [
+            "llama-3.3-70b-versatile",  # Primary: Latest Llama 3.3
+            "llama-3.1-70b-versatile",  # Fallback 1: Llama 3.1
+            "llama3-70b-8192",          # Fallback 2: Llama 3.0
+        ]
+
+        last_error = None
+        for model in models_to_try:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=2048,
+                    top_p=0.85,
+                )
+                break  # Success, exit loop
+            except Exception as model_error:
+                last_error = model_error
+                error_str = str(model_error).lower()
+                if "model" in error_str and ("not found" in error_str or "does not exist" in error_str or "access" in error_str):
+                    logger.warning(
+                        f"Model {model} not available, trying next fallback...")
+                    continue  # Try next model
+                else:
+                    raise  # Different error, don't fallback
+        else:
+            # All models failed
+            raise last_error if last_error else Exception(
+                "All models unavailable")
 
         reply = response.choices[0].message.content.strip()
 
