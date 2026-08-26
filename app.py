@@ -398,7 +398,7 @@ def section_che():
 # ── CHE Conversation History API ─────────────────────────────
 
 MAX_CHE_CONVERSATIONS = 7
-SYSTEM_CONVERSATION_TITLE = "🧬 Schedule Generation"
+SYSTEM_CONVERSATION_TITLE = "Schedule Generation"
 
 
 def ensure_system_conversation(user_id: str):

@@ -21,7 +21,8 @@ body {
 /* ── Sidebar ────────────────────────────────────────────────── */
 #sidebar {
     width: 260px;
-    background: #1a1a1a;
+    background: #014421;
+    /* UP Forest Green */
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -29,7 +30,7 @@ body {
 
 .sidebar-header {
     padding: 24px 20px 16px;
-    border-bottom: 1px solid #2e2e2e;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-title {
@@ -72,13 +73,13 @@ body {
 }
 
 .nav-item:hover {
-    background: rgba(107, 15, 26, 0.4);
-    color: #f0c0c5;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
     text-decoration: none;
 }
 
 .nav-item.active {
-    background: #6b0f1a;
+    background: rgba(255, 255, 255, 0.25);
     color: white;
     text-decoration: none;
 }
@@ -132,20 +133,20 @@ body {
 }
 
 .sub-nav-item:hover {
-    background: rgba(107, 15, 26, 0.3);
-    color: #f0c0c5;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
     text-decoration: none;
 }
 
 .sub-nav-item.active {
-    background: rgba(107, 15, 26, 0.6);
+    background: rgba(255, 255, 255, 0.2);
     color: white;
     text-decoration: none;
 }
 
 .sidebar-footer {
     padding: 16px;
-    border-top: 1px solid #2e2e2e;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* ── Main content ───────────────────────────────────────────── */
