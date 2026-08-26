@@ -1750,68 +1750,83 @@ def get_fsr_footnotes(member_id):
 @login_required
 def get_schedules():
     """Return all schedule entries from Supabase. Optionally filter by professor name."""
-    try:
-        # Get filter parameters
-        prof_filter = request.args.get('prof', '').strip().lower()
-        semester = request.args.get('semester', '').strip()
-        school_year = request.args.get('schoolYear', '').strip()
+    max_retries = 3
+    retry_count = 0
+    last_error = None
 
-        # Build Supabase query
-        query = supabase.table('schedules').select('*').order('created_at')
+    while retry_count < max_retries:
+        try:
+            # Get filter parameters
+            prof_filter = request.args.get('prof', '').strip().lower()
+            semester = request.args.get('semester', '').strip()
+            school_year = request.args.get('schoolYear', '').strip()
 
-        # Apply semester filter if provided
-        if semester:
-            query = query.eq('semester', semester)
+            # Build Supabase query
+            query = supabase.table('schedules').select('*').order('created_at')
 
-        # Apply school year filter if provided
-        if school_year:
-            query = query.eq('school_year', school_year)
+            # Apply semester filter if provided
+            if semester:
+                query = query.eq('semester', semester)
 
-        # Execute query
-        result = query.execute()
+            # Apply school year filter if provided
+            if school_year:
+                query = query.eq('school_year', school_year)
 
-        def format_time(time_str):
-            if time_str and ':' in str(time_str):
-                parts = str(time_str).split(':')
-                return f"{parts[0]}:{parts[1]}"
-            return time_str
+            # Execute query
+            result = query.execute()
 
-        entries = []
-        for data in result.data:
-            entry = {
-                'id': data.get('id'),
-                'prof': data.get('prof'),
-                'subjCode': data.get('subj_code', data.get('subjCode')),
-                'subjName': data.get('subj_name', data.get('subjName')),
-                'type': data.get('type'),
-                'day': data.get('day'),
-                'start': format_time(data.get('start')),
-                'end': format_time(data.get('end')),
-                'room': data.get('room'),
-                'units': data.get('units'),
-                'section': data.get('section'),
-                'year': data.get('year'),
-                'semester': data.get('semester'),
-                'schoolYear': data.get('school_year', data.get('schoolYear')),
-                'created_at': data.get('created_at')
-            }
+            def format_time(time_str):
+                if time_str and ':' in str(time_str):
+                    parts = str(time_str).split(':')
+                    return f"{parts[0]}:{parts[1]}"
+                return time_str
 
-            # Optional professor filter (case-insensitive partial match)
-            if prof_filter:
-                entry_prof = (entry.get('prof') or '').lower()
-                if prof_filter not in entry_prof:
-                    continue
+            entries = []
+            for data in result.data:
+                entry = {
+                    'id': data.get('id'),
+                    'prof': data.get('prof'),
+                    'subjCode': data.get('subj_code', data.get('subjCode')),
+                    'subjName': data.get('subj_name', data.get('subjName')),
+                    'type': data.get('type'),
+                    'day': data.get('day'),
+                    'start': format_time(data.get('start')),
+                    'end': format_time(data.get('end')),
+                    'room': data.get('room'),
+                    'units': data.get('units'),
+                    'section': data.get('section'),
+                    'year': data.get('year'),
+                    'semester': data.get('semester'),
+                    'schoolYear': data.get('school_year', data.get('schoolYear')),
+                    'created_at': data.get('created_at')
+                }
 
-            entries.append(entry)
+                # Optional professor filter (case-insensitive partial match)
+                if prof_filter:
+                    entry_prof = (entry.get('prof') or '').lower()
+                    if prof_filter not in entry_prof:
+                        continue
 
-        logger.info(f"✅ Found {len(entries)} schedules from Supabase")
-        return jsonify(entries)
+                entries.append(entry)
 
-    except Exception as e:
-        logger.error(f"Get schedules error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+            logger.info(f"✅ Found {len(entries)} schedules from Supabase")
+            return jsonify(entries)
+
+        except Exception as e:
+            last_error = e
+            retry_count += 1
+            if retry_count < max_retries:
+                logger.warning(
+                    f"Get schedules retry {retry_count}/{max_retries}: {e}")
+                import time
+                time.sleep(0.5 * retry_count)  # Exponential backoff
+                continue
+            else:
+                logger.error(
+                    f"Get schedules error after {max_retries} retries: {e}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({'error': str(last_error)}), 500
 
 
 @app.route('/api/schedules', methods=['POST'])

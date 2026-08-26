@@ -3286,9 +3286,8 @@
                     schedules = [];
                     window.schedules = schedules; // Update global reference
                 }
-                filtered = schedules.slice();
-                window.filtered = filtered; // Update global reference
-                applyFilters();
+                // Don't set filtered yet - let applyFilters do it to prevent flash of wrong data
+                applyFilters(); // This will set filtered array correctly
                 refreshFilterOptions();
                 renderTimetable();
                 renderReport();
@@ -3350,6 +3349,11 @@
 
                     if (sProfName !== profNormalized) return; // Different FIC
                     if (s.day !== day) return; // Different day
+
+                    // CRITICAL: Only check conflicts within the same semester/year
+                    var sSchoolYear = s.school_year || s.schoolYear;
+                    if (sSchoolYear !== currentSchoolYear) return; // Different school year
+                    if (s.semester !== currentSemester) return; // Different semester
 
                     // Check for time overlap
                     var existingStart = slotIdx(s.start);
@@ -5152,6 +5156,16 @@
 
                             // Store old values for rollback
                             var idx = schedules.findIndex(function (s) { return s.id === dragId; });
+                            if (idx < 0) {
+                                console.error('❌ Schedule not found in array:', dragId);
+                                showToast('Error: Schedule not found. Reloading...', 'error');
+                                await loadSchedules();
+                                dragEl.classList.remove('dragging');
+                                dragEl = null;
+                                dragId = null;
+                                return;
+                            }
+
                             if (idx >= 0) {
                                 var oldDay = schedules[idx].day;
                                 var oldStart = schedules[idx].start;
@@ -5190,11 +5204,18 @@
                                                 schedules[currentIdx].start = oldStart;
                                                 schedules[currentIdx].end = oldEnd;
                                             }
-                                            await loadSchedules();
+                                            applyFilters();
+                                            refreshFilterOptions();
+                                            renderTimetable();
+                                            renderReport();
+                                            if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
                                             alert('Failed to save changes to database. Changes have been reverted.');
                                         } else {
-                                            // Success — reload to update FIC and allocation
-                                            await loadSchedules();
+                                            // Success — just refresh UI, no need to reload from DB
+                                            // (Optimistic update already happened above)
+                                            console.log('✅ Schedule updated successfully');
+                                            refreshFilterOptions();
+                                            renderReport();
                                         }
                                     } catch (err) {
                                         // Rollback on error
