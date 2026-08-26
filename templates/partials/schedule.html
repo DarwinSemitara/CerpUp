@@ -2353,6 +2353,11 @@
     </style>
 
     <script>
+        // ═══ VERSION CHECK - Cache Buster ═══
+        console.log('%c🔧 Schedule System Version: 2026-08-26-FIX-v2', 'color: #10b981; font-weight: bold; font-size: 14px');
+        console.log('%c✅ Fixes loaded: Semester/year conflict filter + No cross-faculty flash', 'color: #3b82f6; font-size: 12px');
+        console.log('%cℹ️  If you still see issues, press Ctrl+Shift+R to hard refresh', 'color: #6b7280; font-size: 11px');
+
         // ═══ Toast Notification System ═══
         window.showToast = function (message, type = 'error', duration = 5000) {
             var container = document.getElementById('toast-container');
