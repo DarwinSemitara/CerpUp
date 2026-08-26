@@ -606,25 +606,9 @@ def che_chat():
         message = data.get('message', '').strip()
         history = data.get('history', [])
         include_context = data.get('include_context', False)
-        conversation_id = data.get('conversation_id', '')
 
         if not message:
             return jsonify({'reply': 'Please send a message.', 'error': True}), 400
-
-        # Check if this is the system Schedule Generation conversation
-        is_system_conversation = False
-        if conversation_id:
-            user_id = session.get('uid', '')
-            conv_check = (
-                supabase.table('che_conversations')
-                .select('is_system')
-                .eq('id', conversation_id)
-                .eq('user_id', user_id)
-                .single()
-                .execute()
-            )
-            if conv_check.data and conv_check.data.get('is_system', False):
-                is_system_conversation = True
 
         # Always inject schedule context for scheduling awareness
         context_data = {}
@@ -674,8 +658,7 @@ def che_chat():
         result = che_chat_fn(
             message=message,
             history=history,
-            context_data=context_data,
-            is_system_conversation=is_system_conversation
+            context_data=context_data
         )
 
         # If CHE returned a scheduling action, pre-execute it for preview
