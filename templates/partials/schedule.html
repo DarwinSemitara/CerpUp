@@ -3472,9 +3472,14 @@
             };
 
             function applyFilters() {
-                // Filter schedules based on school year, semester, and section
+                // Filter schedules based on school year, semester, section, AND professor
                 console.log('=== applyFilters DEBUG ===');
                 console.log('Current filters - Year:', currentSchoolYear, 'Semester:', currentSemester, 'Section:', currentSection);
+
+                // Get currently selected professor (even if filters toggle is off)
+                var profEl = document.getElementById('sf-professor');
+                var selectedProf = profEl ? profEl.value : '';
+                console.log('Selected Professor:', selectedProf || 'None');
 
                 if (schedules.length > 0) {
                     console.log('Sample schedule full object:', JSON.stringify(schedules[0], null, 2));
@@ -3488,8 +3493,18 @@
                     // Only filter by section if currentSection is set and not empty
                     var matchSection = !currentSection || s.section === currentSection;
 
+                    // CRITICAL: ALWAYS filter by professor if one is selected (even if filter toggle is off)
+                    var matchProfessor = true;
+                    if (selectedProf) {
+                        var sProfName = s.prof || '';
+                        if (sProfName.indexOf(',') > -1) {
+                            sProfName = sProfName.split(',')[0].trim();
+                        }
+                        matchProfessor = sProfName === selectedProf;
+                    }
+
                     // Debug each schedule
-                    if (!matchSchoolYear || !matchSemester || !matchSection) {
+                    if (!matchSchoolYear || !matchSemester || !matchSection || !matchProfessor) {
                         console.log('Schedule filtered out:', {
                             subjCode: s.subj_code || s.subjCode,
                             prof: s.prof,
@@ -3498,17 +3513,18 @@
                             section: s.section,
                             matchSchoolYear: matchSchoolYear,
                             matchSemester: matchSemester,
-                            matchSection: matchSection
+                            matchSection: matchSection,
+                            matchProfessor: matchProfessor
                         });
                     }
 
-                    return matchSchoolYear && matchSemester && matchSection;
+                    return matchSchoolYear && matchSemester && matchSection && matchProfessor;
                 });
 
                 window.filtered = filtered;
 
                 console.log('applyFilters: Total schedules:', schedules.length, 'Filtered:', filtered.length);
-                console.log('Filters - School Year:', currentSchoolYear, 'Semester:', currentSemester, 'Section:', currentSection || 'A');
+                console.log('Filters - School Year:', currentSchoolYear, 'Semester:', currentSemester, 'Section:', currentSection || 'A', 'Professor:', selectedProf || 'All');
 
                 // Update unit tracking and draggable blocks when filter changes
                 calculateAllocatedUnits();
