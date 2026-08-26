@@ -1061,6 +1061,12 @@
 
         async function loadConversation(id) {
             try {
+                // CRITICAL: Save current conversation before switching
+                if (currentConvId && currentConvId !== id && chatHistory.length > 0) {
+                    clearTimeout(saveTimer);
+                    await saveConversation();
+                }
+
                 const res = await fetch(`/api/che/conversations/${id}`);
                 if (!res.ok) return;
                 const conv = await res.json();
@@ -1149,6 +1155,9 @@
                     content: m.content,
                     time: m.time || new Date().toISOString()
                 }));
+
+                console.log(`💾 Saving conversation ${currentConvId} with ${messages.length} messages`);
+
                 await fetch(`/api/che/conversations/${currentConvId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
