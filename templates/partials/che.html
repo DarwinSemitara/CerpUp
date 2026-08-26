@@ -1108,6 +1108,21 @@
                     });
                     const conv = await res.json();
                     currentConvId = conv.id;
+
+                    // CRITICAL: Reset chat history for the new conversation
+                    // The welcome message should be the only thing in history
+                    const welcomeMsg = messagesEl.querySelector('.che-msg-ai');
+                    if (welcomeMsg) {
+                        const welcomeText = welcomeMsg.querySelector('.che-msg-bubble').textContent;
+                        chatHistory = [{
+                            role: 'assistant',
+                            content: welcomeText,
+                            time: new Date().toISOString()
+                        }];
+                    } else {
+                        chatHistory = [];
+                    }
+
                     // Prepend to list & re-render
                     convList.unshift(conv);
                     if (convList.length > 7) convList.pop();
