@@ -7310,3 +7310,209 @@
             color: #374151;
         }
     </style>
+
+
+<!-- ═══ Schedule GA Chat Widget ═══ -->
+<div id="schedule-chat-bubble" 
+    style="display:flex;position:fixed;bottom:30px;left:30px;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);box-shadow:0 4px 20px rgba(0,0,0,0.3);cursor:pointer;z-index:1001;align-items:center;justify-content:center;transition:all 0.3s;">
+    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+</div>
+
+<div id="schedule-chat-window"
+    style="display:none;position:fixed;bottom:30px;left:30px;width:400px;height:600px;background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);z-index:1002;flex-direction:column;overflow:hidden;">
+    
+    <!-- Chat Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid #e5e7eb;background:#f9fafb;">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);display:flex;align-items:center;justify-content:center;">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+            </div>
+            <div>
+                <div style="font-size:0.9rem;font-weight:700;color:#111827;">Schedule Generator</div>
+                <div style="font-size:0.72rem;color:#6b7280;">CHE AI Assistant</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button onclick="minimizeScheduleChat()" 
+                style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
+                onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+                </svg>
+            </button>
+            <button onclick="closeScheduleChat()"
+                style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
+                onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div id="schedule-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#fafafa;">
+        <!-- Welcome message -->
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+            <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>
+            <div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;">
+                Hi! I'm CHE, your schedule generation assistant. I can help you generate optimized schedules using genetic algorithms. Ask me to generate a schedule or answer questions about the scheduling process.
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Input -->
+    <div style="padding:12px 14px;border-top:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-end;">
+        <textarea id="schedule-chat-input" placeholder="Ask about schedule generation..." 
+            style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.82rem;font-family:inherit;color:#374151;outline:none;resize:none;max-height:100px;line-height:1.4;"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendScheduleChatMessage();}"></textarea>
+        <button onclick="sendScheduleChatMessage()" 
+            style="width:36px;height:36px;border-radius:9px;background:#6b0f1a;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0;"
+            onmouseover="this.style.background='#850f20'" onmouseout="this.style.background='#6b0f1a'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+// ═══ Schedule GA Chat Widget Functions ═══
+var scheduleChatState = {
+    isOpen: false,
+    chatHistory: []
+};
+
+window.openScheduleChat = function() {
+    var bubble = document.getElementById('schedule-chat-bubble');
+    var window_elem = document.getElementById('schedule-chat-window');
+    
+    bubble.style.display = 'none';
+    window_elem.style.display = 'flex';
+    scheduleChatState.isOpen = true;
+    
+    // Focus input
+    var input = document.getElementById('schedule-chat-input');
+    if (input) input.focus();
+};
+
+window.closeScheduleChat = function() {
+    var bubble = document.getElementById('schedule-chat-bubble');
+    var window_elem = document.getElementById('schedule-chat-window');
+    
+    window_elem.style.display = 'none';
+    bubble.style.display = 'flex';
+    scheduleChatState.isOpen = false;
+};
+
+window.minimizeScheduleChat = function() {
+    closeScheduleChat();
+};
+
+window.sendScheduleChatMessage = function() {
+    var input = document.getElementById('schedule-chat-input');
+    var messagesContainer = document.getElementById('schedule-chat-messages');
+    
+    if (!input || !messagesContainer) return;
+    
+    var message = input.value.trim();
+    if (!message) return;
+    
+    // Add user message to UI
+    var userMsg = document.createElement('div');
+    userMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse;';
+    userMsg.innerHTML = 
+        '<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">U</div>' +
+        '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-right-radius:4px;font-size:0.8rem;line-height:1.55;color:white;background:#6b0f1a;">' + 
+        escapeHtml(message) + '</div>';
+    messagesContainer.appendChild(userMsg);
+    
+    // Clear input
+    input.value = '';
+    
+    // Add to history
+    scheduleChatState.chatHistory.push({role: 'user', content: message});
+    
+    // Show typing indicator
+    var typingMsg = document.createElement('div');
+    typingMsg.id = 'schedule-typing-indicator';
+    typingMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+    typingMsg.innerHTML = 
+        '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+        '<div style="padding:10px 14px;border-radius:14px;border-bottom-left-radius:4px;background:#f3f4f6;display:flex;align-items:center;gap:4px;">' +
+        '<div style="width:6px;height:6px;border-radius:50%;background:#9ca3af;animation:typingBounce 1.2s infinite ease-in-out;"></div>' +
+        '<div style="width:6px;height:6px;border-radius:50%;background:#9ca3af;animation:typingBounce 1.2s infinite ease-in-out 0.2s;"></div>' +
+        '<div style="width:6px;height:6px;border-radius:50%;background:#9ca3af;animation:typingBounce 1.2s infinite ease-in-out 0.4s;"></div>' +
+        '</div>';
+    messagesContainer.appendChild(typingMsg);
+    
+    // Scroll to bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Send to CHE API
+    fetch('/che/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            message: message,
+            history: scheduleChatState.chatHistory,
+            include_context: true
+        })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        // Remove typing indicator
+        var typing = document.getElementById('schedule-typing-indicator');
+        if (typing) typing.remove();
+        
+        // Add AI response
+        var reply = data.reply || 'Sorry, I encountered an error.';
+        scheduleChatState.chatHistory.push({role: 'assistant', content: reply});
+        
+        var aiMsg = document.createElement('div');
+        aiMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+        aiMsg.innerHTML = 
+            '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+            '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;white-space:pre-wrap;">' + 
+            escapeHtml(reply) + '</div>';
+        messagesContainer.appendChild(aiMsg);
+        
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    })
+    .catch(function(err) {
+        // Remove typing indicator
+        var typing = document.getElementById('schedule-typing-indicator');
+        if (typing) typing.remove();
+        
+        // Show error
+        var errorMsg = document.createElement('div');
+        errorMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+        errorMsg.innerHTML = 
+            '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+            '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#dc2626;background:#fee2e2;">Error: Could not reach CHE assistant.</div>';
+        messagesContainer.appendChild(errorMsg);
+        
+        console.error('CHE chat error:', err);
+    });
+};
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Toggle chat on bubble click
+document.getElementById('schedule-chat-bubble').addEventListener('click', function() {
+    if (scheduleChatState.isOpen) {
+        closeScheduleChat();
+    } else {
+        openScheduleChat();
+    }
+});
+</script>
