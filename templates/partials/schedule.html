@@ -2354,9 +2354,13 @@
 
     <script>
         // ═══ VERSION CHECK - Cache Buster ═══
-        console.log('%c🔧 Schedule System Version: 2026-08-26-FIX-v2', 'color: #10b981; font-weight: bold; font-size: 14px');
+        console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #10b981; font-weight: bold');
+        console.log('%c🔧 Schedule System Version: 2026-08-26-FIX-v3-DEEP-DEBUG', 'color: #10b981; font-weight: bold; font-size: 16px');
+        console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #10b981; font-weight: bold');
+        console.log('%c⚠️  CRITICAL: If you see "FIX-v2" or older, your browser is CACHED!', 'color: #ef4444; font-weight: bold; font-size: 14px; background: #fee; padding: 4px;');
+        console.log('%c⚠️  PRESS CTRL+SHIFT+R NOW to force refresh and load fixes!', 'color: #ef4444; font-weight: bold; font-size: 14px; background: #fee; padding: 4px;');
         console.log('%c✅ Fixes loaded: Semester/year conflict filter + No cross-faculty flash', 'color: #3b82f6; font-size: 12px');
-        console.log('%cℹ️  If you still see issues, press Ctrl+Shift+R to hard refresh', 'color: #6b7280; font-size: 11px');
+        console.log('%c🔍 Deep debug mode: All filter/render/validate operations will be logged', 'color: #f59e0b; font-size: 12px');
 
         // ═══ Toast Notification System ═══
         window.showToast = function (message, type = 'error', duration = 5000) {
@@ -3315,6 +3319,9 @@
 
             // Validation function for schedule conflicts and unit limits
             function validateSchedule(prof, day, start, end, excludeId) {
+                console.log('%c🔍 validateSchedule called', 'color: #f59e0b; font-weight: bold');
+                console.log('  Prof:', prof, '| Day:', day, '| Time:', start, '-', end, '| Exclude ID:', excludeId);
+                console.log('  Current filters - Year:', currentSchoolYear, '| Semester:', currentSemester);
                 // Normalize professor name (remove suffix if present)
                 var profNormalized = prof;
                 if (profNormalized.indexOf(',') > -1) {
@@ -3343,8 +3350,12 @@
 
                 // Check for time conflicts across all years (but only in current semester)
                 var conflicts = [];
+                console.log('  Checking', schedules.length, 'total schedules for conflicts...');
                 schedules.forEach(function (s) {
-                    if (s.id === excludeId) return; // Skip the block being edited
+                    if (s.id === excludeId) {
+                        console.log('    ✓ Skipping self:', s.subjCode, s.id);
+                        return; // Skip the block being edited
+                    }
 
                     // Normalize schedule professor name for comparison
                     var sProfName = s.prof || '';
@@ -3357,8 +3368,14 @@
 
                     // CRITICAL: Only check conflicts within the same semester/year
                     var sSchoolYear = s.school_year || s.schoolYear;
-                    if (sSchoolYear !== currentSchoolYear) return; // Different school year
-                    if (s.semester !== currentSemester) return; // Different semester
+                    if (sSchoolYear !== currentSchoolYear) {
+                        console.log('    ✓ Skipping different year:', s.subjCode, 'Year:', sSchoolYear, 'vs', currentSchoolYear);
+                        return; // Different school year
+                    }
+                    if (s.semester !== currentSemester) {
+                        console.log('    ✓ Skipping different semester:', s.subjCode, 'Sem:', s.semester, 'vs', currentSemester);
+                        return; // Different semester
+                    }
 
                     // Check for time overlap
                     var existingStart = slotIdx(s.start);
@@ -3367,11 +3384,14 @@
                     var newEnd = slotIdx(end);
 
                     if (newStart < existingEnd && newEnd > existingStart) {
+                        console.log('    ❌ CONFLICT FOUND:', s.subjCode, s.start, '-', s.end, '| ID:', s.id, '| Prof:', s.prof, '| Year:', s.school_year || s.schoolYear, '| Sem:', s.semester);
                         conflicts.push({
                             subjCode: s.subjCode,
                             year: s.year || s.schoolYear,
                             time: fmt(s.start) + ' - ' + fmt(s.end)
                         });
+                    } else {
+                        console.log('    ✓ No overlap:', s.subjCode, s.start, '-', s.end, '| ID:', s.id);
                     }
                 });
 
@@ -4661,11 +4681,21 @@
             };
 
             function renderTimetable() {
+                console.log('%c🎨 renderTimetable() called', 'color: #8b5cf6; font-weight: bold');
+                console.log('  Total schedules:', schedules.length, '| Filtered:', filtered.length);
+                console.log('  Current filters - Year:', currentSchoolYear, '| Semester:', currentSemester, '| Section:', currentSection);
+                console.log('  Filtered array professors:', filtered.map(function (s) { return s.prof; }).filter(function (v, i, a) { return a.indexOf(v) === i; }));
+
                 var tbody = document.getElementById('timetable-body');
                 if (!tbody) return;
                 var grid = {};
                 DAYS.forEach(function (d) { grid[d] = {}; });
+                var renderCount = 0;
                 filtered.forEach(function (s) {
+                    renderCount++;
+                    if (renderCount <= 5) { // Only log first 5 to avoid spam
+                        console.log('  Rendering #' + renderCount + ':', s.subjCode, 'Prof:', s.prof, 'Day:', s.day, 'Year:', s.school_year || s.schoolYear, 'Sem:', s.semester);
+                    }
                     var si = slotIdx(s.start);
                     var ei = slotIdx(s.end);
                     if (si < 0 || ei <= si) return;
@@ -6043,17 +6073,18 @@
                         applyFilters(); // Reapply filter
                         window.schedules = schedules; // Update global reference
 
-                        // Remove from staging immediately
-                        unscheduledSubjects = unscheduledSubjects.filter(function (s) {
-                            return s.id !== stagingDragId;
-                        });
+                        // DON'T remove from staging or delete configured_subjects
+                        // Users should be able to place the same subject multiple times
+                        // unscheduledSubjects = unscheduledSubjects.filter(function (s) {
+                        //     return s.id !== stagingDragId;
+                        // });
 
-                        // Delete from backend configured_subjects
-                        try {
-                            await fetch('/api/configured-subjects/' + stagingDragId, { method: 'DELETE' });
-                        } catch (err) {
-                            console.error('Failed to delete configured subject:', err);
-                        }
+                        // DON'T delete from backend - keep it for reuse
+                        // try {
+                        //     await fetch('/api/configured-subjects/' + stagingDragId, { method: 'DELETE' });
+                        // } catch (err) {
+                        //     console.error('Failed to delete configured subject:', err);
+                        // }
 
                         // Update UI immediately
                         refreshFilterOptions();

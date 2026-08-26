@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory
 from dotenv import load_dotenv
 from services.supabase_service import verify_access_token as verify_id_token, db, supabase
 from services.cloudinary_service import upload_member_photo, delete_member_photo
@@ -19,6 +19,16 @@ TAP_SECTIONS = [
     ('tap-modelcom', 'Model Community'),
     ('tap-praxis',  'Praxis'),
 ]
+
+
+# Favicon route to prevent 404 errors
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, 'static', 'images'),
+        'uplogo.png',
+        mimetype='image/png'
+    )
 
 
 def login_required(f):
@@ -1727,16 +1737,32 @@ def get_fsr_footnotes(member_id):
         # Extract semester number (e.g., "1st Semester" -> "1")
         sem_num = semester.split()[0][0]
 
-        # Get footnotes directly
-        footnotes_result = supabase.table('fsr_footnotes').select(
-            'footnote_number, footnote_type, faculty_name, subject, load_sharing'
-        ).eq('member_id', member_id).eq(
-            'semester', sem_num
-        ).eq('academic_year', academic_year).order('footnote_number').execute()
+        # Get footnotes with retry logic for network timeouts
+        max_retries = 3
+        retry_delay = 1
+        footnotes_result = None
+
+        for attempt in range(max_retries):
+            try:
+                footnotes_result = supabase.table('fsr_footnotes').select(
+                    'footnote_number, footnote_type, faculty_name, subject, load_sharing'
+                ).eq('member_id', member_id).eq(
+                    'semester', sem_num
+                ).eq('academic_year', academic_year).order('footnote_number').execute()
+                break  # Success, exit retry loop
+            except Exception as retry_error:
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"FSR footnotes attempt {attempt + 1} failed, retrying in {retry_delay}s...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    raise  # Final attempt failed, re-raise
 
         return jsonify({
             'success': True,
-            'footnotes': footnotes_result.data or []
+            'footnotes': footnotes_result.data if footnotes_result else []
         })
 
     except Exception as e:
