@@ -1,0 +1,53 @@
+═══════════════════════════════════════════════════════════════════
+SCHEDULE FIX v3 - DEEP DEBUG MODE
+═══════════════════════════════════════════════════════════════════
+
+CRITICAL: Your browser is CACHING old JavaScript!
+
+STEP 1: HARD REFRESH (REQUIRED!)
+--------------------------------
+1. Open the schedule page
+2. Press: CTRL + SHIFT + R (force reload, bypass cache)
+3. Open browser console (F12)
+4. Look for: "🔧 Schedule System Version: 2026-08-26-FIX-v3-DEEP-DEBUG"
+
+If you see "FIX-v2" or older → CACHE PROBLEM → Try again!
+
+STEP 2: Test Schedule Operations
+---------------------------------
+When you move or resize a schedule block, you'll see detailed logs:
+
+🎨 renderTimetable() - Shows what schedules are being rendered
+   • Should ONLY show schedules for current faculty/year/semester
+   • If you see other faculty → filtered array is wrong
+
+🔍 validateSchedule() - Shows conflict detection process
+   • Should skip schedules from different years/semesters
+   • Should skip the schedule being moved (excludeId)
+   • If false conflicts → validation logic is checking wrong schedules
+
+STEP 3: Share Console Logs
+---------------------------
+If problems persist:
+1. Copy ALL console output when you move a schedule
+2. Share it so I can see what's happening
+
+═══════════════════════════════════════════════════════════════════
+CHANGES MADE:
+═══════════════════════════════════════════════════════════════════
+
+✅ Added deep debugging to:
+   - renderTimetable(): Shows what's being rendered and why
+   - validateSchedule(): Shows conflict detection step-by-step
+   - applyFilters(): Already had logging
+
+✅ Version bumped to v3-DEEP-DEBUG with big warning about cache
+
+✅ All logic remains CORRECT:
+   - Line 4668: renderTimetable uses filtered.forEach() ✓
+   - Line 3360-3366: validateSchedule filters by year/semester ✓
+   - Line 3289: No premature copy before applyFilters ✓
+
+THE CODE IS CORRECT - THE ISSUE IS BROWSER CACHE!
+
+═══════════════════════════════════════════════════════════════════

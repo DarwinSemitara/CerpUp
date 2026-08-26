@@ -398,6 +398,50 @@ def section_che():
 # ── CHE Conversation History API ─────────────────────────────
 
 MAX_CHE_CONVERSATIONS = 7
+SYSTEM_CONVERSATION_TITLE = "🧬 Schedule Generation"
+
+
+def ensure_system_conversation(user_id: str):
+    """
+    Ensure the system 'Schedule Generation' conversation exists for this user.
+    This conversation is undeletable and always available.
+    """
+    try:
+        # Check if system conversation already exists
+        existing = (
+            supabase.table('che_conversations')
+            .select('id')
+            .eq('user_id', user_id)
+            .eq('is_system', True)
+            .limit(1)
+            .execute()
+        )
+
+        if existing.data and len(existing.data) > 0:
+            return existing.data[0]['id']  # Already exists
+
+        # Create system conversation
+        now = datetime.now(timezone.utc).isoformat()
+        system_id = str(uuid.uuid4())
+
+        supabase.table('che_conversations').insert({
+            'id': system_id,
+            'user_id': user_id,
+            'title': SYSTEM_CONVERSATION_TITLE,
+            'messages': [],
+            'created_at': now,
+            'updated_at': now,
+            'is_system': True,
+            'undeletable': True,
+        }).execute()
+
+        logger.info(
+            f"Created system Schedule Generation conversation for user {user_id}")
+        return system_id
+
+    except Exception as e:
+        logger.error(f"Error ensuring system conversation: {e}")
+        return None
 
 
 @app.route('/api/che/conversations', methods=['GET'])
@@ -406,9 +450,13 @@ def che_list_conversations():
     """List all saved CHE conversations for the current admin (max 7, newest first)."""
     try:
         user_id = session.get('uid', '')
+
+        # Always ensure the system "Schedule Generation" conversation exists
+        ensure_system_conversation(user_id)
+
         response = (
             supabase.table('che_conversations')
-            .select('id, title, created_at, updated_at')
+            .select('id, title, created_at, updated_at, is_system, undeletable')
             .eq('user_id', user_id)
             .order('updated_at', desc=True)
             .limit(MAX_CHE_CONVERSATIONS)
@@ -516,9 +564,23 @@ def che_update_conversation(conv_id):
 @app.route('/api/che/conversations/<conv_id>', methods=['DELETE'])
 @login_required
 def che_delete_conversation(conv_id):
-    """Delete a conversation."""
+    """Delete a conversation (unless it's marked as undeletable)."""
     try:
         user_id = session.get('uid', '')
+
+        # Check if conversation is undeletable
+        check_resp = (
+            supabase.table('che_conversations')
+            .select('undeletable')
+            .eq('id', conv_id)
+            .eq('user_id', user_id)
+            .single()
+            .execute()
+        )
+
+        if check_resp.data and check_resp.data.get('undeletable', False):
+            return jsonify({'error': 'This conversation cannot be deleted.', 'undeletable': True}), 403
+
         supabase.table('che_conversations').delete().eq(
             'id', conv_id).eq('user_id', user_id).execute()
         return jsonify({'status': 'ok'})
@@ -534,7 +596,7 @@ def che_delete_conversation(conv_id):
 def che_chat():
     """
     CHE AI chat endpoint with GA scheduling integration.
-    Accepts: { "message": str, "history": [...], "include_context": bool }
+    Accepts: { "message": str, "history": [...], "include_context": bool, "conversation_id": str }
     Returns: { "reply": str, "error": bool, "action": dict|null, "action_result": dict|null }
     """
     try:
@@ -544,9 +606,25 @@ def che_chat():
         message = data.get('message', '').strip()
         history = data.get('history', [])
         include_context = data.get('include_context', False)
+        conversation_id = data.get('conversation_id', '')
 
         if not message:
             return jsonify({'reply': 'Please send a message.', 'error': True}), 400
+
+        # Check if this is the system Schedule Generation conversation
+        is_system_conversation = False
+        if conversation_id:
+            user_id = session.get('uid', '')
+            conv_check = (
+                supabase.table('che_conversations')
+                .select('is_system')
+                .eq('id', conversation_id)
+                .eq('user_id', user_id)
+                .single()
+                .execute()
+            )
+            if conv_check.data and conv_check.data.get('is_system', False):
+                is_system_conversation = True
 
         # Always inject schedule context for scheduling awareness
         context_data = {}
@@ -596,7 +674,8 @@ def che_chat():
         result = che_chat_fn(
             message=message,
             history=history,
-            context_data=context_data
+            context_data=context_data,
+            is_system_conversation=is_system_conversation
         )
 
         # If CHE returned a scheduling action, pre-execute it for preview
