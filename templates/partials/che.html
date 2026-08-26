@@ -992,56 +992,70 @@
             sidebarEmpty.style.display = 'none';
             sidebarList.style.display = 'block';
 
-            convList.forEach(conv => {
-                const isSystem = conv.is_system || false;
-                const isUndeletable = conv.undeletable || false;
+            // Separate system conversations from user conversations
+            const systemConvs = convList.filter(c => c.is_system);
+            const userConvs = convList.filter(c => !c.is_system);
 
-                const item = document.createElement('div');
-                item.className = 'che-conv-item' + (conv.id === currentConvId ? ' active' : '');
-                if (isSystem) item.classList.add('che-conv-system');
-                item.dataset.id = conv.id;
-
-                const dateStr = formatRelativeDate(conv.updated_at);
-
-                // For undeletable conversations, make delete button disabled
-                const deleteBtn = isUndeletable
-                    ? `<button class="che-conv-delete undeletable" title="This conversation cannot be deleted" data-id="${conv.id}" disabled>
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                        </svg>
-                    </button>`
-                    : `<button class="che-conv-delete" title="Delete conversation" data-id="${conv.id}">
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                    </button>`;
-
-                item.innerHTML = `
-                <div class="che-conv-item-body">
-                    <div class="che-conv-item-title">${escHtml(conv.title)}</div>
-                    <div class="che-conv-item-date">${dateStr}</div>
-                </div>
-                ${deleteBtn}`;
-
-                // Click body → load conversation
-                item.querySelector('.che-conv-item-body').addEventListener('click', () => {
-                    loadConversation(conv.id);
-                    if (window.innerWidth < 768) toggleSidebar();
-                });
-
-                // Click delete button (only if not disabled)
-                const deleteButton = item.querySelector('.che-conv-delete');
-                if (!deleteButton.disabled) {
-                    deleteButton.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        await deleteConversation(conv.id);
-                    });
-                }
-
-                sidebarList.appendChild(item);
+            // Render system conversations first (fixed at top)
+            systemConvs.forEach(conv => {
+                renderConversationItem(conv);
             });
+
+            // Then render user conversations (sorted by updated_at)
+            userConvs.forEach(conv => {
+                renderConversationItem(conv);
+            });
+        }
+
+        function renderConversationItem(conv) {
+            const isSystem = conv.is_system || false;
+            const isUndeletable = conv.undeletable || false;
+
+            const item = document.createElement('div');
+            item.className = 'che-conv-item' + (conv.id === currentConvId ? ' active' : '');
+            if (isSystem) item.classList.add('che-conv-system');
+            item.dataset.id = conv.id;
+
+            const dateStr = formatRelativeDate(conv.updated_at);
+
+            // For undeletable conversations, make delete button disabled
+            const deleteBtn = isUndeletable
+                ? `<button class="che-conv-delete undeletable" title="This conversation cannot be deleted" data-id="${conv.id}" disabled>
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </button>`
+                : `<button class="che-conv-delete" title="Delete conversation" data-id="${conv.id}">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>`;
+
+            item.innerHTML = `
+            <div class="che-conv-item-body">
+                <div class="che-conv-item-title">${escHtml(conv.title)}</div>
+                <div class="che-conv-item-date">${dateStr}</div>
+            </div>
+            ${deleteBtn}`;
+
+            // Click body → load conversation
+            item.querySelector('.che-conv-item-body').addEventListener('click', () => {
+                loadConversation(conv.id);
+                if (window.innerWidth < 768) toggleSidebar();
+            });
+
+            // Click delete button (only if not disabled)
+            const deleteButton = item.querySelector('.che-conv-delete');
+            if (!deleteButton.disabled) {
+                deleteButton.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await deleteConversation(conv.id);
+                });
+            }
+
+            sidebarList.appendChild(item);
         }
 
         /* ════════════════════════════════════════
