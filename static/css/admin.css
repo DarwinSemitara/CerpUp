@@ -21,8 +21,8 @@ body {
 /* ── Sidebar ────────────────────────────────────────────────── */
 #sidebar {
     width: 260px;
-    background: #014421;
-    /* UP Forest Green - base color for nav section */
+    background: #6b0f1a;
+    /* Maroon - base color for sidebar */
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
