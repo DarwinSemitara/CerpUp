@@ -231,8 +231,9 @@
     </div>
 </div>
 
-<!-- Faculty Section - COMMENTED OUT FOR FUTURE DECISION -->
-<!-- 
+<!-- Faculty Section - REMOVED FOR FUTURE DECISION -->
+{% if false %}
+<!-- This section is disabled. To restore, change the condition to 'if true' -->
 <div class="card" style="margin-bottom:20px;overflow:visible;">
     <div class="card-header">
         <h2 class="card-title">Faculty</h2>
@@ -262,7 +263,7 @@
         </div>
     </div>
 </div>
--->
+{% endif %}
 
 <!-- New Section: Calendar and To-Do List -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
@@ -307,11 +308,11 @@
     </div>
 </div>
 
-<!-- Faculty Section - COMMENTED OUT (continued with modals below) -->
+<!-- Faculty Modals - REMOVED FOR FUTURE DECISION -->
+{% if false %}
+<!-- This section is disabled. To restore, change the condition to 'if true' -->
 
-<!-- FACULTY MODALS - COMMENTED OUT FOR FUTURE DECISION
 <!-- Add Staff Modal -->
-<!--
 <div class="modal" id="add-staff-modal">
     <div class="modal-box" style="max-width: 600px;">
         <div class="modal-header">
@@ -321,92 +322,99 @@
         <form id="add-staff-form" onsubmit="submitAddStaff(event)">
             <div class="modal-body">
                 <!-- Photo Upload -->
-<div class="form-group">
-    <label class="form-label">Photo</label>
-    <label for="staff-photo-input" class="photo-upload">
-        <img id="staff-photo-preview" class="photo-preview" alt="Preview">
-        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <span style="font-size:0.875rem;color:#6b7280;">Click to upload photo</span>
-    </label>
-    <input type="file" id="staff-photo-input" accept="image/*" style="display:none;"
-        onchange="previewStaffPhoto(event)">
-</div>
+                <div class="form-group">
+                    <label class="form-label">Photo</label>
+                    <label for="staff-photo-input" class="photo-upload">
+                        <img id="staff-photo-preview" class="photo-preview" alt="Preview">
+                        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span style="font-size:0.875rem;color:#6b7280;">Click to upload photo</span>
+                    </label>
+                    <input type="file" id="staff-photo-input" accept="image/*" style="display:none;"
+                        onchange="previewStaffPhoto(event)">
+                </div>
 
-<!-- Select Faculty Member -->
-<div class="form-group">
-    <label class="form-label">Select Faculty Member *</label>
-    <select name="memberId" id="staff-member-select" class="form-select" required onchange="onFacultyMemberChange()">
-        <option value="">-- Select a faculty member --</option>
-    </select>
-    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">
-        Faculty members are managed in the <a href="/manage/" style="color:#6b0f1a;text-decoration:underline;">Manage
-            page</a>
-    </p>
-</div>
+                <!-- Select Faculty Member -->
+                <div class="form-group">
+                    <label class="form-label">Select Faculty Member *</label>
+                    <select name="memberId" id="staff-member-select" class="form-select" required
+                        onchange="onFacultyMemberChange()">
+                        <option value="">-- Select a faculty member --</option>
+                    </select>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">
+                        Faculty members are managed in the <a href="/manage/"
+                            style="color:#6b0f1a;text-decoration:underline;">Manage
+                            page</a>
+                    </p>
+                </div>
 
-<!-- Full Name (Auto-filled, read-only) -->
-<div class="form-group" id="staff-fullname-group" style="display:none;">
-    <label class="form-label">Full Name</label>
-    <input type="text" id="staff-fullname" class="form-input" readonly style="background:#f9fafb;color:#6b7280;">
-</div>
+                <!-- Full Name (Auto-filled, read-only) -->
+                <div class="form-group" id="staff-fullname-group" style="display:none;">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="staff-fullname" class="form-input" readonly
+                        style="background:#f9fafb;color:#6b7280;">
+                </div>
 
-<!-- Time Availability (Auto-filled from member) -->
-<div class="form-group" id="staff-availability-group" style="display:none;">
-    <label class="form-label">Time Availability</label>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-        <label class="availability-checkbox">
-            <input type="checkbox" name="availability" value="Monday" id="staff-avail-monday" disabled>
-            <span>Monday</span>
-        </label>
-        <label class="availability-checkbox">
-            <input type="checkbox" name="availability" value="Tuesday" id="staff-avail-tuesday" disabled>
-            <span>Tuesday</span>
-        </label>
-        <label class="availability-checkbox">
-            <input type="checkbox" name="availability" value="Wednesday" id="staff-avail-wednesday" disabled>
-            <span>Wednesday</span>
-        </label>
-        <label class="availability-checkbox">
-            <input type="checkbox" name="availability" value="Thursday" id="staff-avail-thursday" disabled>
-            <span>Thursday</span>
-        </label>
-        <label class="availability-checkbox">
-            <input type="checkbox" name="availability" value="Friday" id="staff-avail-friday" disabled>
-            <span>Friday</span>
-        </label>
-        <label class="availability-checkbox">
-            <input type="checkbox" name="availability" value="Saturday" id="staff-avail-saturday" disabled>
-            <span>Saturday</span>
-        </label>
+                <!-- Time Availability (Auto-filled from member) -->
+                <div class="form-group" id="staff-availability-group" style="display:none;">
+                    <label class="form-label">Time Availability</label>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Monday" id="staff-avail-monday" disabled>
+                            <span>Monday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Tuesday" id="staff-avail-tuesday"
+                                disabled>
+                            <span>Tuesday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Wednesday" id="staff-avail-wednesday"
+                                disabled>
+                            <span>Wednesday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Thursday" id="staff-avail-thursday"
+                                disabled>
+                            <span>Thursday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Friday" id="staff-avail-friday" disabled>
+                            <span>Friday</span>
+                        </label>
+                        <label class="availability-checkbox">
+                            <input type="checkbox" name="availability" value="Saturday" id="staff-avail-saturday"
+                                disabled>
+                            <span>Saturday</span>
+                        </label>
+                    </div>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Auto-filled from member profile</p>
+                </div>
+
+
+
+                <!-- Subjects -->
+                <div class="form-group">
+                    <label class="form-label">Subjects Taught *</label>
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 10px;">Select all subjects this staff member
+                        can teach</p>
+                    <div class="subject-chips" id="subject-chips">
+                        <div style="text-align:center;padding:20px;color:#9ca3af;font-size:0.8rem;width:100%;">
+                            Please select a year level first
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-error" id="add-staff-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeAddStaffModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Add Staff</button>
+            </div>
+        </form>
     </div>
-    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Auto-filled from member profile</p>
-</div>
-
-
-
-<!-- Subjects -->
-<div class="form-group">
-    <label class="form-label">Subjects Taught *</label>
-    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 10px;">Select all subjects this staff member
-        can teach</p>
-    <div class="subject-chips" id="subject-chips">
-        <div style="text-align:center;padding:20px;color:#9ca3af;font-size:0.8rem;width:100%;">
-            Please select a year level first
-        </div>
-    </div>
-</div>
-
-<div class="form-error" id="add-staff-error"></div>
-</div>
-<div class="modal-footer">
-    <button type="button" class="btn-secondary" onclick="closeAddStaffModal()">Cancel</button>
-    <button type="submit" class="btn-primary">Add Staff</button>
-</div>
-</form>
-</div>
 </div>
 
 <!-- Edit Staff Modal -->
@@ -922,7 +930,6 @@
 </style>
 
 <!-- Bulk Delete Confirmation Modal -->
-<!--
 <div class="modal" id="bulk-delete-modal">
     <div class="modal-box" style="max-width: 400px;">
         <div class="modal-header">
@@ -944,8 +951,9 @@
         </div>
     </div>
 </div>
--->
-<!-- END OF COMMENTED FACULTY MODALS -->
+
+{% endif %}
+<!-- END OF DISABLED FACULTY SECTION -->
 
 {% endblock %}
 
