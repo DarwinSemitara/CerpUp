@@ -41,15 +41,16 @@ body {
 }
 
 .sidebar-subtitle {
-    color: #888;
-    font-size: 0.75rem;
-    margin-top: 4px;
+    display: none;
+    /* Hide "Admin Dashboard" text */
 }
 
 .sidebar-nav {
     flex: 1;
     padding: 16px 0;
     overflow-y: auto;
+    background: rgba(255, 255, 255, 0.08);
+    /* Light green tint for nav section */
 }
 
 .nav-item {

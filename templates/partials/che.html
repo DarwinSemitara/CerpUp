@@ -229,27 +229,6 @@
         background: #fdf2f3;
     }
 
-    /* System conversation styling - highlighted */
-    .che-conv-item.che-conv-system {
-        background: linear-gradient(135deg, #fef3c7, #fde68a);
-        border: 1px solid #fbbf24;
-        margin-bottom: 8px;
-    }
-
-    .che-conv-item.che-conv-system:hover {
-        background: linear-gradient(135deg, #fde68a, #fcd34d);
-    }
-
-    .che-conv-item.che-conv-system.active {
-        background: linear-gradient(135deg, #fde047, #fbbf24);
-        box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
-    }
-
-    .che-conv-item.che-conv-system .che-conv-item-title {
-        font-weight: 700;
-        color: #92400e;
-    }
-
     .che-conv-item-body {
         flex: 1;
         overflow: hidden;
@@ -298,21 +277,6 @@
     .che-conv-delete:hover {
         background: #fee2e2;
         color: #dc2626;
-    }
-
-    /* Undeletable button styling */
-    .che-conv-delete.undeletable {
-        cursor: not-allowed;
-        color: #d1d5db;
-    }
-
-    .che-conv-delete.undeletable:hover {
-        background: transparent;
-        color: #d1d5db;
-    }
-
-    .che-conv-item:hover .che-conv-delete.undeletable {
-        opacity: 0.5;
     }
 
     .che-conv-delete svg {
@@ -992,53 +956,30 @@
             sidebarEmpty.style.display = 'none';
             sidebarList.style.display = 'block';
 
-            // Separate system conversations from user conversations
-            const systemConvs = convList.filter(c => c.is_system);
-            const userConvs = convList.filter(c => !c.is_system);
-
-            // Render system conversations first (fixed at top)
-            systemConvs.forEach(conv => {
-                renderConversationItem(conv);
-            });
-
-            // Then render user conversations (sorted by updated_at)
-            userConvs.forEach(conv => {
+            // Render all conversations (sorted by updated_at)
+            convList.forEach(conv => {
                 renderConversationItem(conv);
             });
         }
 
         function renderConversationItem(conv) {
-            const isSystem = conv.is_system || false;
-            const isUndeletable = conv.undeletable || false;
-
             const item = document.createElement('div');
             item.className = 'che-conv-item' + (conv.id === currentConvId ? ' active' : '');
-            if (isSystem) item.classList.add('che-conv-system');
             item.dataset.id = conv.id;
 
             const dateStr = formatRelativeDate(conv.updated_at);
-
-            // For undeletable conversations, make delete button disabled
-            const deleteBtn = isUndeletable
-                ? `<button class="che-conv-delete undeletable" title="This conversation cannot be deleted" data-id="${conv.id}" disabled>
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                </button>`
-                : `<button class="che-conv-delete" title="Delete conversation" data-id="${conv.id}">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                </button>`;
 
             item.innerHTML = `
             <div class="che-conv-item-body">
                 <div class="che-conv-item-title">${escHtml(conv.title)}</div>
                 <div class="che-conv-item-date">${dateStr}</div>
             </div>
-            ${deleteBtn}`;
+            <button class="che-conv-delete" title="Delete conversation" data-id="${conv.id}">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>`;
 
             // Click body → load conversation
             item.querySelector('.che-conv-item-body').addEventListener('click', () => {
@@ -1046,14 +987,12 @@
                 if (window.innerWidth < 768) toggleSidebar();
             });
 
-            // Click delete button (only if not disabled)
+            // Click delete button
             const deleteButton = item.querySelector('.che-conv-delete');
-            if (!deleteButton.disabled) {
-                deleteButton.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    await deleteConversation(conv.id);
-                });
-            }
+            deleteButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await deleteConversation(conv.id);
+            });
 
             sidebarList.appendChild(item);
         }
