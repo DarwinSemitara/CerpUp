@@ -22,7 +22,7 @@ body {
 #sidebar {
     width: 260px;
     background: #014421;
-    /* UP Forest Green */
+    /* UP Forest Green - base color for nav section */
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -31,6 +31,8 @@ body {
 .sidebar-header {
     padding: 24px 20px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #6b0f1a;
+    /* Maroon for header */
 }
 
 .sidebar-title {
@@ -49,8 +51,8 @@ body {
     flex: 1;
     padding: 16px 0;
     overflow-y: auto;
-    background: rgba(255, 255, 255, 0.08);
-    /* Light green tint for nav section */
+    background: #016428;
+    /* Lighter green for nav section */
 }
 
 .nav-item {
@@ -150,6 +152,8 @@ body {
 .sidebar-footer {
     padding: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: #6b0f1a;
+    /* Maroon for footer */
 }
 
 /* ── Main content ───────────────────────────────────────────── */
