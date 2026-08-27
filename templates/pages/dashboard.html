@@ -268,7 +268,7 @@
 <!-- New Section: Calendar and To-Do List -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
     <!-- Calendar Container -->
-    <div class="chart-card">
+    <div class="chart-card" style="min-height:480px;">
         <div class="chart-header">
             <div>
                 <div class="chart-title">Calendar</div>
@@ -292,13 +292,13 @@
                 </button>
             </div>
         </div>
-        <div id="calendar-grid" style="padding:12px;height:340px;">
+        <div id="calendar-grid" style="padding:12px;">
             <!-- Calendar will be generated here -->
         </div>
     </div>
 
     <!-- To-Do List / Requests Container with Swipe -->
-    <div class="chart-card" style="overflow:hidden;position:relative;">
+    <div class="chart-card" style="overflow:hidden;position:relative;min-height:480px;">
         <div class="chart-header" style="border-bottom:1px solid #e5e7eb;">
             <div style="display:flex;gap:16px;">
                 <button class="todo-tab" data-tab="todo" onclick="switchTab('todo')" style="padding-bottom:12px;">
@@ -309,19 +309,13 @@
                     <div style="font-size:0.85rem;font-weight:600;">Requests</div>
                 </button>
             </div>
-            <button class="btn-add-todo" onclick="showAddTodoDialog()">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                Add New
-            </button>
         </div>
 
         <!-- Swipeable Content Container -->
         <div class="swipe-container" id="swipe-container">
             <div class="swipe-wrapper" id="swipe-wrapper" style="display:flex;transition:transform 0.3s ease;">
                 <!-- To-Do List Panel -->
-                <div class="swipe-panel" style="min-width:100%;padding:20px;">
+                <div class="swipe-panel" style="min-width:100%;padding:20px;position:relative;">
                     <div id="todo-list">
                         <!-- To-Do items will be added here -->
                         <div id="todo-empty-state" style="text-align:center;padding:40px 20px;color:#9ca3af;">
@@ -331,10 +325,17 @@
                                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                             </svg>
                             <div style="font-size:0.9rem;font-weight:600;color:#6b7280;">No tasks yet</div>
-                            <div style="font-size:0.8rem;color:#9ca3af;margin-top:4px;">Add your first task to get
-                                started</div>
+                            <div style="font-size:0.8rem;color:#9ca3af;margin-top:4px;">Click the + button to add a task
+                            </div>
                         </div>
                     </div>
+                    <!-- Floating Add Button for To-Do -->
+                    <button class="floating-add-btn" onclick="showAddTodoDialog()" title="Add new task">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- Requests Panel -->
@@ -355,6 +356,54 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Event Modal -->
+<div class="event-modal" id="event-modal">
+    <div class="event-modal-overlay" onclick="closeEventModal()"></div>
+    <div class="event-modal-box">
+        <div class="event-modal-header">
+            <h3 class="event-modal-title">Add Event</h3>
+            <button class="event-modal-close" onclick="closeEventModal()">✕</button>
+        </div>
+        <form id="event-form" onsubmit="submitEvent(event)">
+            <div class="event-modal-body">
+                <input type="hidden" id="event-date" />
+                <div class="form-group">
+                    <label class="form-label"
+                        style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">
+                        Event Name
+                    </label>
+                    <input type="text" id="event-name" class="form-input" placeholder="Enter event name" required
+                        style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.875rem;" />
+                </div>
+                <div class="form-group" style="margin-top:16px;">
+                    <label class="form-label"
+                        style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:8px;">
+                        Importance Level
+                    </label>
+                    <div class="importance-options">
+                        <label class="importance-option">
+                            <input type="radio" name="importance" value="low" checked />
+                            <span class="importance-badge importance-low">Low</span>
+                        </label>
+                        <label class="importance-option">
+                            <input type="radio" name="importance" value="medium" />
+                            <span class="importance-badge importance-medium">Medium</span>
+                        </label>
+                        <label class="importance-option">
+                            <input type="radio" name="importance" value="high" />
+                            <span class="importance-badge importance-high">High</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="event-modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeEventModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Add Event</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -384,7 +433,7 @@
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 4px;
-        height: 100%;
+        grid-template-rows: auto repeat(6, 1fr);
     }
 
     .calendar-header-day {
@@ -431,17 +480,223 @@
         font-weight: 700;
     }
 
-    .calendar-day.highlighted {
+    .calendar-day.has-event-low::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
         background: #86efac;
-        color: #014421;
-        font-weight: 600;
-        box-shadow: 0 0 0 2px #014421;
     }
 
-    .calendar-day.highlighted.today {
+    .calendar-day.has-event-medium::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #22c55e;
+    }
+
+    .calendar-day.has-event-high::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #014421;
+    }
+
+    /* Event Modal */
+    .event-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 9999;
+    }
+
+    .event-modal.open {
+        display: block;
+    }
+
+    .event-modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+
+    .event-modal-box {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 400px;
+        animation: modalSlideIn 0.2s ease;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -48%);
+        }
+
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+    }
+
+    .event-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .event-modal-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .event-modal-close {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: none;
+        background: #f3f4f6;
+        color: #6b7280;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.15s;
+    }
+
+    .event-modal-close:hover {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .event-modal-body {
+        padding: 24px;
+    }
+
+    .event-modal-footer {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        padding: 16px 24px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .btn-secondary {
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        color: #374151;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .btn-secondary:hover {
+        background: #f9fafb;
+        border-color: #d1d5db;
+    }
+
+    .btn-primary {
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid #014421;
         background: #014421;
         color: white;
-        box-shadow: 0 0 0 2px #86efac;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .btn-primary:hover {
+        background: #016428;
+        border-color: #016428;
+        box-shadow: 0 2px 8px rgba(1, 68, 33, 0.2);
+    }
+
+    .importance-options {
+        display: flex;
+        gap: 12px;
+    }
+
+    .importance-option {
+        flex: 1;
+        cursor: pointer;
+    }
+
+    .importance-option input[type="radio"] {
+        display: none;
+    }
+
+    .importance-badge {
+        display: block;
+        padding: 10px 16px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .importance-low {
+        background: #f0fdf4;
+        color: #166534;
+        border-color: #d1fae5;
+    }
+
+    .importance-medium {
+        background: #dcfce7;
+        color: #15803d;
+        border-color: #86efac;
+    }
+
+    .importance-high {
+        background: #22c55e;
+        color: white;
+        border-color: #16a34a;
+    }
+
+    .importance-option input[type="radio"]:checked+.importance-low {
+        border-color: #166534;
+        box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.1);
+    }
+
+    .importance-option input[type="radio"]:checked+.importance-medium {
+        border-color: #15803d;
+        box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+    }
+
+    .importance-option input[type="radio"]:checked+.importance-high {
+        border-color: #014421;
+        box-shadow: 0 0 0 3px rgba(1, 68, 33, 0.2);
     }
 
     /* To-Do / Requests Tabs */
@@ -463,25 +718,34 @@
         color: #014421;
     }
 
-    .btn-add-todo {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-        border-radius: 8px;
-        border: 1px solid #014421;
+    /* Floating Add Button */
+    .floating-add-btn {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: none;
         background: #014421;
         color: white;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-weight: 600;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(1, 68, 33, 0.3);
         transition: all 0.2s;
+        z-index: 10;
     }
 
-    .btn-add-todo:hover {
+    .floating-add-btn:hover {
         background: #016428;
-        border-color: #016428;
-        box-shadow: 0 2px 8px rgba(1, 68, 33, 0.2);
+        box-shadow: 0 6px 16px rgba(1, 68, 33, 0.4);
+        transform: scale(1.05);
+    }
+
+    .floating-add-btn:active {
+        transform: scale(0.95);
     }
 
     /* Swipe Container */
@@ -573,7 +837,7 @@
 <script>
     // Calendar functionality
     let currentCalendarDate = new Date();
-    let highlightedDates = new Set(); // Store highlighted dates as "YYYY-MM-DD"
+    let calendarEvents = {}; // Store events as {dateStr: {name, importance}}
 
     function renderCalendar() {
         const year = currentCalendarDate.getFullYear();
@@ -592,7 +856,7 @@
         const daysInPrevMonth = new Date(year, month, 0).getDate();
 
         // Build calendar grid with FIXED 6-row layout
-        let calendarHTML = '<div class="calendar-grid" style="grid-template-rows:auto repeat(6, 1fr);">';
+        let calendarHTML = '<div class="calendar-grid">';
 
         // Day headers
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -615,14 +879,16 @@
             const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
             const isPast = dateObj < today;
             const isToday = isCurrentMonth && today.getDate() === day;
-            const isHighlighted = highlightedDates.has(dateStr);
+            const hasEvent = calendarEvents[dateStr];
 
             let classes = 'calendar-day';
             if (isPast && !isToday) classes += ' disabled';
             if (isToday) classes += ' today';
-            if (isHighlighted) classes += ' highlighted';
+            if (hasEvent) {
+                classes += ' has-event-' + hasEvent.importance;
+            }
 
-            const clickHandler = (isPast && !isToday) ? '' : ' onclick="toggleHighlight(\'' + dateStr + '\')"';
+            const clickHandler = (isPast && !isToday) ? '' : ' onclick="openEventModal(\'' + dateStr + '\')"';
             calendarHTML += '<div class="' + classes + '"' + clickHandler + ' data-date="' + dateStr + '">' + day + '</div>';
         }
 
@@ -637,13 +903,31 @@
         document.getElementById('calendar-grid').innerHTML = calendarHTML;
     }
 
-    function toggleHighlight(dateStr) {
-        if (highlightedDates.has(dateStr)) {
-            highlightedDates.delete(dateStr);
-        } else {
-            highlightedDates.add(dateStr);
+    function openEventModal(dateStr) {
+        document.getElementById('event-date').value = dateStr;
+        document.getElementById('event-name').value = '';
+        document.querySelector('input[name="importance"][value="low"]').checked = true;
+        document.getElementById('event-modal').classList.add('open');
+    }
+
+    function closeEventModal() {
+        document.getElementById('event-modal').classList.remove('open');
+    }
+
+    function submitEvent(e) {
+        e.preventDefault();
+        const dateStr = document.getElementById('event-date').value;
+        const eventName = document.getElementById('event-name').value.trim();
+        const importance = document.querySelector('input[name="importance"]:checked').value;
+
+        if (eventName) {
+            calendarEvents[dateStr] = {
+                name: eventName,
+                importance: importance
+            };
+            renderCalendar();
+            closeEventModal();
         }
-        renderCalendar();
     }
 
     function previousMonth() {
@@ -685,11 +969,6 @@
     }
 
     function showAddTodoDialog() {
-        if (currentTab === 'requests') {
-            alert('Request management coming soon!');
-            return;
-        }
-
         const taskText = prompt('Enter your task:');
         if (taskText && taskText.trim()) {
             addTodoItem(taskText.trim());
