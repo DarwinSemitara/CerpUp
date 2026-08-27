@@ -118,17 +118,17 @@ function initCharts() {
                     {
                         label: currentDashboardYear.toString(),
                         data: currentYearData,
-                        borderColor: '#6b0f1a',
+                        borderColor: '#014421',  // UP Forest Green
                         backgroundColor: 'transparent',
                         borderWidth: 2.5,
                         pointBackgroundColor: '#fff',
-                        pointBorderColor: '#6b0f1a',
+                        pointBorderColor: '#014421',  // UP Forest Green
                         pointBorderWidth: 2.5,
                         pointRadius: 6,
                         pointHoverRadius: 8,
                         pointHoverBorderWidth: 3,
                         pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#6b0f1a',
+                        pointHoverBorderColor: '#014421',  // UP Forest Green
                         fill: false,
                         tension: 0.4,
                         spanGaps: false,
@@ -228,14 +228,14 @@ function initCharts() {
     if (tapCtx) {
         const extData = extDataByYear[currentDashboardYear] || {};
 
-        // Extension types and their display info
+        // Extension types and their display info - UP Forest Green color scheme
         const extensionTypes = [
-            { key: 'extensions', label: 'Extension/Community Service', color: '#6b0f1a' },
-            { key: 'training', label: 'Training', color: '#9b1a2a' },
-            { key: 'information_dissemination', label: 'Information Dissemination', color: '#c53030' },
-            { key: 'workshop', label: 'Workshop', color: '#e53e3e' },
-            { key: 'symposium', label: 'Symposium', color: '#fc8181' },
-            { key: 'others', label: 'Others', color: '#feb2b2' }
+            { key: 'extensions', label: 'Extension/Community Service', color: '#014421' },  // UP Forest Green
+            { key: 'training', label: 'Training', color: '#016428' },  // Lighter green
+            { key: 'information_dissemination', label: 'Information Dissemination', color: '#028a38' },  // Medium green
+            { key: 'workshop', label: 'Workshop', color: '#03a043' },  // Bright green
+            { key: 'symposium', label: 'Symposium', color: '#22c55e' },  // Light bright green
+            { key: 'others', label: 'Others', color: '#86efac' }  // Very light green
         ];
 
         const chartData = [];
