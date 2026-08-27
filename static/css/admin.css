@@ -51,8 +51,8 @@ body {
     flex: 1;
     padding: 16px 0;
     overflow-y: auto;
-    background: #8b1e2e;
-    /* Lighter maroon for nav section */
+    background: #6b0f1a;
+    /* Same maroon as header/footer */
 }
 
 .nav-item {
