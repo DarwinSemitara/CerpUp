@@ -272,41 +272,374 @@
         <div class="chart-header">
             <div>
                 <div class="chart-title">Calendar</div>
-                <div class="chart-subtitle">Upcoming events and schedules</div>
+                <div class="chart-subtitle">Schedule and events</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="calendar-nav-btn" onclick="previousMonth()">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div style="min-width:140px;text-align:center;">
+                    <span id="calendar-month-year" style="font-size:0.85rem;font-weight:600;color:#374151;"></span>
+                </div>
+                <button class="calendar-nav-btn" onclick="nextMonth()">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
             </div>
         </div>
-        <div style="position:relative;min-height:400px;padding:20px;text-align:center;color:#9ca3af;">
-            <!-- Calendar will be implemented here -->
-            <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"
-                style="margin:60px auto 20px;opacity:0.3;">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <div style="font-size:0.9rem;font-weight:600;color:#6b7280;">Calendar Coming Soon</div>
-            <div style="font-size:0.8rem;color:#9ca3af;margin-top:8px;">Event scheduling and management</div>
+        <div id="calendar-grid" style="padding:12px;">
+            <!-- Calendar will be generated here -->
         </div>
     </div>
 
-    <!-- To-Do List Container -->
-    <div class="chart-card">
-        <div class="chart-header">
-            <div>
-                <div class="chart-title">To-Do List</div>
-                <div class="chart-subtitle">Track your tasks and deadlines</div>
+    <!-- To-Do List / Requests Container with Swipe -->
+    <div class="chart-card" style="overflow:hidden;position:relative;">
+        <div class="chart-header" style="border-bottom:1px solid #e5e7eb;">
+            <div style="display:flex;gap:16px;">
+                <button class="todo-tab" data-tab="todo" onclick="switchTab('todo')" style="padding-bottom:12px;">
+                    <div style="font-size:0.85rem;font-weight:600;">To-Do List</div>
+                </button>
+                <button class="todo-tab" data-tab="requests" onclick="switchTab('requests')"
+                    style="padding-bottom:12px;">
+                    <div style="font-size:0.85rem;font-weight:600;">Requests</div>
+                </button>
             </div>
+            <button class="btn-primary" onclick="addNewTodo()" style="padding:6px 12px;font-size:0.8rem;">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Add New
+            </button>
         </div>
-        <div style="position:relative;min-height:400px;padding:20px;text-align:center;color:#9ca3af;">
-            <!-- To-Do List will be implemented here -->
-            <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"
-                style="margin:60px auto 20px;opacity:0.3;">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            <div style="font-size:0.9rem;font-weight:600;color:#6b7280;">To-Do List Coming Soon</div>
-            <div style="font-size:0.8rem;color:#9ca3af;margin-top:8px;">Task management and reminders</div>
+
+        <!-- Swipeable Content Container -->
+        <div class="swipe-container" id="swipe-container">
+            <div class="swipe-wrapper" id="swipe-wrapper" style="display:flex;transition:transform 0.3s ease;">
+                <!-- To-Do List Panel -->
+                <div class="swipe-panel" style="min-width:100%;padding:20px;">
+                    <div id="todo-list">
+                        <!-- To-Do items will be added here -->
+                        <div style="text-align:center;padding:40px 20px;color:#9ca3af;">
+                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.5" style="margin:0 auto 12px;opacity:0.3;">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            <div style="font-size:0.9rem;font-weight:600;color:#6b7280;">No tasks yet</div>
+                            <div style="font-size:0.8rem;color:#9ca3af;margin-top:4px;">Add your first task to get
+                                started</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requests Panel -->
+                <div class="swipe-panel" style="min-width:100%;padding:20px;">
+                    <div id="requests-list">
+                        <!-- Request items will be added here -->
+                        <div style="text-align:center;padding:40px 20px;color:#9ca3af;">
+                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.5" style="margin:0 auto 12px;opacity:0.3;">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <div style="font-size:0.9rem;font-weight:600;color:#6b7280;">No requests</div>
+                            <div style="font-size:0.8rem;color:#9ca3af;margin-top:4px;">Pending requests will appear
+                                here</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Calendar Styles */
+    .calendar-nav-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        transition: all 0.15s;
+    }
+
+    .calendar-nav-btn:hover {
+        border-color: #6b0f1a;
+        background: #fdf2f3;
+        color: #6b0f1a;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+
+    .calendar-header-day {
+        text-align: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #6b7280;
+        padding: 8px 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: #374151;
+        position: relative;
+    }
+
+    .calendar-day:hover {
+        background: #f3f4f6;
+    }
+
+    .calendar-day.other-month {
+        color: #d1d5db;
+    }
+
+    .calendar-day.today {
+        background: #6b0f1a;
+        color: white;
+        font-weight: 700;
+    }
+
+    .calendar-day.has-event::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #22c55e;
+    }
+
+    /* To-Do / Requests Tabs */
+    .todo-tab {
+        border: none;
+        background: none;
+        cursor: pointer;
+        color: #9ca3af;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .todo-tab.active {
+        color: #6b0f1a;
+        border-bottom-color: #6b0f1a;
+    }
+
+    .todo-tab:hover {
+        color: #6b0f1a;
+    }
+
+    /* Swipe Container */
+    .swipe-container {
+        overflow: hidden;
+        position: relative;
+        min-height: 400px;
+        cursor: grab;
+        user-select: none;
+    }
+
+    .swipe-container:active {
+        cursor: grabbing;
+    }
+
+    .swipe-wrapper {
+        display: flex;
+        will-change: transform;
+    }
+
+    .swipe-panel {
+        flex-shrink: 0;
+    }
+</style>
+
+<script>
+    // Calendar functionality
+    let currentCalendarDate = new Date();
+
+    function renderCalendar() {
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+
+        // Update month/year display
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        document.getElementById('calendar-month-year').textContent = monthNames[month] + ' ' + year;
+
+        // Get first day of month and number of days
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        // Build calendar grid
+        let calendarHTML = '<div class="calendar-grid">';
+
+        // Day headers
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        dayNames.forEach(day => {
+            calendarHTML += '<div class="calendar-header-day">' + day + '</div>';
+        });
+
+        // Previous month days
+        for (let i = firstDay - 1; i >= 0; i--) {
+            const day = daysInPrevMonth - i;
+            calendarHTML += '<div class="calendar-day other-month">' + day + '</div>';
+        }
+
+        // Current month days
+        const today = new Date();
+        const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const isToday = isCurrentMonth && today.getDate() === day;
+            const classes = 'calendar-day' + (isToday ? ' today' : '');
+            calendarHTML += '<div class="' + classes + '">' + day + '</div>';
+        }
+
+        // Next month days to fill grid
+        const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+        const remainingCells = totalCells - (firstDay + daysInMonth);
+        for (let day = 1; day <= remainingCells; day++) {
+            calendarHTML += '<div class="calendar-day other-month">' + day + '</div>';
+        }
+
+        calendarHTML += '</div>';
+        document.getElementById('calendar-grid').innerHTML = calendarHTML;
+    }
+
+    function previousMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        renderCalendar();
+    }
+
+    function nextMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        renderCalendar();
+    }
+
+    // Initialize calendar on load
+    document.addEventListener('DOMContentLoaded', function () {
+        renderCalendar();
+    });
+
+    // To-Do / Requests Tab Switching
+    let currentTab = 'todo';
+
+    function switchTab(tab) {
+        currentTab = tab;
+
+        // Update tab styles
+        document.querySelectorAll('.todo-tab').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+
+        // Animate swipe
+        const wrapper = document.getElementById('swipe-wrapper');
+        if (tab === 'todo') {
+            wrapper.style.transform = 'translateX(0%)';
+        } else {
+            wrapper.style.transform = 'translateX(-100%)';
+        }
+    }
+
+    // Swipe functionality for touch and mouse
+    (function () {
+        const container = document.getElementById('swipe-container');
+        const wrapper = document.getElementById('swipe-wrapper');
+
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+        let startTransform = 0;
+
+        function getTransformX() {
+            const transform = wrapper.style.transform;
+            if (transform && transform.includes('translateX')) {
+                return parseFloat(transform.match(/-?\d+\.?\d*/)[0]);
+            }
+            return 0;
+        }
+
+        function handleStart(e) {
+            isDragging = true;
+            startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            startTransform = getTransformX();
+            wrapper.style.transition = 'none';
+            container.style.cursor = 'grabbing';
+        }
+
+        function handleMove(e) {
+            if (!isDragging) return;
+
+            currentX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const diff = currentX - startX;
+            const newTransform = startTransform + (diff / container.offsetWidth) * 100;
+
+            // Limit swipe range between 0% and -100%
+            const clampedTransform = Math.max(-100, Math.min(0, newTransform));
+            wrapper.style.transform = 'translateX(' + clampedTransform + '%)';
+        }
+
+        function handleEnd() {
+            if (!isDragging) return;
+
+            isDragging = false;
+            wrapper.style.transition = 'transform 0.3s ease';
+            container.style.cursor = 'grab';
+
+            const currentTransform = getTransformX();
+
+            // Snap to nearest panel
+            if (currentTransform < -50) {
+                wrapper.style.transform = 'translateX(-100%)';
+                switchTab('requests');
+            } else {
+                wrapper.style.transform = 'translateX(0%)';
+                switchTab('todo');
+            }
+        }
+
+        // Mouse events
+        container.addEventListener('mousedown', handleStart);
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+
+        // Touch events
+        container.addEventListener('touchstart', handleStart, { passive: true });
+        container.addEventListener('touchmove', handleMove, { passive: true });
+        container.addEventListener('touchend', handleEnd);
+
+        // Initialize first tab as active
+        document.querySelector('[data-tab="todo"]').classList.add('active');
+    })();
+
+    function addNewTodo() {
+        alert('Add new ' + (currentTab === 'todo' ? 'task' : 'request') + ' - Coming soon!');
+    }
+</script>
 
 <!-- Faculty Modals - REMOVED FOR FUTURE DECISION -->
 {% if false %}
