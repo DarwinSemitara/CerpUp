@@ -377,7 +377,9 @@
                         Event Name
                     </label>
                     <input type="text" id="event-name" class="form-input" placeholder="Enter event name" required
+                        maxlength="15"
                         style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.875rem;" />
+                    <p style="font-size:0.75rem;color:#6b7280;margin:4px 0 0;">Maximum 15 characters</p>
                 </div>
                 <div class="form-group" style="margin-top:16px;">
                     <label class="form-label"
@@ -521,13 +523,18 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.15s;
         color: #374151;
         position: relative;
         z-index: 3;
+        padding: 4px;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
     }
 
     .calendar-day:hover:not(.disabled):not(.other-month) {
@@ -551,12 +558,20 @@
         font-weight: 700;
     }
 
+    .calendar-day.has-event-low,
+    .calendar-day.has-event-medium,
+    .calendar-day.has-event-high {
+        font-weight: 600;
+        font-size: 0.65rem;
+        padding-bottom: 8px;
+    }
+
     .calendar-day.has-event-low::after {
         content: '';
         position: absolute;
-        bottom: 4px;
-        width: 6px;
-        height: 6px;
+        bottom: 2px;
+        width: 4px;
+        height: 4px;
         border-radius: 50%;
         background: #86efac;
     }
@@ -564,9 +579,9 @@
     .calendar-day.has-event-medium::after {
         content: '';
         position: absolute;
-        bottom: 4px;
-        width: 6px;
-        height: 6px;
+        bottom: 2px;
+        width: 4px;
+        height: 4px;
         border-radius: 50%;
         background: #22c55e;
     }
@@ -574,9 +589,9 @@
     .calendar-day.has-event-high::after {
         content: '';
         position: absolute;
-        bottom: 4px;
-        width: 6px;
-        height: 6px;
+        bottom: 2px;
+        width: 4px;
+        height: 4px;
         border-radius: 50%;
         background: #014421;
     }
@@ -1129,7 +1144,11 @@
             }
 
             const clickHandler = (isPast && !isToday) ? '' : ' onclick="handleCalendarClick(event, \'' + dateStr + '\')" oncontextmenu="handleCalendarRightClick(event, \'' + dateStr + '\')"';
-            calendarHTML += '<div class="' + classes + '"' + clickHandler + ' data-date="' + dateStr + '">' + day + '</div>';
+
+            // Show event name if exists, otherwise show day number
+            const displayText = hasEvent ? hasEvent.name : day;
+
+            calendarHTML += '<div class="' + classes + '"' + clickHandler + ' data-date="' + dateStr + '" title="' + (hasEvent ? hasEvent.name : '') + '">' + displayText + '</div>';
         }
 
         // Next month days to fill remaining cells (always 42 cells total = 6 rows)
