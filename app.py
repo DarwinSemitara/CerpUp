@@ -13,6 +13,8 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 TAP_SECTIONS = [
     ('tap-capdev',  'Capacity Development'),
@@ -166,11 +168,15 @@ def get_current_member():
 def dashboard():
     email = session.get('email', '')
     initial = email[0].upper() if email else 'A'
+    # Add cache buster
+    import time
+    cache_version = int(time.time())
     return render_template('pages/dashboard.html',
                            email=email,
                            initial=initial,
                            page_title='Dashboard',
-                           active_page='dashboard')
+                           active_page='dashboard',
+                           cache_version=cache_version)
 
 
 @app.route('/dashboard/faculty/<member_id>')
