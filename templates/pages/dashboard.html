@@ -1196,23 +1196,33 @@
     }
 
     function openEventModal(dateStr, isEdit = false) {
-        document.getElementById('event-date').value = dateStr;
-        document.getElementById('event-edit-mode').value = isEdit ? 'true' : 'false';
+        console.log('openEventModal called with:', dateStr, isEdit);
+        try {
+            document.getElementById('event-date').value = dateStr;
+            document.getElementById('event-edit-mode').value = isEdit ? 'true' : 'false';
 
-        if (isEdit && calendarEvents[dateStr]) {
-            const event = calendarEvents[dateStr];
-            document.getElementById('event-name').value = event.name;
-            document.querySelector('input[name="importance"][value="' + event.importance + '"]').checked = true;
-            document.getElementById('event-modal-title').textContent = 'Edit Event';
-            document.getElementById('event-submit-btn').textContent = 'Update Event';
-        } else {
-            document.getElementById('event-name').value = '';
-            document.querySelector('input[name="importance"][value="low"]').checked = true;
-            document.getElementById('event-modal-title').textContent = 'Add Event';
-            document.getElementById('event-submit-btn').textContent = 'Add Event';
+            if (isEdit && calendarEvents[dateStr]) {
+                const event = calendarEvents[dateStr];
+                console.log('Editing event:', event);
+                document.getElementById('event-name').value = event.name;
+                document.querySelector('input[name="importance"][value="' + event.importance + '"]').checked = true;
+                document.getElementById('event-modal-title').textContent = 'Edit Event';
+                document.getElementById('event-submit-btn').textContent = 'Update Event';
+            } else {
+                console.log('Adding new event');
+                document.getElementById('event-name').value = '';
+                document.querySelector('input[name="importance"][value="low"]').checked = true;
+                document.getElementById('event-modal-title').textContent = 'Add Event';
+                document.getElementById('event-submit-btn').textContent = 'Add Event';
+            }
+
+            const modal = document.getElementById('event-modal');
+            console.log('Modal element:', modal);
+            modal.classList.add('open');
+            console.log('Modal should be open now');
+        } catch (error) {
+            console.error('Error in openEventModal:', error);
         }
-
-        document.getElementById('event-modal').classList.add('open');
     }
 
     function closeEventModal() {
@@ -1221,17 +1231,23 @@
 
     function submitEvent(e) {
         e.preventDefault();
+        console.log('submitEvent called');
         const dateStr = document.getElementById('event-date').value;
         const eventName = document.getElementById('event-name').value.trim();
         const importance = document.querySelector('input[name="importance"]:checked').value;
+
+        console.log('Submitting event:', { dateStr, eventName, importance });
 
         if (eventName) {
             calendarEvents[dateStr] = {
                 name: eventName,
                 importance: importance
             };
+            console.log('Event saved. All events:', calendarEvents);
             renderCalendar();
             closeEventModal();
+        } else {
+            console.log('Event name is empty');
         }
     }
 
