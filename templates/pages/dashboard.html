@@ -1044,6 +1044,41 @@
     let calendarEvents = {}; // Store events as {dateStr: {name, importance}}
     let contextMenuDate = null;
 
+    // Load events from localStorage on page load
+    function loadCalendarEvents() {
+        try {
+            const stored = localStorage.getItem('calendarEvents');
+            if (stored) {
+                calendarEvents = JSON.parse(stored);
+                console.log('Loaded events from storage:', calendarEvents);
+            }
+        } catch (e) {
+            console.error('Error loading calendar events:', e);
+        }
+    }
+
+    // Save events to localStorage
+    function saveCalendarEvents() {
+        try {
+            localStorage.setItem('calendarEvents', JSON.stringify(calendarEvents));
+            console.log('Saved events to storage');
+        } catch (e) {
+            console.error('Error saving calendar events:', e);
+        }
+    }
+
+    // Clear all events (for debugging/reset)
+    function clearAllEvents() {
+        if (confirm('Clear all calendar events? This cannot be undone.')) {
+            calendarEvents = {};
+            saveCalendarEvents();
+            renderCalendar();
+            console.log('All events cleared');
+        }
+    }
+    // Expose to window for console access
+    window.clearAllEvents = clearAllEvents;
+
     function renderCalendar() {
         const year = currentCalendarDate.getFullYear();
         const month = currentCalendarDate.getMonth();
@@ -1190,6 +1225,7 @@
     function confirmDeleteEvent() {
         if (contextMenuDate) {
             delete calendarEvents[contextMenuDate];
+            saveCalendarEvents(); // Save to localStorage
             renderCalendar();
         }
         closeConfirmModal();
@@ -1250,6 +1286,7 @@
                 importance: importance
             };
             console.log('Event saved. All events:', calendarEvents);
+            saveCalendarEvents(); // Save to localStorage
             renderCalendar();
             closeEventModal();
         } else {
@@ -1276,6 +1313,7 @@
 
     // Initialize calendar on load
     document.addEventListener('DOMContentLoaded', function () {
+        loadCalendarEvents(); // Load saved events
         renderCalendar();
     });
 
