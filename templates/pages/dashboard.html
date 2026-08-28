@@ -364,12 +364,13 @@
     <div class="event-modal-overlay" onclick="closeEventModal()"></div>
     <div class="event-modal-box">
         <div class="event-modal-header">
-            <h3 class="event-modal-title">Add Event</h3>
+            <h3 class="event-modal-title" id="event-modal-title">Add Event</h3>
             <button class="event-modal-close" onclick="closeEventModal()">✕</button>
         </div>
         <form id="event-form" onsubmit="submitEvent(event)">
             <div class="event-modal-body">
                 <input type="hidden" id="event-date" />
+                <input type="hidden" id="event-edit-mode" value="false" />
                 <div class="form-group">
                     <label class="form-label"
                         style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">
@@ -401,9 +402,51 @@
             </div>
             <div class="event-modal-footer">
                 <button type="button" class="btn-secondary" onclick="closeEventModal()">Cancel</button>
-                <button type="submit" class="btn-primary">Add Event</button>
+                <button type="submit" class="btn-primary" id="event-submit-btn">Add Event</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Calendar Context Menu -->
+<div class="calendar-context-menu" id="calendar-context-menu">
+    <div class="context-menu-item" onclick="editEventFromContext()">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        Edit Event
+    </div>
+    <div class="context-menu-item delete" onclick="requestDeleteEvent()">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Delete Event
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="confirm-modal" id="confirm-delete-modal">
+    <div class="confirm-modal-overlay" onclick="closeConfirmModal()"></div>
+    <div class="confirm-modal-box">
+        <div class="confirm-modal-header">
+            <h3 class="confirm-modal-title">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Delete Event?
+            </h3>
+        </div>
+        <div class="confirm-modal-body">
+            Are you sure you want to delete the event "<strong id="confirm-event-name"></strong>"? This action cannot be
+            undone.
+        </div>
+        <div class="confirm-modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+            <button type="button" class="btn-danger" onclick="confirmDeleteEvent()">Delete Event</button>
+        </div>
     </div>
 </div>
 
@@ -508,6 +551,138 @@
         height: 6px;
         border-radius: 50%;
         background: #014421;
+    }
+
+    .calendar-day.delete-mode {
+        background: #fee2e2 !important;
+        border: 2px solid #ef4444;
+        color: #991b1b;
+    }
+
+    /* Calendar Context Menu */
+    .calendar-context-menu {
+        position: fixed;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 4px;
+        z-index: 9999;
+        display: none;
+    }
+
+    .calendar-context-menu.open {
+        display: block;
+    }
+
+    .context-menu-item {
+        padding: 10px 16px;
+        font-size: 0.875rem;
+        color: #374151;
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
+
+    .context-menu-item:hover {
+        background: #f3f4f6;
+    }
+
+    .context-menu-item.delete {
+        color: #dc2626;
+    }
+
+    .context-menu-item.delete:hover {
+        background: #fee2e2;
+    }
+
+    /* Confirmation Modal */
+    .confirm-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10000;
+    }
+
+    .confirm-modal.open {
+        display: block;
+    }
+
+    .confirm-modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+
+    .confirm-modal-box {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 400px;
+        animation: modalSlideIn 0.2s ease;
+    }
+
+    .confirm-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .confirm-modal-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #dc2626;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .confirm-modal-body {
+        padding: 24px;
+        font-size: 0.9rem;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+
+    .confirm-modal-footer {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        padding: 16px 24px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .btn-danger {
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid #dc2626;
+        background: #dc2626;
+        color: white;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+        border-color: #b91c1c;
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
     }
 
     /* Event Modal */
@@ -721,7 +896,7 @@
     /* Floating Add Button */
     .floating-add-btn {
         position: absolute;
-        bottom: 20px;
+        bottom: 80px;
         right: 20px;
         width: 56px;
         height: 56px;
@@ -838,6 +1013,7 @@
     // Calendar functionality
     let currentCalendarDate = new Date();
     let calendarEvents = {}; // Store events as {dateStr: {name, importance}}
+    let contextMenuDate = null;
 
     function renderCalendar() {
         const year = currentCalendarDate.getFullYear();
@@ -888,7 +1064,7 @@
                 classes += ' has-event-' + hasEvent.importance;
             }
 
-            const clickHandler = (isPast && !isToday) ? '' : ' onclick="openEventModal(\'' + dateStr + '\')"';
+            const clickHandler = (isPast && !isToday) ? '' : ' onclick="handleCalendarClick(event, \'' + dateStr + '\')" oncontextmenu="handleCalendarRightClick(event, \'' + dateStr + '\')"';
             calendarHTML += '<div class="' + classes + '"' + clickHandler + ' data-date="' + dateStr + '">' + day + '</div>';
         }
 
@@ -903,10 +1079,98 @@
         document.getElementById('calendar-grid').innerHTML = calendarHTML;
     }
 
-    function openEventModal(dateStr) {
+    function handleCalendarClick(e, dateStr) {
+        e.preventDefault();
+        const hasEvent = calendarEvents[dateStr];
+
+        if (hasEvent) {
+            // Edit existing event
+            openEventModal(dateStr, true);
+        } else {
+            // Create new event
+            openEventModal(dateStr, false);
+        }
+    }
+
+    function handleCalendarRightClick(e, dateStr) {
+        e.preventDefault();
+        const hasEvent = calendarEvents[dateStr];
+
+        if (hasEvent) {
+            contextMenuDate = dateStr;
+            showContextMenu(e.pageX, e.pageY);
+
+            // Highlight date in red
+            const dayElement = document.querySelector('[data-date="' + dateStr + '"]');
+            if (dayElement) {
+                dayElement.classList.add('delete-mode');
+            }
+        }
+    }
+
+    function showContextMenu(x, y) {
+        const menu = document.getElementById('calendar-context-menu');
+        menu.classList.add('open');
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+    }
+
+    function hideContextMenu() {
+        const menu = document.getElementById('calendar-context-menu');
+        menu.classList.remove('open');
+
+        // Remove delete-mode from all days
+        document.querySelectorAll('.calendar-day.delete-mode').forEach(el => {
+            el.classList.remove('delete-mode');
+        });
+    }
+
+    function editEventFromContext() {
+        hideContextMenu();
+        if (contextMenuDate) {
+            openEventModal(contextMenuDate, true);
+        }
+    }
+
+    function requestDeleteEvent() {
+        hideContextMenu();
+        if (contextMenuDate && calendarEvents[contextMenuDate]) {
+            const eventName = calendarEvents[contextMenuDate].name;
+            document.getElementById('confirm-event-name').textContent = eventName;
+            document.getElementById('confirm-delete-modal').classList.add('open');
+        }
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirm-delete-modal').classList.remove('open');
+        contextMenuDate = null;
+    }
+
+    function confirmDeleteEvent() {
+        if (contextMenuDate) {
+            delete calendarEvents[contextMenuDate];
+            renderCalendar();
+        }
+        closeConfirmModal();
+    }
+
+    function openEventModal(dateStr, isEdit = false) {
         document.getElementById('event-date').value = dateStr;
-        document.getElementById('event-name').value = '';
-        document.querySelector('input[name="importance"][value="low"]').checked = true;
+        document.getElementById('event-edit-mode').value = isEdit ? 'true' : 'false';
+
+        if (isEdit && calendarEvents[dateStr]) {
+            const event = calendarEvents[dateStr];
+            document.getElementById('event-name').value = event.name;
+            document.querySelector('input[name="importance"][value="' + event.importance + '"]').checked = true;
+            document.getElementById('event-modal-title').textContent = 'Edit Event';
+            document.getElementById('event-submit-btn').textContent = 'Update Event';
+        } else {
+            document.getElementById('event-name').value = '';
+            document.querySelector('input[name="importance"][value="low"]').checked = true;
+            document.getElementById('event-modal-title').textContent = 'Add Event';
+            document.getElementById('event-submit-btn').textContent = 'Add Event';
+        }
+
         document.getElementById('event-modal').classList.add('open');
     }
 
@@ -939,6 +1203,13 @@
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
         renderCalendar();
     }
+
+    // Close context menu when clicking anywhere
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#calendar-context-menu')) {
+            hideContextMenu();
+        }
+    });
 
     // Initialize calendar on load
     document.addEventListener('DOMContentLoaded', function () {
