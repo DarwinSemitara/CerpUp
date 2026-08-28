@@ -595,7 +595,7 @@
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         padding: 4px;
-        z-index: 9999;
+        z-index: 99998;
         display: none;
     }
 
@@ -636,7 +636,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 10000;
+        z-index: 100000;
     }
 
     .confirm-modal.open {
@@ -715,17 +715,17 @@
 
     /* Event Modal */
     .event-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 9999;
+        display: none !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 99999 !important;
     }
 
     .event-modal.open {
-        display: block;
+        display: block !important;
     }
 
     .event-modal-overlay {
