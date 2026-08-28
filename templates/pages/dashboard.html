@@ -1218,7 +1218,11 @@
 
             const modal = document.getElementById('event-modal');
             console.log('Modal element:', modal);
+            console.log('Modal classes before:', modal.className);
             modal.classList.add('open');
+            modal.style.display = 'block'; // Force display
+            console.log('Modal classes after:', modal.className);
+            console.log('Modal computed display:', window.getComputedStyle(modal).display);
             console.log('Modal should be open now');
         } catch (error) {
             console.error('Error in openEventModal:', error);
@@ -1226,7 +1230,9 @@
     }
 
     function closeEventModal() {
-        document.getElementById('event-modal').classList.remove('open');
+        const modal = document.getElementById('event-modal');
+        modal.classList.remove('open');
+        modal.style.display = ''; // Remove inline style
     }
 
     function submitEvent(e) {
