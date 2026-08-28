@@ -268,7 +268,7 @@
 <!-- New Section: Calendar and To-Do List -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
     <!-- Calendar Container -->
-    <div class="chart-card" style="min-height:480px;">
+    <div class="chart-card" style="min-height:480px;position:relative;z-index:1;">
         <div class="chart-header">
             <div>
                 <div class="chart-title">Calendar</div>
@@ -292,13 +292,13 @@
                 </button>
             </div>
         </div>
-        <div id="calendar-grid" style="padding:12px;">
+        <div id="calendar-grid" style="padding:12px;position:relative;z-index:2;">
             <!-- Calendar will be generated here -->
         </div>
     </div>
 
     <!-- To-Do List / Requests Container with Swipe -->
-    <div class="chart-card" style="overflow:hidden;position:relative;min-height:480px;">
+    <div class="chart-card" style="overflow:hidden;position:relative;min-height:480px;z-index:1;">
         <div class="chart-header" style="border-bottom:1px solid #e5e7eb;">
             <div style="display:flex;gap:16px;">
                 <button class="todo-tab" data-tab="todo" onclick="switchTab('todo')" style="padding-bottom:12px;">
@@ -315,7 +315,7 @@
         <div class="swipe-container" id="swipe-container">
             <div class="swipe-wrapper" id="swipe-wrapper" style="display:flex;transition:transform 0.3s ease;">
                 <!-- To-Do List Panel -->
-                <div class="swipe-panel" style="min-width:100%;padding:20px 20px 100px 20px;position:relative;">
+                <div class="swipe-panel" style="min-width:100%;padding:20px 20px 100px 20px;">
                     <div id="todo-list">
                         <!-- To-Do items will be added here -->
                         <div id="todo-empty-state" style="text-align:center;padding:40px 20px;color:#9ca3af;">
@@ -501,6 +501,7 @@
         transition: all 0.15s;
         color: #374151;
         position: relative;
+        z-index: 3;
     }
 
     .calendar-day:hover:not(.disabled):not(.other-month) {
