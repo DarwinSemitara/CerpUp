@@ -451,6 +451,33 @@
     </div>
 </div>
 
+<!-- Add Todo Modal -->
+<div class="event-modal" id="add-todo-modal">
+    <div class="event-modal-overlay" onclick="closeTodoModal()"></div>
+    <div class="event-modal-box">
+        <div class="event-modal-header">
+            <h3 class="event-modal-title">Add Task</h3>
+            <button class="event-modal-close" onclick="closeTodoModal()">✕</button>
+        </div>
+        <form id="todo-form" onsubmit="submitTodo(event)">
+            <div class="event-modal-body">
+                <div class="form-group">
+                    <label class="form-label"
+                        style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">
+                        Task Description
+                    </label>
+                    <textarea id="todo-text" class="form-input" placeholder="Enter task description" required rows="3"
+                        style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.875rem;resize:vertical;font-family:inherit;"></textarea>
+                </div>
+            </div>
+            <div class="event-modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeTodoModal()">Cancel</button>
+                <button type="submit" class="btn-primary">Add Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <style>
     /* Calendar Styles */
     .calendar-nav-btn {
@@ -1248,9 +1275,20 @@
     }
 
     function showAddTodoDialog() {
-        const taskText = prompt('Enter your task:');
-        if (taskText && taskText.trim()) {
-            addTodoItem(taskText.trim());
+        document.getElementById('todo-text').value = '';
+        document.getElementById('add-todo-modal').classList.add('open');
+    }
+
+    function closeTodoModal() {
+        document.getElementById('add-todo-modal').classList.remove('open');
+    }
+
+    function submitTodo(e) {
+        e.preventDefault();
+        const taskText = document.getElementById('todo-text').value.trim();
+        if (taskText) {
+            addTodoItem(taskText);
+            closeTodoModal();
         }
     }
 
