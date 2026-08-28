@@ -348,15 +348,14 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Floating Add Button for To-Do (positioned relative to swipe-container) -->
-            <button class="floating-add-btn" onclick="event.stopPropagation(); showAddTodoDialog();"
-                title="Add new task">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-            </button>
         </div>
+
+        <!-- Floating Add Button - Outside swipe container, relative to chart-card -->
+        <button class="floating-add-btn" onclick="event.stopPropagation(); showAddTodoDialog();" title="Add new task">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+        </button>
     </div>
 </div>
 
@@ -1114,11 +1113,14 @@
         e.preventDefault();
         e.stopPropagation();
         const hasEvent = calendarEvents[dateStr];
+        console.log('Has event?', hasEvent);
 
         if (hasEvent) {
+            console.log('Opening edit modal');
             // Edit existing event
             openEventModal(dateStr, true);
         } else {
+            console.log('Opening add modal');
             // Create new event
             openEventModal(dateStr, false);
         }
@@ -1129,8 +1131,10 @@
         e.preventDefault();
         e.stopPropagation();
         const hasEvent = calendarEvents[dateStr];
+        console.log('Has event for right-click?', hasEvent);
 
         if (hasEvent) {
+            console.log('Showing context menu');
             contextMenuDate = dateStr;
             showContextMenu(e.pageX, e.pageY);
 
@@ -1139,6 +1143,8 @@
             if (dayElement) {
                 dayElement.classList.add('delete-mode');
             }
+        } else {
+            console.log('No event to edit/delete');
         }
         return false;
     }
