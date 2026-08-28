@@ -911,19 +911,20 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 4px 12px rgba(1, 68, 33, 0.3);
-        transition: all 0.2s;
-        z-index: 10;
+        transition: all 0.3s;
+        z-index: 100;
         pointer-events: auto;
+        transform: translateX(0);
     }
 
     .floating-add-btn:hover {
         background: #016428;
         box-shadow: 0 6px 16px rgba(1, 68, 33, 0.4);
-        transform: scale(1.05);
+        transform: translateX(0) scale(1.05);
     }
 
     .floating-add-btn:active {
-        transform: scale(0.95);
+        transform: translateX(0) scale(0.95);
     }
 
     /* Swipe Container */
@@ -1082,7 +1083,9 @@
     }
 
     function handleCalendarClick(e, dateStr) {
+        console.log('Calendar click:', dateStr);
         e.preventDefault();
+        e.stopPropagation();
         const hasEvent = calendarEvents[dateStr];
 
         if (hasEvent) {
@@ -1095,7 +1098,9 @@
     }
 
     function handleCalendarRightClick(e, dateStr) {
+        console.log('Calendar right-click:', dateStr);
         e.preventDefault();
+        e.stopPropagation();
         const hasEvent = calendarEvents[dateStr];
 
         if (hasEvent) {
@@ -1108,6 +1113,7 @@
                 dayElement.classList.add('delete-mode');
             }
         }
+        return false;
     }
 
     function showContextMenu(x, y) {
