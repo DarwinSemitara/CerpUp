@@ -764,10 +764,271 @@
         .year-option:last-child {
             border-radius: 0 0 10px 10px;
         }
+
+        /* Email Verification Modal - Blurred Overlay */
+        #verification-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        #verification-modal.open {
+            display: flex;
+        }
+
+        #verification-modal .modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 24px 72px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .verification-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #6b0f1a 0%, #014421 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(107, 15, 26, 0.3);
+        }
+
+        .code-inputs {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 24px 0;
+        }
+
+        .code-input {
+            width: 56px;
+            height: 64px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: 700;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.2s;
+            color: #111827;
+        }
+
+        .code-input:focus {
+            border-color: #6b0f1a;
+            box-shadow: 0 0 0 4px rgba(107, 15, 26, 0.1);
+        }
+
+        .code-input.filled {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .code-input.error {
+            border-color: #ef4444;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-8px);
+            }
+
+            75% {
+                transform: translateX(8px);
+            }
+        }
+
+        .verification-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .verify-btn {
+            flex: 1;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #6b0f1a 0%, #014421 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(107, 15, 26, 0.3);
+        }
+
+        .verify-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(107, 15, 26, 0.4);
+        }
+
+        .verify-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .resend-btn {
+            padding: 10px 20px;
+            background: transparent;
+            color: #6b7280;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .resend-btn:hover:not(:disabled) {
+            color: #6b0f1a;
+            background: #f9fafb;
+        }
+
+        .resend-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .verification-error {
+            color: #ef4444;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 12px;
+            min-height: 20px;
+            font-weight: 500;
+        }
+
+        /* Password Change Modal */
+        #password-change-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        #password-change-modal.open {
+            display: flex;
+        }
+
+        #password-change-modal .modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 24px 72px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        .password-input-group {
+            margin: 20px 0;
+        }
+
+        .password-input-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .password-input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .password-input-group input:focus {
+            border-color: #6b0f1a;
+            box-shadow: 0 0 0 4px rgba(107, 15, 26, 0.1);
+        }
+
+        .password-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .password-skip-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: white;
+            color: #6b7280;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .password-skip-btn:hover {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+
+        .password-change-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #6b0f1a 0%, #014421 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(107, 15, 26, 0.3);
+        }
+
+        .password-change-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(107, 15, 26, 0.4);
+        }
     </style>
 </head>
 
-<body>
+<body data-first-login="{{ 'true' if first_login else 'false' }}">
 
     <div id="shell">
         <aside id="sidebar">
@@ -907,12 +1168,87 @@
             </div>
         </div>
     </div>
+
+    <!-- Email Verification Modal (First Login) -->
+    <div id="verification-modal">
+        <div class="modal-box">
+            <div class="verification-icon">
+                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <h2 style="font-size:1.4rem;font-weight:700;color:#111827;text-align:center;margin:0 0 8px;">
+                Verify Your Email
+            </h2>
+            <p style="font-size:0.9rem;color:#6b7280;text-align:center;margin:0 0 24px;">
+                We've sent a 6-digit verification code to your email.<br>
+                <strong id="verification-email" style="color:#111827;">{{ email }}</strong>
+            </p>
+            <div class="code-inputs">
+                <input type="text" class="code-input" maxlength="1" id="code-1" />
+                <input type="text" class="code-input" maxlength="1" id="code-2" />
+                <input type="text" class="code-input" maxlength="1" id="code-3" />
+                <input type="text" class="code-input" maxlength="1" id="code-4" />
+                <input type="text" class="code-input" maxlength="1" id="code-5" />
+                <input type="text" class="code-input" maxlength="1" id="code-6" />
+            </div>
+            <div class="verification-error" id="verification-error"></div>
+            <div class="verification-buttons">
+                <button class="verify-btn" onclick="submitVerificationCode()" id="verify-submit-btn">
+                    Verify Code
+                </button>
+            </div>
+            <div style="text-align:center;margin-top:16px;">
+                <button class="resend-btn" onclick="resendVerificationCode()" id="resend-code-btn">
+                    Didn't receive code? Resend
+                </button>
+            </div>
+            <div style="text-align:center;margin-top:12px;">
+                <button onclick="doLogout()"
+                    style="padding:8px 16px;background:transparent;border:1px solid #e5e7eb;border-radius:8px;color:#6b7280;font-size:0.85rem;cursor:pointer;transition:all 0.2s;">
+                    Logout
+                </button>
+            </div>
+        </div>
     </div>
-    </div>
+
+    <!-- Password Change Modal (After Verification) -->
+    <div id="password-change-modal">
+        <div class="modal-box">
+            <div style="text-align:center;margin-bottom:24px;">
+                <div
+                    style="width:72px;height:72px;margin:0 auto 16px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16, 185, 129, 0.3);">
+                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h2 style="font-size:1.3rem;font-weight:700;color:#111827;margin:0 0 8px;">
+                    Email Verified!
+                </h2>
+                <p style="font-size:0.9rem;color:#6b7280;margin:0;">
+                    Would you like to change your password now for better security?
+                </p>
+            </div>
+            <div class="password-input-group">
+                <label for="new-password-input">New Password</label>
+                <input type="password" id="new-password-input" placeholder="Enter new password (min. 6 characters)" />
+            </div>
+            <div class="password-buttons">
+                <button class="password-skip-btn" onclick="skipPasswordChange()">
+                    Skip for Now
+                </button>
+                <button class="password-change-btn" onclick="submitPasswordChange()">
+                    Change Password
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Settings state
+        // First login verification state - set from template
+        window.userEmail = '{{ email }}';
+        window.isFirstLogin = false;
         let settings = {
             sidebarColor: localStorage.getItem('sidebarColor') || 'forest',
             theme: localStorage.getItem('theme') || 'light'
@@ -5932,6 +6268,30 @@
         // ── Schedule Loading (REMOVED) ──────────────────────────────────────────────
         // Schedule functionality removed from user dashboard
     </script>
+
+    <script src="{{ url_for('static', filename='js/verification.js') }}"></script>
+
+    <!-- Email Verification Script -->
+    <script>
+        // Initialize email for veration (          here)
+        var userEmail = '{{ email }}';
+        var isFirstLogin = false;
+    </script>
+    <script src="{{ url_for('static', filename='js/verification.js') }}"></script>
 </body>
 
 </html>
+
+<!-- TEMPORARY DEBUG SCRIPT -->
+<script>
+        console.log('='.repeat(50));
+        console.log('🔍 VERIFICATION DEBUG');
+        console.log('='.repeat(50));
+        console.log('1. userEmail defined:', typeof userEmail !== 'undefined');
+        console.log('2. userEmail value:', typeof userEmail !== 'undefined' ? userEmail : 'NOT DEFINED');
+        console.log('3. Body firstLogin attr:', document.body.dataset.firstLogin);
+        console.log('4. Modal exists:', document.getElementById('verification-modal') !== null);
+        console.log('5. Password modal exists:', document.getElementById('password-change-modal') !== null);
+        console.log('6. showVerificationModal exists:', typeof showVerificationModal !== 'undefined');
+        console.log('='.repeat(50));
+</script>

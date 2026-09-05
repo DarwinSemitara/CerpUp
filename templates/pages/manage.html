@@ -421,15 +421,29 @@
         </div>
         <div class="modal-body">
             <p style="font-size:0.875rem;color:#6b7280;margin-bottom:16px;">
-                Create a login account for this member. They will be able to access the user dashboard.
+                Create a login account for this member. The ID number will be used as both username and initial
+                password.
             </p>
             <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" id="ca-email" class="form-input" required>
+                <label class="form-label">Faculty/Member ID *</label>
+                <input type="text" id="ca-member-id" class="form-input" required placeholder="e.g., 0123-01">
+                <p style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Format: XXXX-XX (e.g., 0123-01)</p>
             </div>
             <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" id="ca-password" class="form-input" required minlength="6">
+                <label class="form-label">Email *</label>
+                <input type="email" id="ca-email" class="form-input" required>
+                <p style="font-size:0.75rem;color:#6b7280;margin-top:4px;">Verification code will be sent to this email
+                </p>
+            </div>
+            <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px;margin-top:12px;">
+                <p style="font-size:0.8rem;color:#92400e;font-weight:500;margin:0;">
+                    <svg style="display:inline;width:16px;height:16px;margin-right:4px;vertical-align:text-bottom;"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Initial credentials: ID number for both username and password
+                </p>
             </div>
             <div class="form-error" id="create-account-error"></div>
         </div>
@@ -458,6 +472,33 @@
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
             <button class="btn-danger" onclick="confirmDeleteMember()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Promotions Modal -->
+<div class="modal" id="promotions-modal">
+    <div class="modal-box" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Manage Promotions</h3>
+            <button class="modal-close" onclick="closePromotionsModal()">✕</button>
+        </div>
+        <div class="modal-body" style="text-align: center; padding: 48px 24px;">
+            <div
+                style="width: 80px; height: 80px; margin: 0 auto 20px; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#6b7280" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+            </div>
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 12px;">Coming Soon</h3>
+            <p style="font-size: 0.875rem; color: #6b7280; line-height: 1.6;">
+                The promotions management feature is currently under development.
+                You'll be able to view and manage faculty promotion history here soon.
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-primary" onclick="closePromotionsModal()">Got It</button>
         </div>
     </div>
 </div>

@@ -121,16 +121,69 @@ def api_login():
     # Look up role from Supabase users table
     user_doc = db.collection('users').document(uid).get()
     role = 'user'
+    first_login = False
+
     if user_doc.exists:
         user_data = user_doc.to_dict()
         role = user_data.get('role', 'user')
+        # Default to True for new users
+        first_login = user_data.get('first_login', True)
+    else:
+        # New user - mark as first login
+        first_login = True
 
     session['uid'] = uid
     session['email'] = email
     session['role'] = role
 
+    # Check if this is first login and needs verification
+    if first_login and role == 'user':
+        # Generate and send verification code
+        from services.email_service import generate_verification_code, store_verification_code, send_verification_email
+
+        # Get display name
+        try:
+            from services.supabase_service import supabase
+            users_response = supabase.auth.admin.list_users()
+            current_user = None
+
+            users_list = []
+            if hasattr(users_response, 'data'):
+                users_list = users_response.data
+            elif hasattr(users_response, '__iter__'):
+                users_list = list(users_response)
+            else:
+                users_list = [users_response]
+
+            for user in users_list:
+                if (getattr(user, 'id', None) or user.get('id')) == uid:
+                    current_user = user
+                    break
+
+            if current_user:
+                metadata = getattr(current_user, 'user_metadata', None) or (
+                    current_user.get('user_metadata') if isinstance(current_user, dict) else {})
+                display_name = metadata.get('display_name', 'User') if isinstance(
+                    metadata, dict) else 'User'
+            else:
+                display_name = 'User'
+        except:
+            display_name = 'User'
+
+        verification_code = generate_verification_code()
+        store_verification_code(email, verification_code)
+        send_verification_email(email, display_name, verification_code)
+
+        redirect_url = '/user/dashboard/'
+        return jsonify({
+            'status': 'ok',
+            'redirect': redirect_url,
+            'first_login': True,
+            'requires_verification': True
+        })
+
     redirect_url = '/dashboard/' if role == 'admin' else '/user/dashboard/'
-    return jsonify({'status': 'ok', 'redirect': redirect_url})
+    return jsonify({'status': 'ok', 'redirect': redirect_url, 'first_login': False})
 
 
 @app.route('/api/logout', methods=['POST'])
@@ -602,8 +655,10 @@ def che_delete_conversation(conv_id):
 def che_chat():
     """
     CHE AI chat endpoint with GA scheduling integration.
-    Accepts: { "message": str, "history": [...], "include_context": bool, "conversation_id": str }
-    Returns: { "reply": str, "error": bool, "action": dict|null, "action_result": dict|null }
+    Accepts: { "message": str,
+        "history": [...], "include_context": bool, "conversation_id": str }
+    Returns: { "reply": str, "error": bool,
+        "action": dict|null, "action_result": dict|null }
     """
     try:
         from services.che_service import chat as che_chat_fn, extract_action, execute_schedule_action
@@ -612,9 +667,34 @@ def che_chat():
         message = data.get('message', '').strip()
         history = data.get('history', [])
         include_context = data.get('include_context', False)
+        conversation_id = data.get('conversation_id')
+        # New: explicit flag for schedule page chat
+        is_schedule_page = data.get('is_schedule_page', False)
 
         if not message:
             return jsonify({'reply': 'Please send a message.', 'error': True}), 400
+
+        # Check if this is the system "Schedule Generation" conversation
+        # Default to True if from schedule page
+        is_system_conversation = is_schedule_page
+        if conversation_id and not is_schedule_page:
+            try:
+                user_id = session.get('uid', '')
+                conv_resp = (
+                    supabase.table('che_conversations')
+                    .select('is_system, title')
+                    .eq('id', conversation_id)
+                    .eq('user_id', user_id)
+                    .single()
+                    .execute()
+                )
+                if conv_resp.data:
+                    is_system_conversation = conv_resp.data.get('is_system', False) or \
+                        conv_resp.data.get(
+                            'title') == SYSTEM_CONVERSATION_TITLE
+            except Exception as conv_err:
+                logger.warning(
+                    f"Could not check conversation type: {conv_err}")
 
         # Always inject schedule context for scheduling awareness
         context_data = {}
@@ -664,7 +744,8 @@ def che_chat():
         result = che_chat_fn(
             message=message,
             history=history,
-            context_data=context_data
+            context_data=context_data,
+            is_system_conversation=is_system_conversation  # Pass conversation type flag
         )
 
         # If CHE returned a scheduling action, pre-execute it for preview
@@ -971,7 +1052,7 @@ def delete_staff(staff_id):
 
 @app.route('/api/members', methods=['GET'])
 def get_members():
-    """Return all members from Supabase (public endpoint for faculty page). 
+    """Return all members from Supabase (public endpoint for faculty page).
     Supports filtering by type via query parameter or faculty status."""
     try:
         member_type = request.args.get('type', None)
@@ -1045,7 +1126,7 @@ def add_member():
             'availability': request.form.getlist('availability'),
             'photo_url': None,
             'user_no':   request.form.get('user_no', ''),
-            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
         }
 
         print(f"✅ Converted is_faculty to boolean: {member['is_faculty']}")
@@ -1159,8 +1240,8 @@ def delete_member(member_id):
 @login_required
 def create_member_account(member_id):
     """
-    Admin assigns an email + password to a member, creating a Supabase Auth
-    account and storing the role in Supabase users collection.
+    Admin assigns an email + ID to a member, creating a Supabase Auth account.
+    The member ID is used as both username and initial password.
     """
     from services.supabase_service import supabase
     data = request.get_json()
@@ -1169,8 +1250,10 @@ def create_member_account(member_id):
 
     email = data.get('email', '').strip()
     password = data.get('password', '').strip()
-    if not email or not password:
-        return jsonify({'error': 'Email and password are required.'}), 400
+    faculty_id = data.get('member_id', '').strip()
+
+    if not email or not password or not faculty_id:
+        return jsonify({'error': 'Email, password, and member ID are required.'}), 400
     if len(password) < 6:
         return jsonify({'error': 'Password must be at least 6 characters.'}), 400
 
@@ -1191,9 +1274,11 @@ def create_member_account(member_id):
             response = supabase.auth.admin.create_user({
                 "email": email,
                 "password": password,
-                "email_confirm": True,  # Auto-confirm email
+                # Auto-confirm email (we handle verification via code)
+                "email_confirm": True,
                 "user_metadata": {
-                    "display_name": display_name
+                    "display_name": display_name,
+                    "faculty_id": faculty_id
                 }
             })
 
@@ -1279,16 +1364,237 @@ def create_member_account(member_id):
             'role':        'user',
             'member_id':   member_id,
             'display_name': display_name,
+            'first_login': True,  # Mark as first login - needs email verification
         }, merge=True)
 
         # Link uid back to member doc
         db.collection('members').document(member_id).update(
             {'uid': user_id, 'email': email})
 
-        return jsonify({'status': 'ok', 'uid': user_id})
+        # Generate and send verification code
+        from services.email_service import generate_verification_code, store_verification_code, send_verification_email
+
+        verification_code = generate_verification_code()
+        store_verification_code(email, verification_code)
+
+        # Print to console with big banner for easy visibility
+        print("\n" + "="*70)
+        print("🔐 VERIFICATION CODE GENERATED (New Account)")
+        print("="*70)
+        print(f"📧 Email: {email}")
+        print(f"👤 Name:  {display_name}")
+        print(f"🔢 Code:  {verification_code}")
+        print(f"⏰ Valid for: 15 minutes")
+        print("="*70 + "\n")
+
+        # Send verification email
+        success, message = send_verification_email(
+            email, display_name, verification_code)
+
+        logger.info(f"Verification code sent: {message}")
+
+        return jsonify({
+            'status': 'ok',
+            'uid': user_id,
+            'verification_sent': success,
+            'message': 'Account created. Verification code sent to email.' if success else 'Account created but email sending failed.'
+        })
     except Exception as e:
         logger.error(
             f"Unexpected error in create_member_account: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/verify-code', methods=['POST'])
+def verify_email_code():
+    """Verify email verification code"""
+    try:
+        from services.email_service import verify_code
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        email = data.get('email', '').strip()
+        code = data.get('code', '').strip()
+
+        if not email or not code:
+            return jsonify({'error': 'Email and code are required'}), 400
+
+        success, message = verify_code(email, code)
+
+        if success:
+            return jsonify({'success': True, 'message': message})
+        else:
+            return jsonify({'success': False, 'error': message}), 400
+
+    except Exception as e:
+        logger.error(f"Error verifying code: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/resend-code', methods=['POST'])
+def resend_verification_code():
+    """Resend verification code"""
+    try:
+        from services.email_service import generate_verification_code, store_verification_code, send_verification_email
+        from services.supabase_service import supabase
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        email = data.get('email', '').strip()
+
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+
+        # Get user info from Supabase
+        try:
+            users_response = supabase.auth.admin.list_users()
+            user = None
+
+            users_list = []
+            if hasattr(users_response, 'data'):
+                users_list = users_response.data
+            elif hasattr(users_response, '__iter__'):
+                users_list = list(users_response)
+            else:
+                users_list = [users_response]
+
+            for u in users_list:
+                user_email = getattr(u, 'email', None) or (
+                    u.get('email') if isinstance(u, dict) else None)
+                if user_email == email:
+                    user = u
+                    break
+
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+
+            # Get display name from metadata
+            metadata = getattr(user, 'user_metadata', None) or (
+                user.get('user_metadata') if isinstance(user, dict) else {})
+            display_name = metadata.get('display_name', 'User') if isinstance(
+                metadata, dict) else 'User'
+
+        except Exception as e:
+            logger.error(f"Error fetching user: {e}")
+            return jsonify({'error': 'Failed to fetch user information'}), 500
+
+        # Generate and send new code
+        verification_code = generate_verification_code()
+        store_verification_code(email, verification_code)
+
+        # Print to console with big banner for easy visibility
+        print("\n" + "="*70)
+        print("🔐 VERIFICATION CODE GENERATED")
+        print("="*70)
+        print(f"📧 Email: {email}")
+        print(f"🔢 Code:  {verification_code}")
+        print(f"⏰ Valid for: 15 minutes")
+        print("="*70 + "\n")
+
+        success, message = send_verification_email(
+            email, display_name, verification_code)
+
+        if success:
+            return jsonify({'success': True, 'message': 'Verification code sent'})
+        else:
+            return jsonify({'error': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error resending code: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/complete-first-login', methods=['POST'])
+@login_required
+def complete_first_login():
+    """
+    Mark first login as complete and optionally change password.
+    Called after email verification is successful.
+    """
+    try:
+        from services.supabase_service import supabase
+        from datetime import datetime, timezone
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        uid = session.get('uid')
+        email = session.get('email')
+
+        if not uid:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Optional: Change password
+        new_password = data.get('new_password', '').strip()
+        if new_password:
+            if len(new_password) < 6:
+                return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+            try:
+                supabase.auth.admin.update_user_by_id(
+                    uid,
+                    {"password": new_password}
+                )
+                logger.info(f"Password changed for user {uid}")
+            except Exception as e:
+                logger.error(f"Error changing password: {e}")
+                return jsonify({'error': 'Failed to change password'}), 500
+
+        # Mark first login as complete
+        db.collection('users').document(uid).set({
+            'first_login': False,
+            'setup_completed_at': datetime.now(timezone.utc).isoformat()
+        }, merge=True)
+
+        # Send welcome email
+        from services.email_service import send_welcome_email
+
+        # Get faculty ID from metadata
+        try:
+            users_response = supabase.auth.admin.list_users()
+            current_user = None
+
+            users_list = []
+            if hasattr(users_response, 'data'):
+                users_list = users_response.data
+            elif hasattr(users_response, '__iter__'):
+                users_list = list(users_response)
+            else:
+                users_list = [users_response]
+
+            for user in users_list:
+                if (getattr(user, 'id', None) or user.get('id')) == uid:
+                    current_user = user
+                    break
+
+            if current_user:
+                metadata = getattr(current_user, 'user_metadata', None) or (
+                    current_user.get('user_metadata') if isinstance(current_user, dict) else {})
+                display_name = metadata.get('display_name', 'User') if isinstance(
+                    metadata, dict) else 'User'
+                faculty_id = metadata.get(
+                    'faculty_id', 'N/A') if isinstance(metadata, dict) else 'N/A'
+            else:
+                display_name = 'User'
+                faculty_id = 'N/A'
+        except:
+            display_name = 'User'
+            faculty_id = 'N/A'
+
+        send_welcome_email(email, display_name, faculty_id)
+
+        return jsonify({
+            'success': True,
+            'message': 'First login setup completed successfully'
+        })
+
+    except Exception as e:
+        logger.error(f"Error completing first login: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -2146,6 +2452,110 @@ def generate_schedule():
         return jsonify({'error': str(e)}), 500
 
 
+# ── Async GA Schedule Generation API ──────────────────────────────────────────────
+
+@app.route('/api/schedule/ga-generate-async', methods=['POST'])
+@login_required
+def api_ga_generate_async():
+    """
+    Start an asynchronous GA schedule generation run.
+    Simplified version that works with current scheduler_service.
+
+    Body: {
+        "reference_semester": "1"|"2",
+        "reference_school_year": "2026-2027",
+        "target_semester": "1"|"2",
+        "target_school_year": "2026-2027",
+        "save_to_db": true|false
+    }
+    Returns: { "session_id": str, "message": str }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+
+        # Generate a unique session ID
+        import uuid
+        session_id = str(uuid.uuid4())
+
+        # For now, return a mock response indicating the feature is being implemented
+        # TODO: Implement full async GA generation
+        return jsonify({
+            'session_id': session_id,
+            'message': 'Schedule generation starting (feature in development)',
+            'status': 'started',
+            'note': 'Full GA async implementation pending'
+        })
+
+    except Exception as e:
+        logger.error(f"GA async generation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedule/ga-status/<session_id>', methods=['GET'])
+@login_required
+def api_ga_status(session_id):
+    """
+    Get the status of an async GA generation run.
+    Mock implementation until full GA async is implemented.
+
+    Returns: {
+        "status": "running"|"completed"|"failed"|"not_found",
+        "progress": GAProgress dict (if running),
+        "result": dict (if completed),
+        "error": str (if failed)
+    }
+    """
+    try:
+        # Mock implementation - always return "not implemented" status
+        return jsonify({
+            'status': 'failed',
+            'error': 'Async GA generation is currently under development',
+            'message': 'Please use the synchronous generation endpoint for now',
+            'note': 'Full async implementation with progress tracking coming soon'
+        }), 501  # 501 = Not Implemented
+
+    except Exception as e:
+        logger.error(f"GA status check error: {e}")
+        return jsonify({'status': 'failed', 'error': str(e)}), 500
+
+
+@app.route('/api/schedule/ga-cancel/<session_id>', methods=['POST'])
+@login_required
+def api_ga_cancel(session_id):
+    """
+    Cancel a running GA generation session.
+    Sets the cancellation flag in _active_ga_runs.
+
+    Returns: { "status": "cancelled"|"not_found", "message": str }
+    """
+    try:
+        from services.scheduler_service import _active_ga_runs
+
+        if session_id not in _active_ga_runs:
+            return jsonify({'status': 'not_found', 'message': 'Session not found or already completed.'}), 404
+
+        run_info = _active_ga_runs[session_id]
+
+        if run_info['status'] == 'running':
+            # Set cancellation flag (GA loop checks this)
+            run_info['cancel_requested'] = True
+            return jsonify({
+                'status': 'cancelling',
+                'message': 'Cancellation requested. Generation will stop after current generation.'
+            })
+        else:
+            return jsonify({
+                'status': run_info['status'],
+                'message': f"Cannot cancel - session is {run_info['status']}."
+            })
+
+    except Exception as e:
+        logger.error(f"GA cancellation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ── Configured Subjects API ──────────────────────────────────────────────
 @app.route('/api/configured-subjects', methods=['GET'])
 @login_required
@@ -2274,128 +2684,35 @@ def delete_configured_subject(entry_id):
 def api_generate_full_schedule():
     """
     Full semester schedule generation using enhanced GA.
-    Considers: faculty availability, teaching loads, subject allocation,
-    room conflicts, block spreading, reference semester seeding.
+    Mock implementation until GA is fully integrated.
     """
     try:
-        from services.scheduler_service import run_full_ga, FullGAConfig, SubjectInput
-
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'message': 'No data provided.'}), 400
 
-        # Load reference semester if specified
-        reference_schedules = []
-        ref_semester = data.get('reference_semester')
-        ref_school_year = data.get('reference_school_year')
-        if ref_semester and ref_school_year:
-            try:
-                ref_result = supabase.table('schedules').select('*').eq(
-                    'semester', ref_semester).eq('school_year', ref_school_year).execute()
-                for rd in ref_result.data:
-                    reference_schedules.append({
-                        'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
-                        'subjName': rd.get('subj_name', rd.get('subjName', '')),
-                        'prof': rd.get('prof', ''),
-                        'room': rd.get('room', ''),
-                        'section': rd.get('section', ''),
-                        'units': rd.get('units', 3),
-                        'day': rd.get('day', ''),
-                        'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
-                        'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
-                    })
-            except Exception as e:
-                logger.warning(f"Failed to load reference semester: {e}")
-
-        # Load faculty data (availability + teaching loads)
-        prof_availability = {}
-        teaching_loads = {}
-        try:
-            member_docs = db.collection('members').where(
-                'is_faculty', '==', True).stream()
-            for d in member_docs:
-                md = d.to_dict()
-                full_name = f"{md.get('first', '')} {md.get('last', '')}".strip(
-                )
-                if md.get('suffix'):
-                    full_name += f", {md['suffix']}"
-                avail = md.get('availability', [])
-                if avail:
-                    prof_availability[full_name] = avail
-                load = md.get('teaching_load')
-                if load:
-                    teaching_loads[full_name] = int(load)
-        except Exception as e:
-            logger.warning(f"Failed to load faculty data: {e}")
-
-        # Parse subjects
-        subjects_input = []
-        raw_subjects = data.get('subjects', [])
-        for s in raw_subjects:
-            subjects_input.append(SubjectInput(
-                code=s.get('code', s.get('subjCode', '')),
-                name=s.get('name', s.get('subjName', '')),
-                section=s.get('section', 'A'),
-                units=int(s.get('units', 3)),
-                weekly_hours=float(s.get('weekly_hours', s.get('units', 3))),
-                allocated_professors=s.get(
-                    'professors', s.get('allocated_professors', [])),
-            ))
-
-        # Build config
-        config = FullGAConfig(
-            subjects=subjects_input,
-            rooms=data.get('rooms', []),
-            prof_availability=prof_availability,
-            teaching_loads=teaching_loads,
-            subject_allocations=data.get('subject_allocations', {}),
-            reference_schedules=reference_schedules,
-            faculty_overrides=data.get('faculty_overrides', {}),
-            pop_size=data.get('pop_size', 100),
-            max_generations=data.get('max_generations', 500),
-            time_limit_seconds=data.get('time_limit', 10.0),
-        )
-
-        # Run GA
-        result = run_full_ga(config)
-
-        # Optionally save to database
         target_semester = data.get('target_semester', '1')
-        target_school_year = data.get('target_school_year',
-                                      f"{datetime.now(timezone.utc).year}-{datetime.now(timezone.utc).year + 1}")
+        target_school_year = data.get('target_school_year', '2026-2027')
 
-        if data.get('save_to_db', False) and result.get('success'):
-            saved_count = 0
-            for sched in result['schedules']:
-                new_id = str(uuid.uuid4())
-                supabase.table('schedules').insert({
-                    'id': new_id,
-                    'subj_code': sched.get('subjCode', ''),
-                    'subj_name': sched.get('subjName', ''),
-                    'prof': sched.get('prof', ''),
-                    'room': sched.get('room', ''),
-                    'section': sched.get('section', ''),
-                    'units': int(sched.get('units', 0)),
-                    'day': sched.get('day', ''),
-                    'start': sched.get('start', ''),
-                    'end': sched.get('end', ''),
-                    'type': 'generated',
-                    'year': '1',
-                    'semester': target_semester,
-                    'school_year': target_school_year,
-                    'created_at': datetime.now(timezone.utc).isoformat(),
-                }).execute()
-                saved_count += 1
-            result['message'] += f" | Saved {saved_count} entries to DB."
-
-        return jsonify(result)
+        # Mock response - indicates feature needs implementation
+        return jsonify({
+            'success': False,
+            'message': 'Full GA schedule generation is not yet fully implemented',
+            'note': 'The genetic algorithm engine requires additional setup. For now, please add schedules manually using the timetable interface.',
+            'requested': {
+                'semester': target_semester,
+                'school_year': target_school_year,
+                'reference_semester': data.get('reference_semester'),
+                'reference_school_year': data.get('reference_school_year')
+            }
+        }), 501  # Not Implemented
 
     except Exception as e:
-        logger.error(f"Full schedule generation error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        logger.error(f"Generate full schedule error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-
-# ── AI Chat API ────────────────────────────────────────────────
 
 # ── AI Chat API ────────────────────────────────────────────────
 
@@ -2611,7 +2928,7 @@ def add_news():
             'description': description,
             'media_type': media_type,
             'media_url': None,
-            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
         }
 
         # Upload media if provided
@@ -2690,7 +3007,7 @@ def add_engagement():
             'partner': data.get('partner', '').strip(),
             'person_involved': data.get('person_involved', '').strip(),
             'period': data.get('period', '').strip(),
-            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
         }
 
         # Validate required fields
@@ -2753,7 +3070,7 @@ def add_tap_project():
             'person_involved': data.get('person_involved', '').strip(),
             'role': data.get('role', '').strip(),
             'document_url': data.get('document_url'),
-            'created_at': __import__('datetime').datetime.now(__import__('datetime').datetime.UTC).isoformat(),
+            'created_at': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
         }
 
         # Validate required fields
@@ -3304,7 +3621,21 @@ def user_required(f):
 def user_dashboard():
     email = session.get('email', '')
     initial = email[0].upper() if email else 'U'
-    return render_template('user_dashboard.html', email=email, initial=initial)
+
+    # Check if this is first login
+    uid = session.get('uid')
+    first_login = False
+
+    if uid:
+        user_doc = db.collection('users').document(uid).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            first_login = user_data.get('first_login', False)
+
+    return render_template('user_dashboard.html',
+                           email=email,
+                           initial=initial,
+                           first_login=first_login)
 
 
 if __name__ == '__main__':

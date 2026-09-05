@@ -1299,6 +1299,219 @@
         transform: translateY(0);
     }
 
+    /* ── GA Progress UI ────────────────────────────────────────── */
+    #ga-progress-container {
+        position: fixed;
+        bottom: 20px;
+        right: 400px;
+        /* Position to left of chat panel */
+        width: 360px;
+        z-index: 1000;
+        display: none;
+        transition: right 0.35s ease;
+    }
+
+    #sched-root:not(.chat-open) #ga-progress-container {
+        right: 20px;
+    }
+
+    .ga-progress-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .ga-progress-card.ga-success {
+        border-color: #10b981;
+    }
+
+    .ga-progress-card.ga-error {
+        border-color: #ef4444;
+    }
+
+    .ga-progress-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        background: #fafafa;
+    }
+
+    .ga-progress-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .ga-success .ga-progress-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .ga-error .ga-progress-icon {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .ga-progress-icon svg.spinning {
+        animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .ga-progress-title {
+        flex: 1;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .ga-progress-cancel,
+    .ga-progress-close {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: none;
+        background: #e5e7eb;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        transition: background 0.15s;
+        flex-shrink: 0;
+    }
+
+    .ga-progress-cancel:hover,
+    .ga-progress-close:hover {
+        background: #d1d5db;
+    }
+
+    .ga-progress-body {
+        padding: 16px;
+    }
+
+    .ga-progress-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 0.8rem;
+    }
+
+    .ga-stat-label {
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .ga-stat-value {
+        color: #111827;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .ga-progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #f3f4f6;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 12px 0 8px;
+    }
+
+    .ga-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6b0f1a, #9b1a2a);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .ga-success .ga-progress-fill {
+        background: linear-gradient(90deg, #10b981, #059669);
+        width: 100% !important;
+    }
+
+    .ga-error .ga-progress-fill {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+        width: 100% !important;
+    }
+
+    .ga-progress-message {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-align: center;
+    }
+
+    .ga-result-summary {
+        font-size: 0.85rem;
+        color: #374151;
+        line-height: 1.6;
+        padding: 8px 0;
+    }
+
+    .ga-result-stats {
+        font-size: 0.75rem;
+        color: #6b7280;
+        padding: 4px 0;
+    }
+
+    .ga-error-message {
+        font-size: 0.85rem;
+        color: #dc2626;
+        line-height: 1.6;
+        padding: 8px 12px;
+        background: #fef2f2;
+        border-radius: 6px;
+    }
+
+    .ga-info-message {
+        font-size: 0.85rem;
+        color: #d97706;
+        line-height: 1.6;
+        padding: 8px 12px;
+        background: #fffbeb;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    .ga-info-note {
+        font-size: 0.75rem;
+        color: #6b7280;
+        line-height: 1.4;
+        margin-top: 8px;
+        padding: 8px;
+        background: #f9fafb;
+        border-radius: 6px;
+    }
+
     .fic-status-item {
         border: 1px solid #e5e7eb;
         border-radius: 8px;
@@ -7463,13 +7676,14 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
             // Send to CHE API
-            fetch('/che/chat', {
+            fetch('/api/che/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: message,
                     history: scheduleChatState.chatHistory,
-                    include_context: true
+                    include_context: true,
+                    is_schedule_page: true  // Flag to indicate this is the schedule page chat
                 })
             })
                 .then(function (res) { return res.json(); })
@@ -7478,8 +7692,10 @@
                     var typing = document.getElementById('schedule-typing-indicator');
                     if (typing) typing.remove();
 
-                    // Add AI response
+                    // Get reply and strip JSON code blocks
                     var reply = data.reply || 'Sorry, I encountered an error.';
+                    var cleanReply = reply.replace(/```json[\s\S]*?```/g, '').trim();
+
                     scheduleChatState.chatHistory.push({ role: 'assistant', content: reply });
 
                     var aiMsg = document.createElement('div');
@@ -7487,8 +7703,13 @@
                     aiMsg.innerHTML =
                         '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
                         '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;white-space:pre-wrap;">' +
-                        escapeHtml(reply) + '</div>';
+                        escapeHtml(cleanReply) + '</div>';
                     messagesContainer.appendChild(aiMsg);
+
+                    // Check if there's an action that needs confirmation
+                    if (data.action && data.action.confirm) {
+                        renderActionForm(data.action, messagesContainer);
+                    }
 
                     // Scroll to bottom
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -7516,6 +7737,258 @@
             return div.innerHTML;
         }
 
+        // Helper function to send a message programmatically (used by forms)
+        function sendScheduleMessage(text) {
+            var messagesContainer = document.getElementById('schedule-chat-messages');
+            if (!messagesContainer) return;
+
+            // Add user message to UI
+            var userMsg = document.createElement('div');
+            userMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse;';
+            userMsg.innerHTML =
+                '<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">U</div>' +
+                '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-right-radius:4px;font-size:0.8rem;line-height:1.55;color:white;background:#6b0f1a;">' +
+                escapeHtml(text) + '</div>';
+            messagesContainer.appendChild(userMsg);
+
+            // Add to history
+            scheduleChatState.chatHistory.push({ role: 'user', content: text });
+
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Helper function to show AI response
+        function showScheduleAIMessage(text, isError) {
+            var messagesContainer = document.getElementById('schedule-chat-messages');
+            if (!messagesContainer) return;
+
+            var aiMsg = document.createElement('div');
+            aiMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+            var bgColor = isError ? '#fee2e2' : '#f3f4f6';
+            var textColor = isError ? '#dc2626' : '#111827';
+            aiMsg.innerHTML =
+                '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+                '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:' + textColor + ';background:' + bgColor + ';white-space:pre-wrap;">' +
+                escapeHtml(text) + '</div>';
+            messagesContainer.appendChild(aiMsg);
+
+            // Add to history
+            scheduleChatState.chatHistory.push({ role: 'assistant', content: text });
+
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Render interactive form for action confirmation
+        function renderActionForm(action, container) {
+            var actionType = action.action;
+            var params = action.params || {};
+
+            var formCard = document.createElement('div');
+            formCard.style.cssText = 'margin:10px 0 10px 34px;background:white;border:1px solid #e5e7eb;border-radius:10px;padding:16px;max-width:82%;box-shadow:0 2px 4px rgba(0,0,0,0.08);';
+
+            var formTitle = document.createElement('div');
+            formTitle.style.cssText = 'font-size:0.85rem;font-weight:700;color:#6b0f1a;margin-bottom:12px;';
+            formTitle.textContent = getActionTitle(actionType);
+            formCard.appendChild(formTitle);
+
+            // Render form fields based on action type
+            if (actionType === 'generate_full_schedule') {
+                renderGenerateFullScheduleForm(formCard, params);
+            } else if (actionType === 'add_schedule') {
+                renderAddScheduleForm(formCard, params);
+            } else if (actionType === 'move_schedule') {
+                renderMoveScheduleForm(formCard, params);
+            } else if (actionType === 'delete_schedule') {
+                renderDeleteScheduleForm(formCard, params);
+            } else {
+                // Generic confirmation for other actions
+                renderGenericConfirmation(formCard, action);
+            }
+
+            container.appendChild(formCard);
+        }
+
+        function getActionTitle(actionType) {
+            var titles = {
+                'generate_full_schedule': '📅 Generate Full Schedule',
+                'add_schedule': '➕ Add New Schedule',
+                'move_schedule': '🔄 Move Schedule',
+                'delete_schedule': '🗑️ Delete Schedule',
+                'detect_conflicts': '⚠️ Detect Conflicts'
+            };
+            return titles[actionType] || '✅ Confirm Action';
+        }
+
+        function renderGenerateFullScheduleForm(container, params) {
+            var formHtml = '<div style="display:flex;flex-direction:column;gap:10px;">';
+
+            // Reference semester
+            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Reference Semester</label>';
+            formHtml += '<select id="ref-semester" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;">';
+            formHtml += '<option value="1"' + (params.reference_semester === '1' ? ' selected' : '') + '>1st Semester</option>';
+            formHtml += '<option value="2"' + (params.reference_semester === '2' ? ' selected' : '') + '>2nd Semester</option>';
+            formHtml += '</select></div>';
+
+            // Reference school year
+            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Reference School Year</label>';
+            formHtml += '<input type="text" id="ref-year" value="' + (params.reference_school_year || '2026-2027') + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;" placeholder="2026-2027"></div>';
+
+            // Target semester
+            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Target Semester</label>';
+            formHtml += '<select id="target-semester" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;">';
+            formHtml += '<option value="1"' + (params.target_semester === '1' ? ' selected' : '') + '>1st Semester</option>';
+            formHtml += '<option value="2"' + (params.target_semester === '2' ? ' selected' : '') + '>2nd Semester</option>';
+            formHtml += '</select></div>';
+
+            // Target school year
+            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Target School Year</label>';
+            formHtml += '<input type="text" id="target-year" value="' + (params.target_school_year || '2026-2027') + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;" placeholder="2026-2027"></div>';
+
+            // Save to database
+            formHtml += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:6px;">';
+            formHtml += '<input type="checkbox" id="save-to-db" ' + (params.save_to_db !== false ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;">';
+            formHtml += '<label for="save-to-db" style="font-size:0.75rem;color:#374151;cursor:pointer;">Save generated schedule to database</label>';
+            formHtml += '</div>';
+
+            // Action buttons
+            formHtml += '<div style="display:flex;gap:8px;margin-top:6px;">';
+            formHtml += '<button onclick="confirmGenerateSchedule()" style="flex:1;padding:9px;background:#6b0f1a;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Generate Schedule</button>';
+            formHtml += '<button onclick="cancelAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
+            formHtml += '</div></div>';
+
+            container.innerHTML += formHtml;
+        }
+
+        function renderGenericConfirmation(container, action) {
+            var formHtml = '<div style="display:flex;flex-direction:column;gap:10px;">';
+            formHtml += '<div style="font-size:0.8rem;color:#374151;padding:10px;background:#f9fafb;border-radius:6px;">Ready to proceed with this action?</div>';
+            formHtml += '<div style="display:flex;gap:8px;">';
+            formHtml += '<button onclick="confirmGenericAction(' + escapeHtml(JSON.stringify(action)) + ')" style="flex:1;padding:9px;background:#6b0f1a;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Confirm</button>';
+            formHtml += '<button onclick="cancelAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
+            formHtml += '</div></div>';
+            container.innerHTML += formHtml;
+        }
+
+        // Confirm generate schedule action
+        window.confirmGenerateSchedule = function () {
+            var refSemester = document.getElementById('ref-semester').value;
+            var refYear = document.getElementById('ref-year').value;
+            var targetSemester = document.getElementById('target-semester').value;
+            var targetYear = document.getElementById('target-year').value;
+            var saveToDb = document.getElementById('save-to-db').checked;
+
+            // Remove the form
+            var formCard = document.getElementById('ref-semester').closest('div[style*="border:1px solid #e5e7eb"]');
+            if (formCard) {
+                formCard.style.opacity = '0';
+                formCard.style.transform = 'scale(0.95)';
+                formCard.style.transition = 'all 0.15s';
+                setTimeout(function () { formCard.remove(); }, 150);
+            }
+
+            // Show generating message
+            var semesterText = targetSemester === '1' ? '1st' : '2nd';
+            var refSemesterText = refSemester === '1' ? '1st' : '2nd';
+            var msg = 'Starting schedule generation for ' + semesterText + ' semester ' + targetYear +
+                ' (based on ' + refSemesterText + ' semester ' + refYear + ')...\n\nThis may take 10-30 seconds...';
+            showScheduleAIMessage(msg, false);
+
+            // Call the SYNCHRONOUS generation endpoint (works immediately)
+            fetch('/api/schedule/generate-full', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reference_semester: refSemester,
+                    reference_school_year: refYear,
+                    target_semester: targetSemester,
+                    target_school_year: targetYear,
+                    save_to_db: saveToDb,
+                    // Use empty arrays - endpoint will load data from Supabase/Firestore
+                    subjects: [],
+                    rooms: []
+                })
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        var schedCount = data.schedules ? data.schedules.length : 0;
+                        var feasible = data.is_feasible ? '✓ Feasible' : '✗ Has conflicts';
+                        var resultMsg = 'Schedule generation completed!\n\n' +
+                            '• Generated: ' + schedCount + ' schedule blocks\n' +
+                            '• Status: ' + feasible + '\n' +
+                            '• Best Score: ' + (data.best_score || 0).toFixed(2) + '\n\n';
+
+                        if (saveToDb) {
+                            resultMsg += 'Schedules have been saved to the database. Refresh the page to see them.';
+                        } else {
+                            resultMsg += 'Note: Schedules were not saved (save_to_db was false).';
+                        }
+
+                        showScheduleAIMessage(resultMsg, false);
+
+                        // Refresh the schedule display if save was successful
+                        if (saveToDb && window.location.reload) {
+                            setTimeout(function () {
+                                showScheduleAIMessage('Refreshing page to load new schedules...', false);
+                                setTimeout(function () { window.location.reload(); }, 1500);
+                            }, 2000);
+                        }
+                    } else {
+                        // Check if it's a "not implemented" response
+                        var isNotImplemented = data.note && (
+                            data.note.includes('not yet') ||
+                            data.note.includes('requires additional setup')
+                        );
+
+                        var errorMsg = data.message || 'Failed to generate schedule';
+                        if (data.note) {
+                            errorMsg += '\n\n' + data.note;
+                        }
+
+                        showScheduleAIMessage(errorMsg, !isNotImplemented);
+                    }
+                })
+                .catch(function (err) {
+                    showScheduleAIMessage('Error: ' + err.message + '\n\nThe generation service may be unavailable.', true);
+                    console.error(err);
+                });
+        };
+
+        // Cancel action
+        window.cancelAction = function (btn) {
+            var formCard = btn.closest('div[style*="border:1px solid #e5e7eb"]');
+            if (formCard) {
+                formCard.style.opacity = '0';
+                formCard.style.transform = 'scale(0.95)';
+                formCard.style.transition = 'all 0.15s';
+                setTimeout(function () { formCard.remove(); }, 150);
+            }
+            showScheduleAIMessage('Action cancelled.', false);
+        };
+
+        // Generic action confirmation
+        window.confirmGenericAction = function (action) {
+            sendScheduleMessage('Executing action...');
+            // TODO: Implement action execution via /api/che/execute-action
+        };
+
+        function renderAddScheduleForm(container, params) {
+            // TODO: Implement add schedule form with dropdowns for prof, room, section, etc.
+            renderGenericConfirmation(container, { action: 'add_schedule', params: params });
+        }
+
+        function renderMoveScheduleForm(container, params) {
+            // TODO: Implement move schedule form
+            renderGenericConfirmation(container, { action: 'move_schedule', params: params });
+        }
+
+        function renderDeleteScheduleForm(container, params) {
+            // TODO: Implement delete schedule form
+            renderGenericConfirmation(container, { action: 'delete_schedule', params: params });
+        }
+
         // Toggle chat on bubble click
         document.getElementById('schedule-chat-bubble').addEventListener('click', function () {
             if (scheduleChatState.isOpen) {
@@ -7525,3 +7998,10 @@
             }
         });
     </script>
+
+
+    <!-- GA Progress Tracking Container (positioned outside sched-root) -->
+    <div id="ga-progress-container"></div>
+
+    <!-- Load GA Progress Tracker -->
+    <script src="/static/js/ga_progress.js"></script>

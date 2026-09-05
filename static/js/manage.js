@@ -236,8 +236,8 @@ async function submitAddMember(event) {
 
 function openCreateAccountModal(memberId, email) {
     _caTargetId = memberId;
+    document.getElementById('ca-member-id').value = '';
     document.getElementById('ca-email').value = email || '';
-    document.getElementById('ca-password').value = '';
     document.getElementById('create-account-error').textContent = '';
     document.getElementById('create-account-modal').classList.add('open');
 }
@@ -248,26 +248,42 @@ function closeCreateAccountModal() {
 }
 
 function openManageAccountModal(memberId, email) {
-    // For now, just show an alert. You can expand this later with reset password, etc.
-    alert(`Account management for ${email}\n\nAccount already exists. Future features:\n- Reset password\n- Change email\n- Disable account`);
+    // Open the promotions modal instead
+    openPromotionsModal(memberId);
+}
+
+function openPromotionsModal(memberId) {
+    // Store the member ID for future use
+    window._promotionsTargetId = memberId;
+    document.getElementById('promotions-modal').classList.add('open');
+}
+
+function closePromotionsModal() {
+    document.getElementById('promotions-modal').classList.remove('open');
+    window._promotionsTargetId = null;
 }
 
 async function confirmCreateAccount() {
     const errEl = document.getElementById('create-account-error');
     errEl.textContent = '';
 
+    const memberId = document.getElementById('ca-member-id').value.trim();
     const email = document.getElementById('ca-email').value.trim();
-    const password = document.getElementById('ca-password').value.trim();
 
-    if (!email || !password) {
-        errEl.textContent = 'Email and password are required.';
+    if (!memberId || !email) {
+        errEl.textContent = 'Member ID and email are required.';
         return;
     }
 
-    if (password.length < 6) {
-        errEl.textContent = 'Password must be at least 6 characters.';
+    // Validate ID format (XXXX-XX)
+    const idPattern = /^\d{4}-\d{2}$/;
+    if (!idPattern.test(memberId)) {
+        errEl.textContent = 'Invalid ID format. Use format: XXXX-XX (e.g., 0123-01)';
         return;
     }
+
+    // Use member ID as password
+    const password = memberId;
 
     const btn = document.querySelector('#create-account-modal .btn-primary');
     const originalText = btn.textContent;
@@ -280,13 +296,17 @@ async function confirmCreateAccount() {
         const res = await fetch(`/api/members/${_caTargetId}/create-account`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({
+                email,
+                password,
+                member_id: memberId  // Send the ID separately
+            })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to create account.');
         closeCreateAccountModal();
         await loadMembers();
-        showSuccessModal('Account created successfully!');
+        showSuccessModal(`Account created! Login with ID: ${memberId}`);
     } catch (e) {
         errEl.textContent = e.message;
         btn.disabled = false;

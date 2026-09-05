@@ -219,8 +219,9 @@
                     console.error('Login error:', err);
                     const messages = {
                         'Invalid login credentials': 'Invalid email or password.',
-                        'Email not confirmed': 'Please verify your email address first.',
                         'Invalid email or password': 'Invalid email or password.',
+                        'User not found': 'No account found with this email.',
+                        'Wrong password': 'Incorrect password.',
                     };
                     errBox.textContent = messages[err.message] || err.message || 'Login failed. Please try again.';
                     errBox.classList.remove('hidden');
