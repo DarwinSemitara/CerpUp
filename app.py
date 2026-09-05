@@ -470,6 +470,8 @@ def che_list_conversations():
             supabase.table('che_conversations')
             .select('id, title, created_at, updated_at, is_system, undeletable')
             .eq('user_id', user_id)
+            # Exclude system conversations from CHE page
+            .eq('is_system', False)
             .order('updated_at', desc=True)
             .limit(MAX_CHE_CONVERSATIONS)
             .execute()

@@ -534,11 +534,7 @@
 
     /* Calendar Dropdown Styles */
     .calendar-dropdown {
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        margin-top: 4px;
+        position: fixed;
         background: white;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
@@ -1245,12 +1241,18 @@
         e.stopPropagation();
         const dropdown = document.getElementById('month-dropdown');
         const yearDropdown = document.getElementById('year-dropdown');
+        const monthSpan = document.getElementById('calendar-month-display');
 
         // Close year dropdown if open
         yearDropdown.style.display = 'none';
 
         // Toggle month dropdown
         if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+            // Position dropdown below the month text
+            const rect = monthSpan.getBoundingClientRect();
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.left = (rect.left + rect.width / 2) + 'px';
+            dropdown.style.transform = 'translateX(-50%)';
             dropdown.style.display = 'block';
         } else {
             dropdown.style.display = 'none';
@@ -1262,13 +1264,20 @@
         e.stopPropagation();
         const dropdown = document.getElementById('year-dropdown');
         const monthDropdown = document.getElementById('month-dropdown');
+        const yearSpan = document.getElementById('calendar-year-display');
 
         // Close month dropdown if open
         monthDropdown.style.display = 'none';
 
         // Toggle year dropdown
         if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+            // Position dropdown below the year text
+            const rect = yearSpan.getBoundingClientRect();
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.left = (rect.left + rect.width / 2) + 'px';
+            dropdown.style.transform = 'translateX(-50%)';
             dropdown.style.display = 'block';
+            console.log('Year dropdown opened, children:', dropdown.childNodes.length);
         } else {
             dropdown.style.display = 'none';
         }
