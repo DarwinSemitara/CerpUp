@@ -1237,7 +1237,7 @@
     }
 
     // Toggle month dropdown
-    function toggleMonthDropdown(e) {
+    function toggleCalendarMonthDropdown(e) {
         e.stopPropagation();
         const dropdown = document.getElementById('month-dropdown');
         const yearDropdown = document.getElementById('year-dropdown');
@@ -1260,8 +1260,8 @@
     }
 
     // Toggle year dropdown
-    function toggleYearDropdown(e) {
-        console.log('toggleYearDropdown called!');
+    function toggleCalendarYearDropdown(e) {
+        console.log('toggleCalendarYearDropdown called!');
         e.stopPropagation();
         const dropdown = document.getElementById('year-dropdown');
         const monthDropdown = document.getElementById('month-dropdown');
@@ -1498,7 +1498,7 @@
         if (yearDisplay) {
             yearDisplay.addEventListener('click', function (e) {
                 console.log('Year clicked via addEventListener!');
-                toggleYearDropdown(e);
+                toggleCalendarYearDropdown(e);
             });
         } else {
             console.error('calendar-year-display element not found!');
@@ -1506,7 +1506,7 @@
 
         if (monthDisplay) {
             monthDisplay.addEventListener('click', function (e) {
-                toggleMonthDropdown(e);
+                toggleCalendarMonthDropdown(e);
             });
         }
 
