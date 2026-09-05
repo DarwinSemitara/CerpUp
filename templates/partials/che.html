@@ -876,7 +876,7 @@
         let currentConvId = null;   // UUID of active conversation
         let chatHistory = [];     // [{role, content, time}]
         let isLoading = false;
-        let sidebarOpen = false;
+        let sidebarOpen = true;  // Start with sidebar open by default
         let saveTimer = null;
         let convList = [];     // cached sidebar list
 
@@ -908,6 +908,10 @@
 
             avatarBtn.addEventListener('click', toggleSidebar);
             document.getElementById('che-new-btn').addEventListener('click', function () { cheNewConversation(); });
+
+            // Open sidebar by default
+            sidebarEl.classList.add('open');
+            avatarBtn.classList.add('sidebar-open');
 
             // Load conversation list, then either resume last or start fresh
             await loadConversationList();

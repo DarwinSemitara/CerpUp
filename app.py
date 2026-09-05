@@ -510,9 +510,6 @@ def che_list_conversations():
     try:
         user_id = session.get('uid', '')
 
-        # Always ensure the system "Schedule Generation" conversation exists
-        ensure_system_conversation(user_id)
-
         response = (
             supabase.table('che_conversations')
             .select('id, title, created_at, updated_at, is_system, undeletable')
