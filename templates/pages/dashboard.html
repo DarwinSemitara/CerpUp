@@ -285,7 +285,7 @@
                     style="min-width:160px;text-align:center;position:relative;display:flex;gap:6px;justify-content:center;align-items:center;overflow:visible;z-index:100;">
                     <!-- Month Display (clickable) -->
                     <div style="position:relative;z-index:101;">
-                        <span id="calendar-month-display" onclick="toggleMonthDropdown(event)"
+                        <span id="calendar-month-display"
                             style="font-size:0.85rem;font-weight:600;color:#374151;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;"
                             onmouseover="this.style.background='#f3f4f6'"
                             onmouseout="this.style.background='transparent'">
@@ -309,7 +309,7 @@
                     </div>
                     <!-- Year Display (clickable) -->
                     <div style="position:relative;z-index:102;">
-                        <span id="calendar-year-display" onclick="toggleYearDropdown(event)"
+                        <span id="calendar-year-display"
                             style="font-size:0.85rem;font-weight:600;color:#374151;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;"
                             onmouseover="this.style.background='#f3f4f6'"
                             onmouseout="this.style.background='transparent'">
@@ -1261,10 +1261,14 @@
 
     // Toggle year dropdown
     function toggleYearDropdown(e) {
+        console.log('toggleYearDropdown called!');
         e.stopPropagation();
         const dropdown = document.getElementById('year-dropdown');
         const monthDropdown = document.getElementById('month-dropdown');
         const yearSpan = document.getElementById('calendar-year-display');
+
+        console.log('Year dropdown element:', dropdown);
+        console.log('Year dropdown display:', dropdown ? dropdown.style.display : 'not found');
 
         // Close month dropdown if open
         monthDropdown.style.display = 'none';
@@ -1278,8 +1282,10 @@
             dropdown.style.transform = 'translateX(-50%)';
             dropdown.style.display = 'block';
             console.log('Year dropdown opened, children:', dropdown.childNodes.length);
+            console.log('Dropdown position:', dropdown.style.top, dropdown.style.left);
         } else {
             dropdown.style.display = 'none';
+            console.log('Year dropdown closed');
         }
     }
 
@@ -1477,6 +1483,27 @@
 
     // Initialize calendar on load
     document.addEventListener('DOMContentLoaded', function () {
+        // Add event listeners for year and month dropdowns
+        const yearDisplay = document.getElementById('calendar-year-display');
+        const monthDisplay = document.getElementById('calendar-month-display');
+
+        console.log('Setting up year click listener, element:', yearDisplay);
+
+        if (yearDisplay) {
+            yearDisplay.addEventListener('click', function (e) {
+                console.log('Year clicked via addEventListener!');
+                toggleYearDropdown(e);
+            });
+        } else {
+            console.error('calendar-year-display element not found!');
+        }
+
+        if (monthDisplay) {
+            monthDisplay.addEventListener('click', function (e) {
+                toggleMonthDropdown(e);
+            });
+        }
+
         loadCalendarEvents(); // Load saved events
         renderCalendar();
     });
