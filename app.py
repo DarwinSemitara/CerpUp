@@ -457,50 +457,6 @@ def section_che():
 # ── CHE Conversation History API ─────────────────────────────
 
 MAX_CHE_CONVERSATIONS = 7
-SYSTEM_CONVERSATION_TITLE = "Schedule Generation"
-
-
-def ensure_system_conversation(user_id: str):
-    """
-    Ensure the system 'Schedule Generation' conversation exists for this user.
-    This conversation is undeletable and always available.
-    """
-    try:
-        # Check if system conversation already exists
-        existing = (
-            supabase.table('che_conversations')
-            .select('id')
-            .eq('user_id', user_id)
-            .eq('is_system', True)
-            .limit(1)
-            .execute()
-        )
-
-        if existing.data and len(existing.data) > 0:
-            return existing.data[0]['id']  # Already exists
-
-        # Create system conversation
-        now = datetime.now(timezone.utc).isoformat()
-        system_id = str(uuid.uuid4())
-
-        supabase.table('che_conversations').insert({
-            'id': system_id,
-            'user_id': user_id,
-            'title': SYSTEM_CONVERSATION_TITLE,
-            'messages': [],
-            'created_at': now,
-            'updated_at': now,
-            'is_system': True,
-            'undeletable': True,
-        }).execute()
-
-        logger.info(
-            f"Created system Schedule Generation conversation for user {user_id}")
-        return system_id
-
-    except Exception as e:
-        logger.error(f"Error ensuring system conversation: {e}")
-        return None
 
 
 @app.route('/api/che/conversations', methods=['GET'])
@@ -686,9 +642,8 @@ def che_chat():
                     .execute()
                 )
                 if conv_resp.data:
-                    is_system_conversation = conv_resp.data.get('is_system', False) or \
-                        conv_resp.data.get(
-                            'title') == SYSTEM_CONVERSATION_TITLE
+                    is_system_conversation = conv_resp.data.get(
+                        'is_system', False)
             except Exception as conv_err:
                 logger.warning(
                     f"Could not check conversation type: {conv_err}")

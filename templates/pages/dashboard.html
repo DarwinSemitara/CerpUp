@@ -282,9 +282,9 @@
                     </svg>
                 </button>
                 <div
-                    style="min-width:160px;text-align:center;position:relative;display:flex;gap:6px;justify-content:center;align-items:center;">
+                    style="min-width:160px;text-align:center;position:relative;display:flex;gap:6px;justify-content:center;align-items:center;overflow:visible;z-index:100;">
                     <!-- Month Display (clickable) -->
-                    <div style="position:relative;">
+                    <div style="position:relative;z-index:101;">
                         <span id="calendar-month-display" onclick="toggleMonthDropdown(event)"
                             style="font-size:0.85rem;font-weight:600;color:#374151;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;"
                             onmouseover="this.style.background='#f3f4f6'"
@@ -308,7 +308,7 @@
                         </div>
                     </div>
                     <!-- Year Display (clickable) -->
-                    <div style="position:relative;">
+                    <div style="position:relative;z-index:102;">
                         <span id="calendar-year-display" onclick="toggleYearDropdown(event)"
                             style="font-size:0.85rem;font-weight:600;color:#374151;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;"
                             onmouseover="this.style.background='#f3f4f6'"
