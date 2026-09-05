@@ -1269,23 +1269,29 @@
 
         console.log('Year dropdown element:', dropdown);
         console.log('Year dropdown display:', dropdown ? dropdown.style.display : 'not found');
+        console.log('Year dropdown children count:', dropdown ? dropdown.childNodes.length : 0);
 
         // Close month dropdown if open
-        monthDropdown.style.display = 'none';
+        if (monthDropdown) {
+            monthDropdown.style.display = 'none';
+        }
 
         // Toggle year dropdown
-        if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+        if (dropdown && (dropdown.style.display === 'none' || dropdown.style.display === '')) {
             // Position dropdown below the year text
             const rect = yearSpan.getBoundingClientRect();
             dropdown.style.top = (rect.bottom + 4) + 'px';
             dropdown.style.left = (rect.left + rect.width / 2) + 'px';
             dropdown.style.transform = 'translateX(-50%)';
             dropdown.style.display = 'block';
-            console.log('Year dropdown opened, children:', dropdown.childNodes.length);
-            console.log('Dropdown position:', dropdown.style.top, dropdown.style.left);
-        } else {
+            console.log('Year dropdown OPENED!');
+            console.log('Position:', dropdown.style.top, dropdown.style.left);
+            console.log('Children:', dropdown.childNodes.length);
+        } else if (dropdown) {
             dropdown.style.display = 'none';
             console.log('Year dropdown closed');
+        } else {
+            console.error('Year dropdown element not found!');
         }
     }
 
