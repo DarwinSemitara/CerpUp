@@ -282,15 +282,45 @@
                     </svg>
                 </button>
                 <div
-                    style="min-width:160px;text-align:center;display:flex;gap:4px;justify-content:center;align-items:center;position:relative;">
-                    <select id="calendar-month-select" onchange="changeMonth(this.value)"
-                        style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;font-weight:600;color:#374151;background:white;cursor:pointer;">
-                        <!-- Month options will be populated by JS -->
-                    </select>
-                    <select id="calendar-year-select" onchange="changeYear(this.value)"
-                        style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:0.85rem;font-weight:600;color:#374151;background:white;cursor:pointer;">
-                        <!-- Year options will be populated by JS -->
-                    </select>
+                    style="min-width:160px;text-align:center;position:relative;display:flex;gap:6px;justify-content:center;align-items:center;">
+                    <!-- Month Display (clickable) -->
+                    <div style="position:relative;">
+                        <span id="calendar-month-display" onclick="toggleMonthDropdown(event)"
+                            style="font-size:0.85rem;font-weight:600;color:#374151;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;"
+                            onmouseover="this.style.background='#f3f4f6'"
+                            onmouseout="this.style.background='transparent'">
+                            September
+                        </span>
+                        <!-- Month Dropdown -->
+                        <div id="month-dropdown" class="calendar-dropdown" style="display:none;">
+                            <div class="calendar-dropdown-item" onclick="selectMonth(0)">January</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(1)">February</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(2)">March</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(3)">April</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(4)">May</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(5)">June</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(6)">July</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(7)">August</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(8)">September</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(9)">October</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(10)">November</div>
+                            <div class="calendar-dropdown-item" onclick="selectMonth(11)">December</div>
+                        </div>
+                    </div>
+                    <!-- Year Display (clickable) -->
+                    <div style="position:relative;">
+                        <span id="calendar-year-display" onclick="toggleYearDropdown(event)"
+                            style="font-size:0.85rem;font-weight:600;color:#374151;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background 0.2s;"
+                            onmouseover="this.style.background='#f3f4f6'"
+                            onmouseout="this.style.background='transparent'">
+                            2026
+                        </span>
+                        <!-- Year Dropdown (scrollable) -->
+                        <div id="year-dropdown" class="calendar-dropdown"
+                            style="display:none;max-height:240px;overflow-y:auto;">
+                            <!-- Years will be populated by JS -->
+                        </div>
+                    </div>
                 </div>
                 <button class="calendar-nav-btn" onclick="nextMonth()">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -500,6 +530,41 @@
         border-color: #014421;
         background: #f0fdf4;
         color: #014421;
+    }
+
+    /* Calendar Dropdown Styles */
+    .calendar-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: 4px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        z-index: 1000;
+        min-width: 140px;
+    }
+
+    .calendar-dropdown-item {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+        color: #374151;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .calendar-dropdown-item:hover {
+        background: #f3f4f6;
+    }
+
+    .calendar-dropdown-item:first-child {
+        border-radius: 8px 8px 0 0;
+    }
+
+    .calendar-dropdown-item:last-child {
+        border-radius: 0 0 8px 8px;
     }
 
     .calendar-grid {
@@ -1099,33 +1164,24 @@
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Update month/year dropdowns
+        // Update month/year display text
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'];
 
-        // Populate month dropdown
-        const monthSelect = document.getElementById('calendar-month-select');
-        if (!monthSelect.hasChildNodes()) {
-            monthNames.forEach((name, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = name;
-                monthSelect.appendChild(option);
-            });
-        }
-        monthSelect.value = month;
+        document.getElementById('calendar-month-display').textContent = monthNames[month];
+        document.getElementById('calendar-year-display').textContent = year;
 
-        // Populate year dropdown (from 2020 to 2050)
-        const yearSelect = document.getElementById('calendar-year-select');
-        if (!yearSelect.hasChildNodes()) {
+        // Populate year dropdown if not already done
+        const yearDropdown = document.getElementById('year-dropdown');
+        if (!yearDropdown.hasChildNodes()) {
             for (let y = 2020; y <= 2050; y++) {
-                const option = document.createElement('option');
-                option.value = y;
-                option.textContent = y;
-                yearSelect.appendChild(option);
+                const yearItem = document.createElement('div');
+                yearItem.className = 'calendar-dropdown-item';
+                yearItem.textContent = y;
+                yearItem.onclick = () => selectYear(y);
+                yearDropdown.appendChild(yearItem);
             }
         }
-        yearSelect.value = year;
 
         // Get first day of month and number of days
         const firstDay = new Date(year, month, 1).getDay();
@@ -1184,16 +1240,63 @@
         document.getElementById('calendar-grid').innerHTML = calendarHTML;
     }
 
-    // New functions for month/year dropdowns
-    function changeMonth(newMonth) {
-        currentCalendarDate.setMonth(parseInt(newMonth));
+    // Toggle month dropdown
+    function toggleMonthDropdown(e) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('month-dropdown');
+        const yearDropdown = document.getElementById('year-dropdown');
+
+        // Close year dropdown if open
+        yearDropdown.style.display = 'none';
+
+        // Toggle month dropdown
+        if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+            dropdown.style.display = 'block';
+        } else {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    // Toggle year dropdown
+    function toggleYearDropdown(e) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('year-dropdown');
+        const monthDropdown = document.getElementById('month-dropdown');
+
+        // Close month dropdown if open
+        monthDropdown.style.display = 'none';
+
+        // Toggle year dropdown
+        if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+            dropdown.style.display = 'block';
+        } else {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    // Select month from dropdown
+    function selectMonth(monthIndex) {
+        currentCalendarDate.setMonth(monthIndex);
+        document.getElementById('month-dropdown').style.display = 'none';
         renderCalendar();
     }
 
-    function changeYear(newYear) {
-        currentCalendarDate.setFullYear(parseInt(newYear));
+    // Select year from dropdown
+    function selectYear(year) {
+        currentCalendarDate.setFullYear(year);
+        document.getElementById('year-dropdown').style.display = 'none';
         renderCalendar();
     }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#calendar-month-display') && !e.target.closest('#month-dropdown')) {
+            document.getElementById('month-dropdown').style.display = 'none';
+        }
+        if (!e.target.closest('#calendar-year-display') && !e.target.closest('#year-dropdown')) {
+            document.getElementById('year-dropdown').style.display = 'none';
+        }
+    });
 
     function handleCalendarClick(e, dateStr) {
         console.log('Calendar click:', dateStr);
