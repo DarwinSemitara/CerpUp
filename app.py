@@ -16,6 +16,19 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
+
+# Prevent caching of protected pages to avoid back button access after logout
+@app.after_request
+def add_cache_control_headers(response):
+    """Add cache control headers to prevent back button access after logout."""
+    # Don't cache HTML pages, JSON responses, or protected content
+    if response.content_type and ('text/html' in response.content_type or 'application/json' in response.content_type):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 TAP_SECTIONS = [
     ('tap-capdev',  'Capacity Development'),
     ('tap-modelcom', 'Model Community'),
@@ -1474,18 +1487,24 @@ def complete_first_login():
         from datetime import datetime, timezone
 
         data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
+        skip_password_change = False
+
+        # Allow empty data (treat as skip)
+        if data:
+            skip_password_change = data.get('skip_password_change', False)
+        else:
+            skip_password_change = True
 
         uid = session.get('uid')
         email = session.get('email')
+        role = session.get('role', 'user')
 
         if not uid:
             return jsonify({'error': 'Not authenticated'}), 401
 
-        # Optional: Change password
-        new_password = data.get('new_password', '').strip()
-        if new_password:
+        # Optional: Change password (only if not skipping and password provided)
+        new_password = data.get('new_password', '').strip() if data else ''
+        if new_password and not skip_password_change:
             if len(new_password) < 6:
                 return jsonify({'error': 'Password must be at least 6 characters'}), 400
 
@@ -1499,7 +1518,32 @@ def complete_first_login():
                 logger.error(f"Error changing password: {e}")
                 return jsonify({'error': 'Failed to change password'}), 500
 
-        # Mark first login as complete
+        # Ensure Supabase users table has proper uid set
+        try:
+            # Check if user record exists in Supabase users table
+            user_check = supabase.table('users').select(
+                'id').eq('uid', uid).execute()
+
+            if not user_check.data:
+                # User record doesn't exist, create it
+                supabase.table('users').insert({
+                    'uid': uid,
+                    'email': email,
+                    'role': role,
+                    'first_login': False
+                }).execute()
+                logger.info(f"Created Supabase users record for {uid}")
+            else:
+                # Update existing record
+                supabase.table('users').update({
+                    'first_login': False
+                }).eq('uid', uid).execute()
+                logger.info(f"Updated Supabase users record for {uid}")
+        except Exception as e:
+            logger.error(f"Error updating Supabase users table: {e}")
+            # Continue anyway - Firebase update is more critical
+
+        # Mark first login as complete in Firebase
         db.collection('users').document(uid).set({
             'first_login': False,
             'setup_completed_at': datetime.now(timezone.utc).isoformat()

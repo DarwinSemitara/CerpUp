@@ -249,7 +249,15 @@ async function submitPasswordChange() {
 }
 
 async function skipPasswordChange() {
-    if (!confirm('Are you sure you want to skip changing your password? You can change it later in Settings.')) {
+    // Show confirmation modal with warning
+    const confirmed = confirm(
+        '⚠️ Are you sure you want to skip changing your password?\n\n' +
+        'Security Risk: Your account will remain with the default password.\n' +
+        'We strongly recommend changing it now for your account security.\n\n' +
+        'You can change it later in Account Settings.'
+    );
+    
+    if (!confirmed) {
         return;
     }
 
@@ -257,7 +265,7 @@ async function skipPasswordChange() {
         const response = await fetch('/api/auth/complete-first-login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+            body: JSON.stringify({ skip_password_change: true })
         });
 
         const data = await response.json();
@@ -270,7 +278,7 @@ async function skipPasswordChange() {
             document.getElementById('password-change-modal').classList.remove('open');
 
             // Show success message
-            alert('Welcome to CERP! You can change your password anytime in Settings.');
+            alert('Welcome to CERP! Remember to change your password in Settings for better security.');
 
             // Reload to show dashboard
             window.location.reload();
