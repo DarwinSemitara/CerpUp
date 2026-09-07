@@ -209,12 +209,12 @@ async function submitPasswordChange() {
     const newPassword = passwordInput.value.trim();
 
     if (!newPassword) {
-        alert('Please enter a new password');
+        showNotificationModal('Please enter a new password', 'warning');
         return;
     }
 
     if (newPassword.length < 6) {
-        alert('Password must be at least 6 characters');
+        showNotificationModal('Password must be at least 6 characters', 'warning');
         return;
     }
 
@@ -235,71 +235,234 @@ async function submitPasswordChange() {
             document.getElementById('password-change-modal').classList.remove('open');
 
             // Show success message
-            alert('Password changed successfully! Welcome to CERP.');
-
-            // Reload to show dashboard
-            window.location.reload();
+            showNotificationModal('Password changed successfully! Welcome to CERP.', 'success', () => {
+                window.location.reload();
+            });
         } else {
-            alert(data.error || 'Failed to change password');
+            showNotificationModal(data.error || 'Failed to change password', 'error');
         }
     } catch (error) {
         console.error('Password change error:', error);
-        alert('Network error. Please try again.');
+        showNotificationModal('Network error. Please try again.', 'error');
     }
 }
 
 async function skipPasswordChange() {
     // Show confirmation modal with warning
-    const confirmed = confirm(
+    showConfirmModal(
+        'Skip Password Change?',
         '⚠️ Are you sure you want to skip changing your password?\n\n' +
         'Security Risk: Your account will remain with the default password.\n' +
         'We strongly recommend changing it now for your account security.\n\n' +
-        'You can change it later in Account Settings.'
-    );
-    
-    if (!confirmed) {
-        return;
-    }
+        'You can change it later in Account Settings.',
+        async () => {
+            try {
+                const response = await fetch('/api/auth/complete-first-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skip_password_change: true })
+                });
 
-    try {
-        const response = await fetch('/api/auth/complete-first-login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ skip_password_change: true })
-        });
+                const data = await response.json();
 
-        const data = await response.json();
+                if (response.ok && data.success) {
+                    // Clear first login flag
+                    sessionStorage.removeItem('first_login');
 
-        if (response.ok && data.success) {
-            // Clear first login flag
-            sessionStorage.removeItem('first_login');
+                    // Close modal and refresh
+                    document.getElementById('password-change-modal').classList.remove('open');
 
-            // Close modal and refresh
-            document.getElementById('password-change-modal').classList.remove('open');
-
-            // Show success message
-            alert('Welcome to CERP! Remember to change your password in Settings for better security.');
-
-            // Reload to show dashboard
-            window.location.reload();
-        } else {
-            alert(data.error || 'Failed to complete setup');
+                    // Show success message
+                    showNotificationModal('Welcome to CERP! Remember to change your password in Settings for better security.', 'success', () => {
+                        window.location.reload();
+                    });
+                } else {
+                    showNotificationModal(data.error || 'Failed to complete setup', 'error');
+                }
+            } catch (error) {
+                console.error('Skip password error:', error);
+                showNotificationModal('Network error. Please try again.', 'error');
+            }
         }
-    } catch (error) {
-        console.error('Skip password error:', error);
-        alert('Network error. Please try again.');
+    );
+}
+
+// Reusable notification modal
+function showNotificationModal(message, type = 'info', callback = null) {
+    // Remove existing notification modal if any
+    const existingModal = document.getElementById('notification-modal-overlay');
+    if (existingModal) {
+        existingModal.remove();
     }
+
+    const icons = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
+    };
+
+    const colors = {
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
+    };
+
+    const overlay = document.createElement('div');
+    overlay.id = 'notification-modal-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        animation: fadeIn 0.2s ease;
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: slideUp 0.3s ease;">
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: ${colors[type]}20; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                    <span style="font-size: 24px; color: ${colors[type]};">${icons[type]}</span>
+                </div>
+                <p style="font-size: 15px; color: #374151; margin: 0; white-space: pre-wrap; line-height: 1.6;">${message}</p>
+            </div>
+            <button onclick="document.getElementById('notification-modal-overlay').remove(); ${callback ? 'this.callbackFn()' : ''}" 
+                    style="width: 100%; padding: 10px; background: ${colors[type]}; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                OK
+            </button>
+        </div>
+        <style>
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        </style>
+    `;
+
+    if (callback) {
+        overlay.querySelector('button').callbackFn = callback;
+    }
+
+    document.body.appendChild(overlay);
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+            if (callback) callback();
+        }
+    });
+}
+
+// Reusable confirmation modal
+function showConfirmModal(title, message, onConfirm, onCancel = null) {
+    // Remove existing confirm modal if any
+    const existingModal = document.getElementById('confirm-modal-overlay');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'confirm-modal-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        animation: fadeIn 0.2s ease;
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 24px; max-width: 450px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: slideUp 0.3s ease;">
+            <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0 0 12px 0;">${title}</h3>
+            <p style="font-size: 14px; color: #6b7280; margin: 0 0 24px 0; white-space: pre-wrap; line-height: 1.6;">${message}</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="cancel-btn" style="padding: 10px 20px; background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                    Cancel
+                </button>
+                <button class="confirm-btn" style="padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                    Continue
+                </button>
+            </div>
+        </div>
+        <style>
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            .cancel-btn:hover {
+                background: #f9fafb;
+                border-color: #9ca3af;
+            }
+            .confirm-btn:hover {
+                background: #dc2626;
+            }
+        </style>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Handle cancel
+    const cancelBtn = overlay.querySelector('.cancel-btn');
+    cancelBtn.addEventListener('click', () => {
+        overlay.remove();
+        if (onCancel) onCancel();
+    });
+
+    // Handle confirm
+    const confirmBtn = overlay.querySelector('.confirm-btn');
+    confirmBtn.addEventListener('click', () => {
+        overlay.remove();
+        if (onConfirm) onConfirm();
+    });
+
+    // Close on overlay click (acts as cancel)
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+            if (onCancel) onCancel();
+        }
+    });
 }
 
 // Logout function (if not already defined)
-function doLogout() {
-    fetch('/api/logout', { method: 'POST' })
-        .then(() => {
-            sessionStorage.clear();
-            window.location.href = '/login';
-        })
-        .catch(err => {
-            console.error('Logout error:', err);
-            window.location.href = '/login';
-        });
+async function doLogout() {
+    try {
+        const response = await fetch('/api/logout', { method: 'POST' });
+        const data = await response.json();
+
+        // Clear all session storage and local storage
+        sessionStorage.clear();
+        localStorage.clear();
+
+        // Force redirect with cache bypass
+        window.location.replace(data.redirect || '/login');
+
+        // Prevent back button from working after logout
+        window.history.pushState(null, '', window.location.href);
+        window.onpopstate = function () {
+            window.location.replace('/login');
+        };
+    } catch (err) {
+        console.error('Logout error:', err);
+        // Force redirect even if request fails
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.replace('/login');
+    }
 }

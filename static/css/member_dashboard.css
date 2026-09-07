@@ -31,7 +31,8 @@ body {
 #sidebar {
     width: 240px;
     flex-shrink: 0;
-    background: #014421;
+    background: #6b0f1a;
+    /* Maroon sidebar for member dashboard */
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -57,12 +58,14 @@ body {
 }
 
 #sidebar .nav-link:hover {
-    background: rgba(167, 243, 208, 0.15);
+    background: rgba(255, 182, 193, 0.15);
+    /* Light maroon on hover */
     color: white;
 }
 
 #sidebar .nav-link.active {
-    background: rgba(167, 243, 208, 0.2);
+    background: rgba(255, 182, 193, 0.25);
+    /* Light maroon active state */
     color: white;
 }
 
@@ -115,12 +118,14 @@ body {
 }
 
 #sidebar .sub-link:hover {
-    background: rgba(167, 243, 208, 0.1);
+    background: rgba(255, 182, 193, 0.1);
+    /* Light maroon sub-link hover */
     color: white;
 }
 
 #sidebar .sub-link.active {
-    background: rgba(167, 243, 208, 0.15);
+    background: rgba(255, 182, 193, 0.15);
+    /* Light maroon sub-link active */
     color: white;
 }
 
@@ -262,7 +267,8 @@ body {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: #014421;
+    background: #6b0f1a;
+    /* Maroon background */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -284,7 +290,8 @@ body {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: #014421;
+    background: #6b0f1a;
+    /* Maroon background */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -304,7 +311,8 @@ body {
 
 .btn-change {
     padding: 6px 14px;
-    background: var(--sidebar-color, #014421);
+    background: #6b0f1a;
+    /* Maroon button */
     color: white;
     border: none;
     border-radius: 6px;
@@ -401,8 +409,9 @@ body {
 }
 
 .color-option.active {
-    border-color: #014421;
-    box-shadow: 0 0 0 2px white, 0 0 0 4px #014421;
+    border-color: #6b0f1a;
+    /* Maroon border */
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #6b0f1a;
 }
 
 .color-option::after {
@@ -455,7 +464,8 @@ body {
 }
 
 .toggle-switch.active {
-    background: var(--sidebar-color, #014421);
+    background: #6b0f1a;
+    /* Maroon toggle */
 }
 
 .toggle-switch::after {
@@ -637,7 +647,8 @@ body {
 }
 
 .schedule-table tbody tr:hover td:not(:first-child) {
-    background: rgba(107, 15, 26, 0.02);
+    background: rgba(107, 15, 26, 0.04);
+    /* Maroon hover effect */
 }
 
 .sched-cell {

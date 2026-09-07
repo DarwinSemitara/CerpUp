@@ -128,6 +128,73 @@
 
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- AGGRESSIVE: Disable back button immediately -->
+    <script>
+        // This runs IMMEDIATELY - no async delays
+        (function () {
+            'use strict';
+
+            // Method 1: Continuously push state to prevent back navigation
+            function disableBackButton() {
+                window.history.pushState(null, '', window.location.href);
+            }
+
+            // Push state immediately
+            disableBackButton();
+
+            // Override popstate to prevent any back navigation
+            window.addEventListener('popstate', function (event) {
+                disableBackButton();
+            });
+
+            // Method 2: Clear browser cache and storage immediately
+            if ('caches' in window) {
+                caches.keys().then(function (names) {
+                    names.forEach(function (name) {
+                        caches.delete(name);
+                    });
+                });
+            }
+
+            // Clear all storage
+            try {
+                sessionStorage.clear();
+                localStorage.clear();
+            } catch (e) { }
+
+            // Method 3: Check session ONCE on load - only redirect if logged in
+            fetch('/api/current-member', {
+                method: 'GET',
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            }).then(function (res) {
+                if (res.ok) {
+                    // Already logged in - redirect immediately without animation
+                    console.log('User already logged in, redirecting to dashboard');
+                    window.location.replace('/dashboard/');
+                }
+                // If not ok (401, 404, etc.), do nothing - show login page
+            }).catch(function (err) {
+                // Network error or not authenticated - do nothing, show login page
+                console.log('Not logged in, showing login page');
+            });
+
+            // Method 4: Block back navigation during page lifecycle
+            window.addEventListener('pagehide', disableBackButton);
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted) {
+                    // Page restored from cache, disable back
+                    disableBackButton();
+                }
+            });
+        })();
+    </script>
+
     <script>
         // Initialize Supabase (only once)
         (function () {
@@ -158,7 +225,15 @@
                 ripple.style.transition = `transform 1.1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease`;
                 ripple.classList.add('active');
 
-                setTimeout(() => { window.location.href = redirectUrl; }, 1100);
+                // Use replace instead of href to prevent back button
+                setTimeout(() => {
+                    window.location.replace(redirectUrl);
+                    // Prevent back button after redirect
+                    window.history.pushState(null, '', redirectUrl);
+                    window.onpopstate = function () {
+                        window.history.go(1);
+                    };
+                }, 1100);
             }
 
             window.handleLogin = async function (e) {

@@ -842,8 +842,10 @@
         }
 
         .code-input.filled {
-            border-color: #10b981;
-            background: #f0fdf4;
+            border-color: #8b1538;
+            /* Maroon border when filled */
+            background: #fef2f4;
+            /* Light maroon background */
         }
 
         .code-input.error {
@@ -1059,6 +1061,14 @@
                     </svg>
                     Extensions
                 </button>
+                <button class="nav-link" onclick="showSection('admin','Admin',this)">
+                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Admin
+                </button>
                 <button class="nav-link" id="sched-toggle"
                     onclick="toggleSub('sched-sub','sched-chevron','sched-toggle')">
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1218,7 +1228,8 @@
         <div class="modal-box">
             <div style="text-align:center;margin-bottom:24px;">
                 <div
-                    style="width:72px;height:72px;margin:0 auto 16px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(16, 185, 129, 0.3);">
+                    style="width:72px;height:72px;margin:0 auto 16px;background:linear-gradient(135deg, #8b1538 0%, #6b0f1a 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(139, 21, 56, 0.3);">
+                    <!-- Maroon gradient -->
                     <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -1309,6 +1320,8 @@
                 renderResearchPage();
             } else if (key === 'extensions') {
                 renderExtensionsPage();
+            } else if (key === 'admin') {
+                renderAdminPage();
             } else if (key === 'pub-eng') {
                 renderPublicEngagementsPage();
             } else if (key === 'tap') {
@@ -1754,6 +1767,15 @@
 
             // Load extension data
             loadMemberExtensionData();
+        }
+
+        function renderAdminPage() {
+            const content = document.getElementById('page-content');
+            content.innerHTML = `
+                <div class="placeholder-section">
+                    <p style="font-size:.95rem;font-weight:600;color:#6b7280;">Admin</p>
+                    <p style="font-size:.82rem;color:#9ca3af;">Content coming soon.</p>
+                </div>`;
         }
 
         async function renderClassSchedulePage() {
@@ -4535,9 +4557,10 @@
                     color: white;
                 }
 
-                    .wizard - step.completed.wizard - step - circle {
-                    background: #10b981;
-                    border - color: #10b981;
+                .wizard-step.completed .wizard-step-circle {
+                    background: #8b1538;
+                    /* Maroon for completed steps */
+                    border-color: #8b1538;
                     color: white;
                 }
 
@@ -5257,9 +5280,10 @@
                     color: white;
                 }
 
-                    .wizard - step.completed.wizard - step - circle {
-                    background: #10b981;
-                    border - color: #10b981;
+                .wizard-step.completed .wizard-step-circle {
+                    background: #8b1538;
+                    /* Maroon for completed steps */
+                    border-color: #8b1538;
                     color: white;
                 }
 
@@ -5730,53 +5754,9 @@
 
             content.innerHTML = `
                     <div class="settings-container">
-                    <!--Left Column: Personalization-->
+                    <!--Left Column: Profile-->
                     <div>
                         <div class="settings-card">
-                            <h2 class="settings-card-title">Personalization</h2>
-                            
-                            <!-- Sidebar Color -->
-                            <div class="settings-option">
-                                <div class="settings-option-info">
-                                    <div class="settings-option-label">Sidebar Color</div>
-                                    <div class="settings-option-desc">Choose your preferred sidebar color</div>
-                                </div>
-                            </div>
-                            <div class="color-picker-grid">
-                                <div class="color-option ${settings.sidebarColor === 'forest' ? 'active' : ''}" 
-                                     style="background: #014421;" 
-                                     onclick="changeSidebarColor('forest', '#014421')"></div>
-                                <div class="color-option ${settings.sidebarColor === 'maroon' ? 'active' : ''}" 
-                                     style="background: #6b0f1a;" 
-                                     onclick="changeSidebarColor('maroon', '#6b0f1a')"></div>
-                                <div class="color-option ${settings.sidebarColor === 'navy' ? 'active' : ''}" 
-                                     style="background: #1e3a8a;" 
-                                     onclick="changeSidebarColor('navy', '#1e3a8a')"></div>
-                                <div class="color-option ${settings.sidebarColor === 'dark' ? 'active' : ''}" 
-                                     style="background: #1a1a1a;" 
-                                     onclick="changeSidebarColor('dark', '#1a1a1a')"></div>
-                                <div class="color-option unavailable"></div>
-                                <div class="color-option ${settings.sidebarColor === 'teal' ? 'active' : ''}" 
-                                     style="background: #0f766e;" 
-                                     onclick="changeSidebarColor('teal', '#0f766e')"></div>
-                                <div class="color-option unavailable"></div>
-                                <div class="color-option ${settings.sidebarColor === 'slate' ? 'active' : ''}" 
-                                     style="background: #334155;" 
-                                     onclick="changeSidebarColor('slate', '#334155')"></div>
-                            </div>
-
-                            <!-- Theme Mode -->
-                            <div class="settings-option" style="margin-top: 24px;">
-                                <div class="settings-option-info">
-                                    <div class="settings-option-label">Dark Mode</div>
-                                    <div class="settings-option-desc">Switch between light and dark theme</div>
-                                </div>
-                                <div class="toggle-switch ${settings.theme === 'dark' ? 'active' : ''}" 
-                                     onclick="toggleTheme()"></div>
-                            </div>
-                        </div>
-
-                        <div class="settings-card" style="margin-top: 20px;">
                             <h2 class="settings-card-title">Profile</h2>
                             <div class="profile-edit-section">
                                 ${photoUrl
@@ -6012,17 +5992,20 @@
                             {
                                 label: currentMemberDashboardYear.toString(),
                                 data: currentYearData,
-                                borderColor: '#fb923c',
+                                borderColor: '#8b1538',
+                                /* Maroon line */
                                 backgroundColor: 'transparent',
                                 borderWidth: 2.5,
                                 pointBackgroundColor: '#fff',
-                                pointBorderColor: '#fb923c',
+                                pointBorderColor: '#8b1538',
+                                /* Maroon points */
                                 pointBorderWidth: 2.5,
                                 pointRadius: 6,
                                 pointHoverRadius: 8,
                                 pointHoverBorderWidth: 3,
                                 pointHoverBackgroundColor: '#fff',
-                                pointHoverBorderColor: '#fb923c',
+                                pointHoverBorderColor: '#8b1538',
+                                /* Maroon hover */
                                 fill: false,
                                 tension: 0.4,
                             },
@@ -6107,12 +6090,18 @@
 
                 // Extension types and their display info
                 const extensionTypes = [
-                    { key: 'extensions', label: 'Extension/Community Service', color: '#fb923c' },
-                    { key: 'training', label: 'Training', color: '#f97316' },
-                    { key: 'information_dissemination', label: 'Information Dissemination', color: '#ea580c' },
-                    { key: 'workshop', label: 'Workshop', color: '#c2410c' },
-                    { key: 'symposium', label: 'Symposium', color: '#fdba74' },
-                    { key: 'others', label: 'Others', color: '#fed7aa' }
+                    { key: 'extensions', label: 'Extension/Community Service', color: '#8b1538' },
+                    /* Deep maroon */
+                    { key: 'training', label: 'Training', color: '#a81c48' },
+                    /* Medium maroon */
+                    { key: 'information_dissemination', label: 'Information Dissemination', color: '#c52859' },
+                    /* Lighter maroon */
+                    { key: 'workshop', label: 'Workshop', color: '#d94371' },
+                    /* Light maroon */
+                    { key: 'symposium', label: 'Symposium', color: '#e8698a' },
+                    /* Very light maroon */
+                    { key: 'others', label: 'Others', color: '#f5a3b8' }
+                    /* Pale maroon */
                 ];
 
                 const chartData = [];
@@ -6273,25 +6262,91 @@
 
     <!-- Email Verification Script -->
     <script>
-        // Initialize email for veration (          here)
+        // Initialize email for verification
         var userEmail = '{{ email }}';
         var isFirstLogin = false;
     </script>
-    <script src="{{ url_for('static', filename='js/verification.js') }}"></script>
+
+    <!-- AGGRESSIVE: Completely disable back button navigation -->
+    <script>
+        (function () {
+            'use strict';
+
+            // Method 1: Continuously push state to trap user in current page
+            function disableBackButton() {
+                window.history.pushState(null, '', window.location.href);
+            }
+
+            // Execute immediately on load
+            disableBackButton();
+
+            // Block ALL popstate events
+            window.addEventListener('popstate', function (event) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                disableBackButton();
+                return false;
+            }, true);
+
+            // Method 2: Disable browser back/forward on load
+            window.onload = function () {
+                disableBackButton();
+
+                // Continuously push state to prevent back
+                setInterval(disableBackButton, 100);
+            };
+
+            // Method 3: Check session validity aggressively
+            function validateSession() {
+                fetch('/api/current-member', {
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                }).then(function (res) {
+                    if (!res.ok) {
+                        // Session invalid - force redirect to login
+                        sessionStorage.clear();
+                        localStorage.clear();
+                        window.location.replace('/login');
+                    }
+                }).catch(function () {
+                    // Network error or not authenticated
+                    window.location.replace('/login');
+                });
+            }
+
+            // Check session on page visibility changes
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    validateSession();
+                }
+            });
+
+            // Check session on page show (when coming from cache)
+            window.addEventListener('pageshow', function (event) {
+                if (event.persisted) {
+                    validateSession();
+                }
+                disableBackButton();
+            });
+
+            // Prevent page from being cached
+            window.addEventListener('pagehide', function () {
+                disableBackButton();
+            });
+
+            // Method 4: Override browser navigation
+            if (window.history && window.history.pushState) {
+                var originalPushState = window.history.pushState;
+                window.history.pushState = function () {
+                    originalPushState.apply(this, [null, '', window.location.href]);
+                };
+            }
+        })();
+    </script>
 </body>
 
 </html>
-
-<!-- TEMPORARY DEBUG SCRIPT -->
-<script>
-        console.log('='.repeat(50));
-        console.log('🔍 VERIFICATION DEBUG');
-        console.log('='.repeat(50));
-        console.log('1. userEmail defined:', typeof userEmail !== 'undefined');
-        console.log('2. userEmail value:', typeof userEmail !== 'undefined' ? userEmail : 'NOT DEFINED');
-        console.log('3. Body firstLogin attr:', document.body.dataset.firstLogin);
-        console.log('4. Modal exists:', document.getElementById('verification-modal') !== null);
-        console.log('5. Password modal exists:', document.getElementById('password-change-modal') !== null);
-        console.log('6. showVerificationModal exists:', typeof showVerificationModal !== 'undefined');
-        console.log('='.repeat(50));
-</script>

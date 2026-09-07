@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, make_response
 from dotenv import load_dotenv
 from services.supabase_service import verify_access_token as verify_id_token, db, supabase
 from services.cloudinary_service import upload_member_photo, delete_member_photo
@@ -52,7 +52,28 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'uid' not in session:
+            # Clear any stale session data
+            session.clear()
+
+            # For API calls (JSON requests), return 401 instead of redirecting
+            if request.is_json or request.headers.get('Accept') == 'application/json' or request.path.startswith('/api/'):
+                return jsonify({'error': 'Not authenticated'}), 401
+
             return redirect(url_for('login'))
+
+        # Validate session hasn't expired (optional: add timestamp check)
+        uid = session.get('uid')
+        role = session.get('role')
+
+        if not uid or not role:
+            session.clear()
+
+            # For API calls, return 401 instead of redirecting
+            if request.is_json or request.headers.get('Accept') == 'application/json' or request.path.startswith('/api/'):
+                return jsonify({'error': 'Not authenticated'}), 401
+
+            return redirect(url_for('login'))
+
         return f(*args, **kwargs)
     return decorated
 
@@ -85,14 +106,27 @@ def publications():
 
 @app.route('/login')
 def login():
+    # Always clear session when accessing login page
+    # This prevents cached admin/user pages from being accessible via back button
+    session.clear()
+
+    # If somehow still authenticated (shouldn't happen after clear), redirect to dashboard
     if 'uid' in session:
         return redirect(url_for('dashboard'))
 
     # Serve Supabase login page
-    return render_template('login_supabase.html',
-                           supabase_url=os.getenv('SUPABASE_URL'),
-                           supabase_anon_key=os.getenv('SUPABASE_ANON_KEY')
-                           )
+    response = make_response(render_template('login_supabase.html',
+                                             supabase_url=os.getenv(
+                                                 'SUPABASE_URL'),
+                                             supabase_anon_key=os.getenv(
+                                                 'SUPABASE_ANON_KEY')
+                                             ))
+    # Extra cache control to prevent login page caching
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    response.headers['Clear-Site-Data'] = '"cache", "storage"'
+    return response
 
 
 # â”€â”€ Auth API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -201,8 +235,14 @@ def api_login():
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
+    """Logout user and clear session."""
     session.clear()
-    return jsonify({'status': 'ok'})
+    response = jsonify({'status': 'ok', 'redirect': url_for('login')})
+    # Add extra cache control headers to ensure logout page isn't cached
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @app.route('/api/current-member', methods=['GET'])
@@ -237,12 +277,19 @@ def dashboard():
     # Add cache buster
     import time
     cache_version = int(time.time())
-    return render_template('pages/dashboard.html',
-                           email=email,
-                           initial=initial,
-                           page_title='Dashboard',
-                           active_page='dashboard',
-                           cache_version=cache_version)
+
+    response = make_response(render_template('pages/dashboard.html',
+                                             email=email,
+                                             initial=initial,
+                                             page_title='Dashboard',
+                                             active_page='dashboard',
+                                             cache_version=cache_version))
+
+    # Ensure no caching of admin dashboard
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @app.route('/dashboard/faculty/<member_id>')
@@ -327,6 +374,21 @@ def section_extensions():
                            initial=initial,
                            page_title='Extensions',
                            active_page='extensions')
+
+
+@app.route('/admin-page/')
+@login_required
+def admin_page():
+    """Admin page for admin dashboard"""
+    if is_partial():
+        return render_template('partials/admin_page.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/admin_page.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Admin',
+                           active_page='admin')
 
 
 @app.route('/extensions/public-engagements/')
@@ -1334,6 +1396,21 @@ def create_member_account(member_id):
             'first_login': True,  # Mark as first login - needs email verification
         }, merge=True)
 
+        # Also create record in Supabase users table
+        try:
+            supabase.table('users').insert({
+                'id': user_id,
+                'uid': user_id,
+                'email': email,
+                'role': 'user',
+                'first_login': True
+            }).execute()
+            logger.info(f"Created Supabase users table record for {user_id}")
+        except Exception as supabase_error:
+            # Log but don't fail if Supabase insert fails
+            logger.warning(
+                f"Could not create Supabase users record: {supabase_error}")
+
         # Link uid back to member doc
         db.collection('members').document(member_id).update(
             {'uid': user_id, 'email': email})
@@ -1502,6 +1579,37 @@ def complete_first_login():
         if not uid:
             return jsonify({'error': 'Not authenticated'}), 401
 
+        # Email is required for Supabase users table
+        if not email:
+            logger.error(f"Email not in session for uid {uid}")
+            # Try to get email from Supabase Auth
+            try:
+                users_response = supabase.auth.admin.list_users()
+                users_list = []
+                if hasattr(users_response, 'data'):
+                    users_list = users_response.data
+                elif hasattr(users_response, '__iter__'):
+                    users_list = list(users_response)
+                else:
+                    users_list = [users_response]
+
+                for user in users_list:
+                    user_id = getattr(user, 'id', None) or user.get('id')
+                    if user_id == uid:
+                        email = getattr(
+                            user, 'email', None) or user.get('email')
+                        if email:
+                            session['email'] = email  # Update session
+                            logger.info(
+                                f"Retrieved email from Supabase Auth: {email}")
+                        break
+
+                if not email:
+                    return jsonify({'error': 'Email not found. Please log in again.'}), 400
+            except Exception as e:
+                logger.error(f"Failed to retrieve email: {e}")
+                return jsonify({'error': 'Unable to complete setup. Please log in again.'}), 400
+
         # Optional: Change password (only if not skipping and password provided)
         new_password = data.get('new_password', '').strip() if data else ''
         if new_password and not skip_password_change:
@@ -1520,28 +1628,41 @@ def complete_first_login():
 
         # Ensure Supabase users table has proper uid set
         try:
-            # Check if user record exists in Supabase users table
-            user_check = supabase.table('users').select(
-                'id').eq('uid', uid).execute()
-
-            if not user_check.data:
-                # User record doesn't exist, create it
-                supabase.table('users').insert({
+            # Use UPSERT to handle both insert and update cases
+            # This prevents duplicate key errors and ensures uid is always set
+            supabase.table('users').upsert({
+                'id': uid,  # Primary key - Set id to match auth user id
+                'uid': uid,  # Also set uid for consistency
+                'email': email,
+                'role': role,
+                'first_login': False
+            }, on_conflict='id').execute()
+            logger.info(f"Upserted Supabase users record for {uid}")
+        except Exception as e:
+            logger.error(f"Error upserting Supabase users table: {e}")
+            # Try alternative approach - update if exists, insert if not
+            try:
+                # First try update
+                result = supabase.table('users').update({
                     'uid': uid,
                     'email': email,
                     'role': role,
                     'first_login': False
-                }).execute()
-                logger.info(f"Created Supabase users record for {uid}")
-            else:
-                # Update existing record
-                supabase.table('users').update({
-                    'first_login': False
-                }).eq('uid', uid).execute()
-                logger.info(f"Updated Supabase users record for {uid}")
-        except Exception as e:
-            logger.error(f"Error updating Supabase users table: {e}")
-            # Continue anyway - Firebase update is more critical
+                }).eq('id', uid).execute()
+
+                # If no rows affected, insert
+                if not result.data:
+                    supabase.table('users').insert({
+                        'id': uid,
+                        'uid': uid,
+                        'email': email,
+                        'role': role,
+                        'first_login': False
+                    }).execute()
+                logger.info(f"Fallback upsert successful for {uid}")
+            except Exception as fallback_error:
+                logger.error(f"Fallback upsert also failed: {fallback_error}")
+                # Continue anyway - Firebase update is more critical
 
         # Mark first login as complete in Firebase
         db.collection('users').document(uid).set({
@@ -3609,7 +3730,28 @@ def user_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'uid' not in session:
+            # Clear any stale session data
+            session.clear()
+
+            # For API calls (JSON requests), return 401 instead of redirecting
+            if request.is_json or request.headers.get('Accept') == 'application/json' or request.path.startswith('/api/'):
+                return jsonify({'error': 'Not authenticated'}), 401
+
             return redirect(url_for('login'))
+
+        # Validate session hasn't expired and user role is correct
+        uid = session.get('uid')
+        role = session.get('role')
+
+        if not uid or not role:
+            session.clear()
+
+            # For API calls, return 401 instead of redirecting
+            if request.is_json or request.headers.get('Accept') == 'application/json' or request.path.startswith('/api/'):
+                return jsonify({'error': 'Not authenticated'}), 401
+
+            return redirect(url_for('login'))
+
         return f(*args, **kwargs)
     return decorated
 
@@ -3630,10 +3772,27 @@ def user_dashboard():
             user_data = user_doc.to_dict()
             first_login = user_data.get('first_login', False)
 
-    return render_template('user_dashboard.html',
+    response = make_response(render_template('user_dashboard.html',
+                                             email=email,
+                                             initial=initial,
+                                             first_login=first_login))
+
+    # Ensure no caching of user dashboard
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, private, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
+@app.route('/user/admin/')
+@user_required
+def user_admin_page():
+    """Admin page for user/member dashboard"""
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'U'
+    return render_template('user_admin_page.html',
                            email=email,
-                           initial=initial,
-                           first_login=first_login)
+                           initial=initial)
 
 
 if __name__ == '__main__':

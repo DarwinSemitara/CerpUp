@@ -112,10 +112,27 @@ function closeLogoutModal() {
 
 async function confirmLogout() {
     try {
-        await fetch('/api/logout', { method: 'POST' });
-        window.location.href = '/login';
-    } catch {
-        alert('Logout failed. Please try again.');
+        const response = await fetch('/api/logout', { method: 'POST' });
+        const data = await response.json();
+
+        // Clear all session storage and local storage
+        sessionStorage.clear();
+        localStorage.clear();
+
+        // Force redirect with cache bypass
+        window.location.replace(data.redirect || '/login');
+
+        // Prevent back button from working after logout
+        window.history.pushState(null, '', window.location.href);
+        window.onpopstate = function () {
+            window.location.replace('/login');
+        };
+    } catch (err) {
+        console.error('Logout error:', err);
+        // Force redirect even if request fails
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.replace('/login');
     }
 }
 

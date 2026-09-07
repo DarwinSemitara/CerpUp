@@ -1,0 +1,35 @@
+{% extends 'admin_base.html' %}
+
+{% block content %}
+<div class="welcome-section">
+    <div class="welcome-title">Admin Page</div>
+    <div class="welcome-text">
+        This page is under construction. Admin features will be added here soon.
+    </div>
+</div>
+
+<style>
+    .welcome-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 60vh;
+        text-align: center;
+        padding: 24px;
+    }
+
+    .welcome-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 12px;
+    }
+
+    .welcome-text {
+        font-size: 1.1rem;
+        color: #6b7280;
+        max-width: 600px;
+    }
+</style>
+{% endblock %}
