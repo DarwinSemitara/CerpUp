@@ -5781,6 +5781,10 @@
                                             console.log('✅ Schedule updated successfully');
                                             refreshFilterOptions();
                                             renderReport();
+
+                                            // FIX #2 & #3: Re-render draggable blocks after successful move
+                                            calculateAllocatedUnits();
+                                            renderDraggableBlocks();
                                         }
                                     } catch (err) {
                                         // Rollback on error
@@ -5848,6 +5852,49 @@
                                 var hours = (curEnd - startSlot) * 0.5; // Each slot is 0.5 hours
                                 var newUnits = Math.round(hours * 10) / 10; // Round to 1 decimal
 
+                                // FIX #4: UNIT QUOTA VALIDATION - prevent resizing beyond configured quota
+                                if (unitConfigSaved && entry.subjCode && subjectUnits[entry.subjCode]) {
+                                    var unitData = subjectUnits[entry.subjCode];
+                                    var configured = unitData.configured || 0;
+                                    var currentAllocated = unitData.allocated || 0;
+                                    var oldUnits = entry.units || 0;
+
+                                    // Calculate what the new total would be
+                                    var newTotal = currentAllocated - oldUnits + newUnits;
+
+                                    console.log('Resize Unit Quota Check:', {
+                                        subject: entry.subjCode,
+                                        configured: configured,
+                                        currentAllocated: currentAllocated,
+                                        oldUnits: oldUnits,
+                                        newUnits: newUnits,
+                                        newTotal: newTotal
+                                    });
+
+                                    if (newTotal > configured) {
+                                        var excess = newTotal - configured;
+                                        showConflictModal(
+                                            '⚠️ UNIT QUOTA EXCEEDED\n\n' +
+                                            'Subject: ' + entry.subjCode + '\n' +
+                                            'Configured: ' + configured + ' hours/week\n' +
+                                            'Currently Allocated: ' + currentAllocated + ' hours\n' +
+                                            'This Block (old): ' + oldUnits + ' hours\n' +
+                                            'This Block (new): ' + newUnits + ' hours\n' +
+                                            'New Total Would Be: ' + newTotal + ' hours\n\n' +
+                                            'This would exceed the configured quota by ' + excess + ' hours.\n\n' +
+                                            'Please resize to a smaller duration.'
+                                        );
+
+                                        // Revert visual changes
+                                        var blk = document.getElementById('blk-' + id);
+                                        if (blk) {
+                                            var originalEnd = slotIdx(entry.end);
+                                            blk.style.height = ((originalEnd - startSlot) * SLOT_H - 3) + 'px';
+                                        }
+                                        return;
+                                    }
+                                }
+
                                 // Update entry with new end time and units
                                 await updateEntry(id, {
                                     start: slots[startSlot],
@@ -5912,6 +5959,10 @@
                     var data = await res.json();
                     if (res.ok) {
                         await loadSchedules();
+
+                        // FIX #2 & #3: Re-render draggable blocks after resize/update
+                        calculateAllocatedUnits();
+                        renderDraggableBlocks();
                     }
                 } catch (err) { }
             }
@@ -5930,15 +5981,12 @@
                 var u = document.getElementById('nbm-units'); if (u) u.value = '';
                 var err = document.getElementById('nbm-err'); if (err) err.style.display = 'none';
 
-                // Auto-fill professor if filter is enabled and a professor is selected
-                var filterToggle = document.getElementById('filter-toggle');
-                var filtersEnabled = filterToggle ? filterToggle.checked : true;
-                if (filtersEnabled) {
-                    var profFilterEl = document.getElementById('sf-professor');
-                    var profModalEl = document.getElementById('nbm-prof');
-                    if (profFilterEl && profModalEl && profFilterEl.value) {
-                        profModalEl.value = profFilterEl.value;
-                    }
+                // FIX #1: Auto-fill professor from filter (regardless of filter toggle state)
+                var profFilterEl = document.getElementById('sf-professor');
+                var profModalEl = document.getElementById('nbm-prof');
+                if (profFilterEl && profModalEl && profFilterEl.value) {
+                    console.log('Auto-filling professor:', profFilterEl.value);
+                    profModalEl.value = profFilterEl.value;
                 }
 
                 document.getElementById('new-block-modal').classList.add('open');
@@ -6141,6 +6189,11 @@
 
                     // Reload from DB to ensure full consistency then re-render
                     await loadSchedules();
+
+                    // FIX #2: Re-render draggable blocks to update staging area
+                    calculateAllocatedUnits();
+                    renderDraggableBlocks();
+
                     closeNewBlockModal();
                 } catch (err) {
                     errEl.textContent = err.message;
