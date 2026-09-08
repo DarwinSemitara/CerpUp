@@ -199,7 +199,8 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
         display: flex;
         flex-direction: column;
-        cursor: grab;
+        cursor: grab !important;
+        /* FIX #5: Force grab cursor to prevent flickering with cell's crosshair */
         /* CRITICAL: Ensure full opacity by default and force GPU rendering for consistency */
         opacity: 1;
         will-change: transform;
@@ -240,7 +241,8 @@
         left: 0;
         right: 0;
         height: 7px;
-        cursor: ns-resize;
+        cursor: ns-resize !important;
+        /* FIX #5: Force resize cursor */
     }
 
     .sched-block .sb-resize:hover {
@@ -3695,20 +3697,17 @@
                     onSubjectCodeChange('nbm');
                 }
 
-                // Auto-fill professor if filter is enabled and a professor is selected
-                var filterToggle = document.getElementById('filter-toggle');
-                var filtersEnabled = filterToggle ? filterToggle.checked : true;
-                if (filtersEnabled) {
-                    var profFilterEl = document.getElementById('sf-professor');
-                    if (profFilterEl && profFilterEl.value) {
-                        // Wait for onSubjectCodeChange to populate professors, then set the value
-                        setTimeout(function () {
-                            var profModalEl = document.getElementById('nbm-prof');
-                            if (profModalEl && profFilterEl.value) {
-                                profModalEl.value = profFilterEl.value;
-                            }
-                        }, 50);
-                    }
+                // Auto-fill professor from filter (regardless of filter toggle state)
+                var profFilterEl = document.getElementById('sf-professor');
+                if (profFilterEl && profFilterEl.value) {
+                    // Wait for onSubjectCodeChange to populate professors, then set the value
+                    setTimeout(function () {
+                        var profModalEl = document.getElementById('nbm-prof');
+                        if (profModalEl && profFilterEl.value) {
+                            console.log('Auto-filling professor in drag modal:', profFilterEl.value);
+                            profModalEl.value = profFilterEl.value;
+                        }
+                    }, 50);
                 }
 
                 // Open modal
