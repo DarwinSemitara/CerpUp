@@ -2940,14 +2940,14 @@ def remove_configured_subject():
             return jsonify({'error': 'Missing required fields'}), 400
 
         logger.info(
-            f"Removing configured subject: faculty={faculty_id}, subject={subject_code}, year={school_year}, sem={semester}")
+            f"Removing configured subject: prof={faculty_id}, subject={subject_code}, year={school_year}, sem={semester}")
 
-        # Delete matching configured subject
-        supabase.table('configured_subjects').delete().eq('faculty_id', faculty_id).eq(
-            'subject_code', subject_code).eq('school_year', school_year).eq('semester', semester).execute()
+        # Delete matching configured subject (column is 'prof' not 'faculty_id', and 'subj_code' not 'subject_code')
+        supabase.table('configured_subjects').delete().eq('prof', faculty_id).eq(
+            'subj_code', subject_code).eq('school_year', school_year).eq('semester', semester).execute()
 
         logger.info(
-            f"Removed configured subject: {subject_code} for faculty {faculty_id}")
+            f"Removed configured subject: {subject_code} for prof {faculty_id}")
         return jsonify({'status': 'ok'})
     except Exception as e:
         logger.error(f"Error removing configured subject: {e}")
