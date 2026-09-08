@@ -3705,9 +3705,20 @@
                         var profModalEl = document.getElementById('nbm-prof');
                         if (profModalEl && profFilterEl.value) {
                             console.log('Auto-filling professor in drag modal:', profFilterEl.value);
-                            profModalEl.value = profFilterEl.value;
+
+                            // Verify the option exists before setting
+                            var optionExists = Array.from(profModalEl.options).some(function (opt) {
+                                return opt.value === profFilterEl.value;
+                            });
+
+                            if (optionExists) {
+                                profModalEl.value = profFilterEl.value;
+                                console.log('✅ Professor auto-filled successfully');
+                            } else {
+                                console.warn('⚠️ Professor not found in dropdown:', profFilterEl.value);
+                            }
                         }
-                    }, 50);
+                    }, 150); // Increased timeout to ensure dropdown is populated
                 }
 
                 // Open modal
@@ -5959,6 +5970,9 @@
                     if (res.ok) {
                         await loadSchedules();
 
+                        // CRITICAL: Reapply filters after loadSchedules
+                        applyFilters();
+
                         // FIX #2 & #3: Re-render draggable blocks after resize/update
                         calculateAllocatedUnits();
                         renderDraggableBlocks();
@@ -5980,12 +5994,24 @@
                 var u = document.getElementById('nbm-units'); if (u) u.value = '';
                 var err = document.getElementById('nbm-err'); if (err) err.style.display = 'none';
 
-                // FIX #1: Auto-fill professor from filter (regardless of filter toggle state)
-                var profFilterEl = document.getElementById('sf-professor');
+                // FIX #1: Pre-populate professor dropdown, THEN auto-select from filter
                 var profModalEl = document.getElementById('nbm-prof');
-                if (profFilterEl && profModalEl && profFilterEl.value) {
-                    console.log('Auto-filling professor:', profFilterEl.value);
-                    profModalEl.value = profFilterEl.value;
+                if (profModalEl && staffData && staffData.length > 0) {
+                    // Populate professor dropdown immediately
+                    profModalEl.innerHTML = '<option value="">Select Professor</option>';
+                    staffData.forEach(function (staff) {
+                        var opt = document.createElement('option');
+                        opt.value = staff.fullName;
+                        opt.textContent = staff.fullName;
+                        profModalEl.appendChild(opt);
+                    });
+
+                    // NOW auto-fill from filter if one is selected
+                    var profFilterEl = document.getElementById('sf-professor');
+                    if (profFilterEl && profFilterEl.value) {
+                        console.log('Auto-filling professor from filter:', profFilterEl.value);
+                        profModalEl.value = profFilterEl.value;
+                    }
                 }
 
                 document.getElementById('new-block-modal').classList.add('open');
@@ -6188,6 +6214,9 @@
 
                     // Reload from DB to ensure full consistency then re-render
                     await loadSchedules();
+
+                    // CRITICAL: Reapply filters after loadSchedules to prevent other blocks from disappearing
+                    applyFilters();
 
                     // FIX #2: Re-render draggable blocks to update staging area
                     calculateAllocatedUnits();
