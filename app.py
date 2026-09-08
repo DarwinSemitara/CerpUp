@@ -201,6 +201,20 @@ def api_login():
             session['uid'] = 'admin-hardcoded'
             session['email'] = 'admin'
             session['role'] = 'admin'
+
+            logger.info("=" * 80)
+            logger.info(f"🔑 SESSION CREATED (ADMIN)")
+            logger.info(f"   UID: admin-hardcoded")
+            logger.info(f"   Email: admin")
+            logger.info(f"   Role: admin")
+            logger.info(f"   Permanent: {session.permanent}")
+            logger.info(f"   Session Keys: {list(session.keys())}")
+            logger.info(
+                f"   Cookie Name: {app.config.get('SESSION_COOKIE_NAME')}")
+            logger.info(
+                f"   Session Lifetime: {app.config.get('PERMANENT_SESSION_LIFETIME')} seconds")
+            logger.info("=" * 80)
+
             return jsonify({'status': 'ok', 'redirect': '/dashboard/'})
         else:
             return jsonify({'error': 'Invalid username or password.'}), 401
@@ -318,11 +332,24 @@ def get_current_member():
     """Get current logged-in member's data."""
     try:
         uid = session.get('uid')
-        logger.info(f"📋 GET_CURRENT_MEMBER - UID from session: {uid}")
+        role = session.get('role')
+        logger.info(f"📋 GET_CURRENT_MEMBER - UID: {uid} | Role: {role}")
 
         if not uid:
             logger.error("❌ GET_CURRENT_MEMBER - No UID in session!")
             return jsonify({'error': 'Not authenticated', 'debug': 'No uid in session'}), 401
+
+        # Handle admin hardcoded user
+        if uid == 'admin-hardcoded' and role == 'admin':
+            logger.info(f"✅ GET_CURRENT_MEMBER - Admin hardcoded user")
+            return jsonify({
+                'id': 'admin-hardcoded',
+                'uid': 'admin-hardcoded',
+                'firstName': 'Admin',
+                'lastName': 'User',
+                'email': 'admin',
+                'role': 'admin'
+            })
 
         # Find member by uid
         members = db.collection('members').where(
@@ -2892,6 +2919,38 @@ def delete_configured_subject(entry_id):
         return jsonify({'status': 'ok'})
     except Exception as e:
         logger.error(f"Error deleting configured subject: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/configured-subjects/remove', methods=['POST'])
+@login_required
+def remove_configured_subject():
+    """Remove a configured subject by faculty, subject code, school year, and semester."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        faculty_id = data.get('faculty_id')
+        subject_code = data.get('subject_code')
+        school_year = data.get('school_year')
+        semester = data.get('semester')
+
+        if not all([faculty_id, subject_code, school_year, semester]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        logger.info(
+            f"Removing configured subject: faculty={faculty_id}, subject={subject_code}, year={school_year}, sem={semester}")
+
+        # Delete matching configured subject
+        supabase.table('configured_subjects').delete().eq('faculty_id', faculty_id).eq(
+            'subject_code', subject_code).eq('school_year', school_year).eq('semester', semester).execute()
+
+        logger.info(
+            f"Removed configured subject: {subject_code} for faculty {faculty_id}")
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        logger.error(f"Error removing configured subject: {e}")
         return jsonify({'error': str(e)}), 500
 
 

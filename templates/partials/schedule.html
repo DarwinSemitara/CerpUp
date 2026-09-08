@@ -889,6 +889,105 @@
         border-top: 1px solid #f3f4f6;
     }
 
+    /* ── Remove Subject Confirmation Modal ── */
+    #remove-subject-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1150;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+
+    #remove-subject-modal.open {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .remove-subject-box {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 420px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        transform: translateY(-10px);
+        transition: transform 0.2s;
+    }
+
+    #remove-subject-modal.open .remove-subject-box {
+        transform: translateY(0);
+    }
+
+    .remove-subject-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #dc2626;
+        margin-bottom: 16px;
+    }
+
+    .remove-subject-title svg {
+        flex-shrink: 0;
+        color: #dc2626;
+    }
+
+    .remove-subject-message {
+        font-size: 0.9rem;
+        color: #374151;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        padding: 14px;
+        background: #fef2f2;
+        border-radius: 6px;
+        border: 1px solid #fee2e2;
+    }
+
+    .remove-subject-message strong {
+        color: #6b0f1a;
+        font-weight: 700;
+    }
+
+    .remove-subject-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .remove-subject-btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+    }
+
+    .remove-subject-btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .remove-subject-btn-cancel:hover {
+        background: #e5e7eb;
+    }
+
+    .remove-subject-btn-remove {
+        background: #dc2626;
+        color: white;
+    }
+
+    .remove-subject-btn-remove:hover {
+        background: #b91c1c;
+    }
+
     /* ── Report ── */
     .report-card {
         background: white;
@@ -2424,6 +2523,31 @@
         </div>
     </div>
 
+    <!-- Remove Subject Confirmation Modal -->
+    <div id="remove-subject-modal">
+        <div class="remove-subject-box">
+            <div class="remove-subject-title">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Remove Subject
+            </div>
+            <div class="remove-subject-message" id="remove-subject-message">
+                Are you sure you want to remove <strong id="remove-subject-name"></strong>?<br>
+                This will make the subject available for configuration again.
+            </div>
+            <div class="remove-subject-actions">
+                <button class="remove-subject-btn remove-subject-btn-cancel" onclick="closeRemoveSubjectModal()">
+                    Cancel
+                </button>
+                <button class="remove-subject-btn remove-subject-btn-remove" onclick="confirmRemoveSubject()">
+                    Remove
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Subject Details Modal (Right-click) -->
     <div id="subject-details-modal">
         <div class="sdm-box">
@@ -3367,6 +3491,8 @@
                         draggable="true"
                         data-subject-code="${subj.code}"
                         data-subject-name="${subj.name}"
+                        data-configured-units="${unitData.configured}"
+                        data-allocated-units="${unitData.allocated}"
                         style="background-color: ${color};"
                         ondragstart="handleDragStart(event)"
                         ondragend="handleDragEnd(event)">
@@ -3377,6 +3503,18 @@
                 });
 
                 container.innerHTML = html;
+
+                // Add right-click event listeners to all draggable subjects
+                container.querySelectorAll('.draggable-subject').forEach(function (block) {
+                    block.addEventListener('contextmenu', function (event) {
+                        event.preventDefault();
+                        showRemoveSubjectModal(
+                            event.currentTarget.dataset.subjectCode,
+                            event.currentTarget.dataset.subjectName
+                        );
+                    });
+                });
+
                 console.log('✅ Blocks rendered successfully!');
                 updateUnitProgress();
             }
@@ -5827,6 +5965,71 @@
             });
             document.getElementById('conflict-modal').addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') closeConflictModal();
+            });
+
+            // ═══ Remove Subject Modal Functions ═══
+            var subjectToRemove = null;
+
+            window.showRemoveSubjectModal = function (subjectCode, subjectName) {
+                subjectToRemove = subjectCode;
+                document.getElementById('remove-subject-name').textContent = subjectCode + ' - ' + subjectName;
+                document.getElementById('remove-subject-modal').classList.add('open');
+            };
+
+            window.closeRemoveSubjectModal = function () {
+                document.getElementById('remove-subject-modal').classList.remove('open');
+                subjectToRemove = null;
+            };
+
+            window.confirmRemoveSubject = async function () {
+                if (!subjectToRemove) return;
+
+                try {
+                    // Remove configured subject from backend
+                    var res = await fetch('/api/configured-subjects/remove', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            faculty_id: currentFacultyId,
+                            subject_code: subjectToRemove,
+                            school_year: currentSchoolYear,
+                            semester: currentSemester
+                        })
+                    });
+
+                    if (!res.ok) {
+                        var error = await res.json();
+                        alert('Failed to remove subject: ' + (error.error || 'Unknown error'));
+                        return;
+                    }
+
+                    // Update local subjectUnits to remove configuration
+                    if (subjectUnits[subjectToRemove]) {
+                        delete subjectUnits[subjectToRemove];
+                    }
+
+                    // Reload configured subjects from backend
+                    await loadAllConfiguredSubjects();
+
+                    // Re-render draggable blocks
+                    renderDraggableBlocks();
+
+                    // Close modal
+                    closeRemoveSubjectModal();
+
+                    console.log('✅ Subject removed:', subjectToRemove);
+                } catch (error) {
+                    console.error('Error removing subject:', error);
+                    alert('Error removing subject: ' + error.message);
+                }
+            };
+
+            // Close remove subject modal when clicking outside or pressing Escape
+            document.getElementById('remove-subject-modal').addEventListener('click', function (e) {
+                if (e.target === this) closeRemoveSubjectModal();
+            });
+            document.getElementById('remove-subject-modal').addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeRemoveSubjectModal();
             });
 
             window.confirmNewBlock = async function () {
