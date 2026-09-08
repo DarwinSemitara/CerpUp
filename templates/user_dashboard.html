@@ -543,6 +543,27 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
+        /* Calendar Styles */
+        .calendar-nav-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            transition: all 0.15s;
+        }
+
+        .calendar-nav-btn:hover {
+            border-color: #8b1538;
+            background: #fef2f2;
+            color: #8b1538;
+        }
+
         .chart-header {
             display: flex;
             align-items: center;
@@ -1086,12 +1107,12 @@
                         Schedule</button>
                     <button class="sub-link" onclick="showSection('events','Events',this)">Events</button>
                 </div>
-                <button class="nav-link" onclick="showSection('instructions','Instructions',this)">
+                <button class="nav-link" onclick="showSection('fsr','FSR',this)">
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Instructions
+                    FSR
                 </button>
                 <button class="nav-link" onclick="showSection('settings','Settings',this)">
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1322,6 +1343,8 @@
                 renderExtensionsPage();
             } else if (key === 'admin') {
                 renderAdminPage();
+            } else if (key === 'fsr') {
+                renderFSRPage();
             } else if (key === 'pub-eng') {
                 renderPublicEngagementsPage();
             } else if (key === 'tap') {
@@ -1778,6 +1801,21 @@
                 </div>`;
         }
 
+        async function renderFSRPage() {
+            const content = document.getElementById('page-content');
+            content.innerHTML = `
+                <div class="chart-card" id="fsr-page-card">
+                    <div style="display:flex;align-items:center;justify-content:center;padding:48px 0;gap:12px;color:#6b7280;">
+                        <div style="width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:#014421;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                        <span style="font-size:.875rem;">Loading FSR...</span>
+                    </div>
+                </div>
+            `;
+
+            // Reuse the same FSR loading logic
+            await loadFSRContent('fsr-page-card');
+        }
+
         async function renderClassSchedulePage() {
             const content = document.getElementById('page-content');
 
@@ -2061,25 +2099,233 @@
                     </div>
                 </div>
 
-                <!-- FSR Section -->
-                <div class="chart-card" style="margin-top:24px;" id="dashboard-fsr-card">
-                    <div style="display:flex;align-items:center;justify-content:center;padding:48px 0;gap:12px;color:#6b7280;">
-                        <div style="width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:#014421;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-                        <span style="font-size:.875rem;">Loading FSR...</span>
+                <!-- Calendar & To-Do Section (Read-Only) -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;">
+                    <!-- Calendar Container (Read-Only) -->
+                    <div class="chart-card" style="min-height:480px;">
+                        <div class="chart-header">
+                            <div>
+                                <div class="chart-title">Calendar</div>
+                                <div class="chart-subtitle">Schedule and events</div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <button class="calendar-nav-btn" onclick="previousMonthMember()">
+                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+                                <div style="min-width:160px;text-align:center;position:relative;display:flex;gap:6px;justify-content:center;align-items:center;">
+                                    <span id="member-calendar-month" style="font-size:0.85rem;font-weight:600;color:#374151;">September</span>
+                                    <span id="member-calendar-year" style="font-size:0.85rem;font-weight:600;color:#374151;">2026</span>
+                                </div>
+                                <button class="calendar-nav-btn" onclick="nextMonthMember()">
+                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="member-calendar-grid" style="padding:12px;">
+                            <!-- Calendar will be generated here -->
+                        </div>
+                    </div>
+
+                    <!-- To-Do List (Read-Only View) -->
+                    <div class="chart-card" style="min-height:480px;">
+                        <div class="chart-header" style="border-bottom:1px solid #e5e7eb;padding-bottom:12px;">
+                            <div class="chart-title">To-Do List</div>
+                        </div>
+                        <div id="member-todo-list" style="padding:20px;">
+                            <div style="text-align:center;padding:40px 20px;color:#9ca3af;">
+                                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.3;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                </svg>
+                                <div style="font-size:0.9rem;font-weight:600;color:#6b7280;">No tasks yet</div>
+                                <div style="font-size:0.8rem;color:#9ca3af;margin-top:4px;">Tasks will appear here when added</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
 
-            // Initialize charts, then load FSR data async
+            // Initialize charts and calendar
             setTimeout(() => {
                 initUserCharts();
+                renderMemberCalendar();
             }, 100);
-
-            // Load FSR async into the dashboard card
-            loadDashboardFSR();
         }
 
         async function loadDashboardFSR() {
+            await loadFSRContent('dashboard-fsr-card');
+        }
+
+        // Member Calendar Functions (Read-Only)
+        let memberCalendarDate = new Date();
+        let memberCalendarEvents = {}; // Shared events from localStorage
+
+        function loadMemberCalendarEvents() {
+            try {
+                const stored = localStorage.getItem('calendarEvents');
+                if (stored) {
+                    memberCalendarEvents = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error('Error loading calendar events:', e);
+            }
+        }
+
+        function renderMemberCalendar() {
+            loadMemberCalendarEvents();
+
+            const year = memberCalendarDate.getFullYear();
+            const month = memberCalendarDate.getMonth();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+
+            document.getElementById('member-calendar-month').textContent = monthNames[month];
+            document.getElementById('member-calendar-year').textContent = year;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            let calendarHTML = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
+
+            // Day headers
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayNames.forEach(day => {
+                calendarHTML += `<div style="text-align:center;font-size:0.7rem;font-weight:600;color:#6b7280;padding:8px 4px;text-transform:uppercase;letter-spacing:0.05em;">${day}</div>`;
+            });
+
+            // Previous month days
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const day = daysInPrevMonth - i;
+                calendarHTML += `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;border-radius:6px;color:#d1d5db;padding:4px;">${day}</div>`;
+            }
+
+            // Current month days
+            const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                dateObj.setHours(0, 0, 0, 0);
+                const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                const isToday = isCurrentMonth && today.getDate() === day;
+                const hasEvent = memberCalendarEvents[dateStr];
+
+                let style = 'aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;border-radius:6px;padding:4px;text-align:center;transition:all 0.15s;';
+
+                if (isToday) {
+                    style += 'background:transparent;color:#8b1538;font-weight:700;border:3px solid#a81c48;box-shadow:0 0 0 3px rgba(168,28,72,0.2);';
+                }
+                if (hasEvent) {
+                    const importanceColors = {
+                        low: 'rgba(252,165,165,0.3);color:#7f1d1d;',
+                        medium: 'rgba(248,113,113,0.4);color:#7f1d1d;',
+                        high: 'rgba(139,21,56,0.85);color:white;'
+                    };
+                    style += 'background:' + importanceColors[hasEvent.importance] + 'font-weight:600;font-size:0.65rem;';
+                }
+
+                const displayText = hasEvent ? hasEvent.name : day;
+                calendarHTML += `<div style="${style}" title="${hasEvent ? hasEvent.name : ''}">${displayText}</div>`;
+            }
+
+            // Next month days
+            const totalDaysShown = firstDay + daysInMonth;
+            const remainingCells = 42 - totalDaysShown;
+            for (let day = 1; day <= remainingCells; day++) {
+                calendarHTML += `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;border-radius:6px;color:#d1d5db;padding:4px;">${day}</div>`;
+            }
+
+            calendarHTML += '</div>';
+            document.getElementById('member-calendar-grid').innerHTML = calendarHTML;
+        }
+
+        function previousMonthMember() {
+            memberCalendarDate.setMonth(memberCalendarDate.getMonth() - 1);
+            renderMemberCalendar();
+        }
+
+        function nextMonthMember() {
+            memberCalendarDate.setMonth(memberCalendarDate.getMonth() + 1);
+            renderMemberCalendar();
+        }
+
+        async function loadDashboardEvents() {
+            try {
+                const response = await fetch('/api/news-events');
+                if (!response.ok) throw new Error('Failed to load events');
+                const events = await response.json();
+
+                const container = document.getElementById('dashboard-events-container');
+                if (!container) return;
+
+                if (!events || events.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align:center;padding:32px;color:#9ca3af;">
+                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.3;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p style="font-size:0.875rem;font-weight:600;margin:0 0 4px;">No upcoming events</p>
+                            <p style="font-size:0.75rem;margin:0;">Check back later for news and announcements</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Display events in a grid (read-only)
+                const eventsHTML = events.slice(0, 6).map(event => {
+                    const date = new Date(event.created_at || Date.now());
+                    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                    let mediaHTML = '';
+                    if (event.media_url) {
+                        mediaHTML = `<img src="${event.media_url}" alt="" style="width:100%;height:150px;object-fit:cover;">`;
+                    } else if (event.video_url) {
+                        const videoId = event.video_url.includes('youtube.com') || event.video_url.includes('youtu.be')
+                            ? event.video_url.split(/v=|\//).pop().split('&')[0]
+                            : '';
+                        if (videoId) {
+                            mediaHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:150px;"></iframe>`;
+                        }
+                    }
+
+                    return `
+                        <div style="background:white;border-radius:8px;border:1px solid #e5e7eb;overflow:hidden;">
+                            ${mediaHTML ? `<div style="background:#f3f4f6;">${mediaHTML}</div>` : ''}
+                            <div style="padding:12px;">
+                                <div style="font-size:0.875rem;font-weight:700;color:#111827;margin-bottom:6px;line-height:1.4;">${event.title || 'Untitled'}</div>
+                                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:8px;line-height:1.5;">${(event.description || '').substring(0, 100)}${event.description && event.description.length > 100 ? '...' : ''}</div>
+                                <div style="font-size:0.7rem;color:#9ca3af;">${dateStr}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;width:100%;">
+                        ${eventsHTML}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading events:', error);
+                const container = document.getElementById('dashboard-events-container');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align:center;padding:32px;color:#dc2626;">
+                            <p style="font-weight:600;margin:0 0 8px;">Could not load events</p>
+                            <button onclick="loadDashboardEvents()" style="padding:6px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;font-size:.8rem;">Retry</button>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        async function loadFSRContent(cardId) {
             let fsrData;
             let staffList = [];
             try {
@@ -2091,7 +2337,7 @@
                 fsrData = await fsrRes.json();
                 if (staffRes.ok) staffList = await staffRes.json();
             } catch (e) {
-                const card = document.getElementById('dashboard-fsr-card');
+                const card = document.getElementById(cardId);
                 if (card) card.innerHTML = `
                     <div style="padding:32px;text-align:center;color:#dc2626;">
                         <p style="font-weight:600;margin:0 0 8px;">Could not load FSR data</p>
@@ -2297,7 +2543,7 @@
                 return rows;
             };
 
-            const card = document.getElementById('dashboard-fsr-card');
+            const card = document.getElementById(cardId);
             if (!card) return;
 
             card.innerHTML = `

@@ -12,7 +12,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: SECRET_KEY
-        generateValue: true
+        sync: false  # Don't auto-sync - must be manually set in Render dashboard
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY

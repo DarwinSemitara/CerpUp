@@ -16,6 +16,13 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
+# Session Configuration - Prevent session sharing between users
+app.config['SESSION_COOKIE_NAME'] = 'cerp_session'
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours in seconds
+
 
 # Prevent caching of protected pages to avoid back button access after logout
 @app.after_request
