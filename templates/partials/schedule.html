@@ -3408,8 +3408,9 @@
                 var subjects = ALL_SUBJECTS;
 
                 console.log('🎨 Rendering draggable blocks...');
-                console.log('Total subjects:', subjects.length);
-                console.log('Subject units config:', subjectUnits);
+                console.log('Total subjects in ALL_SUBJECTS:', subjects.length);
+                console.log('Subject units config (subjectUnits):', JSON.parse(JSON.stringify(subjectUnits)));
+                console.log('Keys in subjectUnits:', Object.keys(subjectUnits));
 
                 // Filter subjects that have configured units and remaining allocation
                 var availableSubjects = subjects.filter(function (subj) {
@@ -3701,18 +3702,35 @@
                     setTimeout(function () {
                         var profModalEl = document.getElementById('nbm-prof');
                         if (profModalEl && profFilterEl.value) {
-                            console.log('Auto-filling professor in drag modal:', profFilterEl.value);
+                            var filterProf = profFilterEl.value; // e.g., "Almira Geles De Mesa"
+                            console.log('Auto-filling professor in drag modal:', filterProf);
 
-                            // Verify the option exists before setting
+                            // Try exact match first
                             var optionExists = Array.from(profModalEl.options).some(function (opt) {
-                                return opt.value === profFilterEl.value;
+                                return opt.value === filterProf;
                             });
 
                             if (optionExists) {
-                                profModalEl.value = profFilterEl.value;
-                                console.log('✅ Professor auto-filled successfully');
+                                profModalEl.value = filterProf;
+                                console.log('✅ Professor auto-filled successfully (exact match)');
                             } else {
-                                console.warn('⚠️ Professor not found in dropdown:', profFilterEl.value);
+                                // Try matching by name without suffix (e.g., "Almira Geles De Mesa" matches "Almira Geles De Mesa, PhD")
+                                var matchingOption = Array.from(profModalEl.options).find(function (opt) {
+                                    var optName = opt.value;
+                                    // Remove suffix from option name if present
+                                    if (optName.indexOf(',') > -1) {
+                                        optName = optName.split(',')[0].trim();
+                                    }
+                                    return optName === filterProf;
+                                });
+
+                                if (matchingOption) {
+                                    profModalEl.value = matchingOption.value;
+                                    console.log('✅ Professor auto-filled successfully (suffix match):', matchingOption.value);
+                                } else {
+                                    console.warn('⚠️ Professor not found in dropdown:', filterProf);
+                                    console.log('Available options:', Array.from(profModalEl.options).map(o => o.value));
+                                }
                             }
                         }
                     }, 150); // Increased timeout to ensure dropdown is populated
@@ -6006,8 +6024,34 @@
                     // NOW auto-fill from filter if one is selected
                     var profFilterEl = document.getElementById('sf-professor');
                     if (profFilterEl && profFilterEl.value) {
-                        console.log('Auto-filling professor from filter:', profFilterEl.value);
-                        profModalEl.value = profFilterEl.value;
+                        var filterProf = profFilterEl.value;
+                        console.log('Auto-filling professor from filter:', filterProf);
+
+                        // Try exact match first
+                        var exactMatch = Array.from(profModalEl.options).some(function (opt) {
+                            return opt.value === filterProf;
+                        });
+
+                        if (exactMatch) {
+                            profModalEl.value = filterProf;
+                            console.log('✅ Exact match found');
+                        } else {
+                            // Try matching by name without suffix
+                            var matchingOption = Array.from(profModalEl.options).find(function (opt) {
+                                var optName = opt.value;
+                                if (optName.indexOf(',') > -1) {
+                                    optName = optName.split(',')[0].trim();
+                                }
+                                return optName === filterProf;
+                            });
+
+                            if (matchingOption) {
+                                profModalEl.value = matchingOption.value;
+                                console.log('✅ Suffix match found:', matchingOption.value);
+                            } else {
+                                console.warn('⚠️ No match found for:', filterProf);
+                            }
+                        }
                     }
                 }
 
