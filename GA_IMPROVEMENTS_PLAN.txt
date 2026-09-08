@@ -1,0 +1,871 @@
+================================================================================
+GA SCHEDULE GENERATION - EXPERT REVIEW & IMPROVEMENT PLAN
+================================================================================
+
+This document addresses expert feedback on the GA implementation and outlines
+concrete improvements to make before extensive testing and deployment.
+
+================================================================================
+EXPERT FEEDBACK SUMMARY
+================================================================================
+
+The current GA design follows established patterns (hard/soft constraints, 
+elitism, tournament selection), but has several critical issues that will 
+cause problems at scale:
+
+1. ❌ CRITICAL: One-point crossover destroys schedule coherence
+2. ❌ CRITICAL: No repair mechanism after crossover/mutation
+3. ⚠️  HIGH: Inconsistent penalty weights (S1=100, S2=1000 vs. stated 10)
+4. ⚠️  HIGH: O(n²) fitness evaluation will be slow
+5. ⚠️  MEDIUM: Pure GA doesn't guarantee feasibility
+6. ⚠️  MEDIUM: Missing pre-generation validation
+7. ⚠️  LOW: Lab blocks should be contiguous (not split)
+8. ⚠️  LOW: No RNG seeding for reproducibility
+9. ⚠️  LOW: Missing real-time progress feedback
+10. ⚠️ DOC: Missing H5/H6 in constraint documentation
+
+================================================================================
+ISSUE 1: ONE-POINT CROSSOVER PROBLEM
+================================================================================
+
+PROBLEM:
+--------
+Current implementation uses single-point crossover on a flat gene array:
+
+  Parent A: [CERP101-Mon-8am, HUME100-Tue-10am, ..., NSTP1-Fri-2pm]
+  Parent B: [CERP101-Tue-9am, HUME100-Mon-11am, ..., NSTP1-Thu-3pm]
+  
+  Split at position 25 creates:
+  Child 1: [Parent A genes 1-25] + [Parent B genes 25-50]
+  
+This ignores relationships between genes and almost always introduces conflicts
+because genes from Parent B have never been checked against Parent A's genes.
+
+WHY IT'S BAD:
+- Destroys locally-consistent structures (e.g., "Monday schedule for Faculty A")
+- Introduces new faculty/room/section conflicts that didn't exist in either parent
+- Children fitness almost always worse than parents
+- GA spends generations just recovering from crossover damage
+
+EVIDENCE FROM CODE:
+File: services/scheduler_service.py (line ~1400)
+```python
+def crossover(p1: List[Gene], p2: List[Gene]) -> Tuple[List[Gene], List[Gene]]:
+    if len(p1) < 2:
+        return copy.deepcopy(p1), copy.deepcopy(p2)
+    cut = random.randint(1, len(p1) - 1)
+    c1 = p1[:cut] + p2[cut:]  # ← Problem: arbitrary split
+    c2 = p2[:cut] + p1[cut:]
+    return c1, c2
+```
+
+SOLUTION OPTIONS:
+----------------
+
+Option A: UNIFORM CROSSOVER (Recommended for immediate fix)
+- Each gene independently inherits from Parent A or B (50/50 probability)
+- No false "locality" assumption
+- Preserves more parent structure than one-point
+
+Implementation:
+```python
+def uniform_crossover(p1: List[Gene], p2: List[Gene]) -> Tuple[List[Gene], List[Gene]]:
+    """Each gene comes from parent A or B with 50% probability."""
+    c1, c2 = [], []
+    for g1, g2 in zip(p1, p2):
+        if random.random() < 0.5:
+            c1.append(copy.deepcopy(g1))
+            c2.append(copy.deepcopy(g2))
+        else:
+            c1.append(copy.deepcopy(g2))
+            c2.append(copy.deepcopy(g1))
+    return c1, c2
+```
+
+Option B: FACULTY-GROUPED CROSSOVER (Better, more work)
+- Group genes by faculty member first
+- Swap entire faculty schedules between parents
+- Preserves faculty-local consistency
+
+Implementation:
+```python
+def faculty_grouped_crossover(p1: List[Gene], p2: List[Gene]) -> Tuple[List[Gene], List[Gene]]:
+    """Swap complete faculty schedules between parents."""
+    # Group genes by faculty
+    p1_by_faculty = {}
+    for g in p1:
+        if g.professor not in p1_by_faculty:
+            p1_by_faculty[g.professor] = []
+        p1_by_faculty[g.professor].append(g)
+    
+    p2_by_faculty = {}
+    for g in p2:
+        if g.professor not in p2_by_faculty:
+            p2_by_faculty[g.professor] = []
+        p2_by_faculty[g.professor].append(g)
+    
+    # For each faculty, choose parent A or B
+    c1, c2 = [], []
+    all_faculty = set(p1_by_faculty.keys()) | set(p2_by_faculty.keys())
+    
+    for faculty in all_faculty:
+        if random.random() < 0.5:
+            c1.extend(copy.deepcopy(p1_by_faculty.get(faculty, [])))
+            c2.extend(copy.deepcopy(p2_by_faculty.get(faculty, [])))
+        else:
+            c1.extend(copy.deepcopy(p2_by_faculty.get(faculty, [])))
+            c2.extend(copy.deepcopy(p1_by_faculty.get(faculty, [])))
+    
+    return c1, c2
+```
+
+Option C: DAY-GROUPED CROSSOVER
+- Group genes by day (Monday, Tuesday, etc.)
+- Swap entire days between parents
+- Preserves day-level consistency
+
+RECOMMENDATION: Start with Option A (uniform), then add Option B if needed.
+
+
+================================================================================
+ISSUE 2: NO REPAIR MECHANISM
+================================================================================
+
+PROBLEM:
+--------
+After crossover/mutation, children chromosomes can have hard constraint violations,
+but no repair mechanism exists. The GA just hopes mutation will fix them eventually.
+
+Result:
+- Most population sits at high fitness (>1000) for many generations
+- Slow convergence
+- Wasted generations
+
+SOLUTION: POST-CROSSOVER/MUTATION REPAIR
+----------------------------------------
+
+Add lightweight repair pass that fixes hard violations only:
+
+```python
+def repair_chromosome(chromosome: List[Gene], config: FullGAConfig) -> List[Gene]:
+    """
+    Repair hard constraint violations using greedy re-slotting.
+    Only touches genes with violations, preserves good genes.
+    """
+    max_repair_attempts = 100  # Prevent infinite loops
+    attempts = 0
+    
+    while attempts < max_repair_attempts:
+        violations = []
+        
+        # Collect all genes with hard violations
+        for gene_idx in range(len(chromosome)):
+            viols = check_all_hard_constraints(chromosome, gene_idx, config)
+            if viols:
+                violations.append((gene_idx, viols))
+        
+        if not violations:
+            break  # All repaired!
+        
+        # Pick one violation to fix
+        gene_idx, _ = violations[0]
+        gene = chromosome[gene_idx]
+        
+        # Try to find a valid slot for this gene
+        found_valid = False
+        for attempt in range(20):  # Try 20 random slots
+            # Random day from faculty availability
+            legacy = extract_legacy_format_from_config(config)
+            avail_days = legacy['prof_availability'].get(gene.professor, WEEKDAYS)
+            new_day = random.choice(avail_days)
+            
+            # Random time slot
+            max_start = SLOTS_PER_DAY - gene.duration
+            new_start = random.randint(0, max(0, max_start))
+            
+            # Try this slot
+            old_day, old_start = gene.day, gene.start_slot
+            gene.day = new_day
+            gene.start_slot = new_start
+            
+            # Check if this fixes the violation
+            new_viols = check_all_hard_constraints(chromosome, gene_idx, config)
+            if not new_viols:
+                found_valid = True
+                break
+            else:
+                # Revert
+                gene.day = old_day
+                gene.start_slot = old_start
+        
+        if not found_valid:
+            # Couldn't repair this gene, move to next
+            attempts += 1
+            continue
+        
+        attempts += 1
+    
+    return chromosome
+```
+
+WHEN TO CALL REPAIR:
+1. After crossover (before adding to new population)
+2. After mutation (optional - mutation is usually lighter)
+3. NOT after every fitness evaluation (too expensive)
+
+Integration point:
+```python
+# In GA main loop, after crossover
+child1, child2 = crossover(parent1, parent2)
+child1 = repair_chromosome(child1, config)  # ← Add this
+child2 = repair_chromosome(child2, config)  # ← Add this
+child1 = mutate(child1, config)
+child2 = mutate(child2, config)
+```
+
+
+================================================================================
+ISSUE 3: INCONSISTENT PENALTY WEIGHTS
+================================================================================
+
+PROBLEM:
+--------
+Documentation says soft constraints = 10 points each, but actual weights:
+- S1 (min load): 100 per unit short
+- S2 (max load): 1000 per unit over (same as hard constraint!)
+- S3 (balance): 10 per variance
+- Others: 10 each
+
+S2's weight of 1000 makes it effectively a hard constraint, blurring the
+hard/soft distinction.
+
+CLARIFICATION NEEDED:
+--------------------
+Is exceeding max teaching load truly non-negotiable? If yes:
+→ Move S2 to hard constraints (H10: Faculty Max Load)
+→ Document that overload requires explicit administrative approval
+
+If no (can occasionally be exceeded):
+→ Reduce S2 weight to 100-200 (serious but not blocking)
+→ Keep in soft constraints
+
+RECOMMENDATION: Make it configurable
+```python
+# In FullGAConfig
+weight_max_load_violation: float = 1000.0  # ← Make this adjustable
+
+# Admin can set in UI:
+# "Strict" mode: 1000 (effectively hard)
+# "Flexible" mode: 100 (soft penalty)
+```
+
+ACTION ITEMS:
+1. Update GA_SCHEDULE_GENERATION_EXPLAINED.txt with correct weights
+2. Document why S2 has higher weight (if intentional)
+3. Consider making it configurable per semester
+
+
+================================================================================
+ISSUE 4: O(n²) FITNESS EVALUATION PERFORMANCE
+================================================================================
+
+PROBLEM:
+--------
+Current conflict checking loops through all genes for each gene:
+
+```python
+def check_faculty_time_conflict(chromosome: List[Gene], gene_idx: int):
+    gene = chromosome[gene_idx]
+    for i, other in enumerate(chromosome):  # ← O(n) loop
+        if i == gene_idx:
+            continue
+        if other.professor == gene.professor and other.day == gene.day:
+            # Check overlap...
+```
+
+For each chromosome (100 in population), for each gene (150+), check against
+all other genes = 100 * 150 * 150 = 2.25 million checks per generation!
+
+SOLUTION: INDEXED CONFLICT DETECTION
+------------------------------------
+
+Build conflict indices once per chromosome, then O(1) lookups:
+
+```python
+def build_conflict_indices(chromosome: List[Gene]) -> Dict[str, Any]:
+    """Build lookup tables for O(1) conflict checking."""
+    faculty_slots = {}  # (faculty, day) -> [(start, end, gene_idx)]
+    room_slots = {}     # (room, day) -> [(start, end, gene_idx)]
+    section_slots = {}  # (section, day) -> [(start, end, gene_idx)]
+    
+    for idx, gene in enumerate(chromosome):
+        # Faculty index
+        key = (gene.professor, gene.day)
+        if key not in faculty_slots:
+            faculty_slots[key] = []
+        faculty_slots[key].append((gene.start_slot, gene.end_slot(), idx))
+        
+        # Room index
+        if gene.room and gene.room != 'TBA':
+            key = (gene.room, gene.day)
+            if key not in room_slots:
+                room_slots[key] = []
+            room_slots[key].append((gene.start_slot, gene.end_slot(), idx))
+        
+        # Section index
+        key = (gene.section, gene.day)
+        if key not in section_slots:
+            section_slots[key] = []
+        section_slots[key].append((gene.start_slot, gene.end_slot(), idx))
+    
+    return {
+        'faculty': faculty_slots,
+        'room': room_slots,
+        'section': section_slots
+    }
+
+
+def check_conflicts_with_index(chromosome: List[Gene], gene_idx: int, 
+                               indices: Dict) -> List[ConstraintViolation]:
+    """O(1) conflict checking using pre-built indices."""
+    gene = chromosome[gene_idx]
+    violations = []
+    
+    # Check faculty conflicts
+    faculty_key = (gene.professor, gene.day)
+    if faculty_key in indices['faculty']:
+        for start, end, other_idx in indices['faculty'][faculty_key]:
+            if other_idx == gene_idx:
+                continue
+            # Check time overlap
+            if not (gene.end_slot() <= start or gene.start_slot >= end):
+                # Conflict found
+                overlap = min(gene.end_slot(), end) - max(gene.start_slot, start)
+                violations.append(ConstraintViolation(
+                    constraint_type='faculty_time_conflict',
+                    gene_index=gene_idx,
+                    severity='hard',
+                    penalty=HARD_PENALTY * overlap,
+                    message=f"Faculty {gene.professor} conflict on {gene.day}",
+                    details={'conflicting_gene': other_idx}
+                ))
+    
+    # Similar for room and section...
+    
+    return violations
+```
+
+PERFORMANCE GAIN:
+- Old: O(n²) per chromosome = ~22,500 checks for 150 genes
+- New: O(n) per chromosome = ~150 checks (150x faster!)
+- Critical for large departments (200+ blocks)
+
+IMPLEMENTATION PLAN:
+1. Add build_conflict_indices() function
+2. Replace check_faculty_time_conflict(), check_room_time_conflict(), 
+   check_section_time_conflict() with indexed versions
+3. Build indices once at start of fitness_v3()
+4. Benchmark before/after on large schedule (>200 blocks)
+
+
+================================================================================
+ISSUE 5: PURE GA DOESN'T GUARANTEE FEASIBILITY
+================================================================================
+
+PROBLEM:
+--------
+Pure GA can run for 120 seconds and still have hard violations (infeasible).
+User wastes time, gets frustrated, has to retry.
+
+EXPERT RECOMMENDATION: Hybrid Approach
+--------------------------------------
+
+Phase 1: FEASIBILITY (Constraint Solver)
+- Use Google OR-Tools CP-SAT or greedy algorithm
+- Goal: Find ANY schedule with 0 hard violations
+- Fast (typically <5 seconds)
+- If fails → config is impossible, tell user immediately
+
+Phase 2: OPTIMIZATION (GA)
+- Start from feasible solution
+- GA only optimizes soft constraints
+- Guaranteed to have something usable
+- User always gets a working schedule
+
+IMPLEMENTATION OPTIONS:
+
+Option A: GREEDY FEASIBILITY FIRST (Simpler)
+```python
+def greedy_feasible_schedule(config: FullGAConfig) -> List[Gene]:
+    """
+    Greedy algorithm to find any feasible schedule.
+    Fast but not optimal. Returns None if impossible.
+    """
+    chromosome = []
+    
+    # Sort subjects by constraints (most constrained first)
+    subjects_sorted = sorted(config.subjects, 
+                            key=lambda s: len(config.prof_availability.get(s.professor, [])))
+    
+    for subject in subjects_sorted:
+        # Try to place all blocks for this subject
+        remaining = subject.weekly_hours
+        while remaining > 0:
+            block_hours = min(remaining, 3)  # Max 3-hour blocks
+            block_slots = slots_for_duration(block_hours)
+            
+            # Try all possible (day, time, room) combinations
+            placed = False
+            for day in config.prof_availability.get(subject.professor, WEEKDAYS):
+                for start_slot in range(0, SLOTS_PER_DAY - block_slots):
+                    for room in config.rooms:
+                        # Try this placement
+                        gene = Gene(
+                            subj_code=subject.code,
+                            subj_name=subject.name,
+                            professor=subject.allocated_professors[0],
+                            room=room.name,
+                            section=subject.section,
+                            units=subject.units,
+                            day=day,
+                            start_slot=start_slot,
+                            duration=block_slots
+                        )
+                        
+                        # Check if valid (no conflicts)
+                        temp_chromosome = chromosome + [gene]
+                        violations = check_all_hard_constraints(
+                            temp_chromosome, len(temp_chromosome)-1, config)
+                        
+                        if not violations:
+                            chromosome.append(gene)
+                            placed = True
+                            break
+                    if placed:
+                        break
+                if placed:
+                    break
+            
+            if not placed:
+                return None  # Impossible to place
+            
+            remaining -= block_hours
+    
+    return chromosome
+
+
+def hybrid_ga_with_feasibility(config: FullGAConfig):
+    """Hybrid: greedy feasibility + GA optimization."""
+    
+    # Phase 1: Find feasible solution
+    print("Phase 1: Finding feasible solution...")
+    feasible = greedy_feasible_schedule(config)
+    
+    if not feasible:
+        return {
+            'success': False,
+            'message': 'No feasible schedule exists with current constraints',
+            'suggestion': 'Try: relaxing faculty availability, adding rooms, or reducing subject load'
+        }
+    
+    print(f"✓ Feasible solution found! Fitness: {fitness_v3(feasible, config).total_score}")
+    
+    # Phase 2: Optimize with GA (starting from feasible solution)
+    print("Phase 2: Optimizing with GA...")
+    config.reference_schedules = [g.to_dict() for g in feasible]  # Seed population
+    
+    best = run_full_generation(config)
+    
+    return {
+        'success': True,
+        'schedule': best,
+        'message': 'Schedule generated successfully'
+    }
+```
+
+Option B: GOOGLE OR-TOOLS CP-SAT (More robust)
+- Requires: `pip install ortools`
+- More complex integration
+- Guarantees feasibility if one exists
+- Recommended for production system
+
+RECOMMENDATION: Start with Option A (greedy), upgrade to Option B later.
+
+
+================================================================================
+ISSUE 6: MISSING PRE-GENERATION VALIDATION
+================================================================================
+
+PROBLEM:
+--------
+GA runs for 2 minutes then fails because:
+- No qualified faculty for CERP 101
+- Total room-hours (5 rooms × 10 hours/day × 5 days = 250 hours) < 
+  required block-hours (300 hours)
+- All faculty unavailable on Fridays but Friday classes required
+
+SOLUTION: PRE-FLIGHT CHECKS
+---------------------------
+
+Add validation before GA starts:
+
+```python
+def validate_schedule_config(config: FullGAConfig) -> Dict[str, Any]:
+    """
+    Validate configuration before running GA.
+    Returns {'valid': bool, 'errors': List[str], 'warnings': List[str]}
+    """
+    errors = []
+    warnings = []
+    
+    # Check 1: Every subject has at least one qualified, available faculty
+    for subject in config.subjects:
+        qualified = config.qualification_matrix.get_qualified_faculty(subject.code)
+        available = [f for f in qualified 
+                    if subject.code in config.prof_availability.get(f, [])]
+        
+        if not available:
+            errors.append(
+                f"Subject {subject.code} section {subject.section}: "
+                f"No qualified faculty available"
+            )
+    
+    # Check 2: Total room capacity (hours)
+    total_room_hours = len(config.rooms) * SLOTS_PER_DAY * len(WEEKDAYS) / 2.0
+    total_required_hours = sum(s.weekly_hours for s in config.subjects)
+    
+    if total_room_hours < total_required_hours:
+        errors.append(
+            f"Insufficient room capacity: {total_room_hours} hours available, "
+            f"{total_required_hours} hours required"
+        )
+    elif total_room_hours < total_required_hours * 1.2:  # Less than 20% buffer
+        warnings.append(
+            f"Tight room capacity: {total_room_hours} hours available, "
+            f"{total_required_hours} hours required (consider adding rooms)"
+        )
+    
+    # Check 3: Faculty teaching load feasibility
+    for faculty in config.faculty:
+        assigned_units = sum(
+            s.units for s in config.subjects 
+            if faculty.id in s.allocated_professors or faculty.name in s.allocated_professors
+        )
+        
+        if assigned_units > faculty.max_units:
+            errors.append(
+                f"Faculty {faculty.name}: {assigned_units} units assigned "
+                f"exceeds max {faculty.max_units} units"
+            )
+        elif assigned_units < faculty.min_units:
+            warnings.append(
+                f"Faculty {faculty.name}: {assigned_units} units assigned "
+                f"below min {faculty.min_units} units"
+            )
+    
+    # Check 4: Lab courses have lab rooms
+    lab_subjects = [s for s in config.subjects if s.is_lab]
+    lab_rooms = [r for r in config.rooms if r.room_type in ['laboratory', 'computer_lab']]
+    
+    if lab_subjects and not lab_rooms:
+        errors.append(
+            f"{len(lab_subjects)} lab courses but no lab rooms available"
+        )
+    
+    return {
+        'valid': len(errors) == 0,
+        'errors': errors,
+        'warnings': warnings
+    }
+
+
+# In API endpoint
+@app.route('/api/schedule/generate-full', methods=['POST'])
+def api_generate_full_schedule():
+    # ... build config ...
+    
+    # Validate BEFORE running GA
+    validation = validate_schedule_config(config)
+    
+    if not validation['valid']:
+        return jsonify({
+            'success': False,
+            'message': 'Configuration validation failed',
+            'errors': validation['errors'],
+            'warnings': validation['warnings']
+        }), 400
+    
+    # Proceed with GA...
+```
+
+BENEFITS:
+- Instant feedback (< 1 second)
+- User knows what to fix
+- Saves wasted GA time
+
+
+================================================================================
+ISSUE 7: LAB BLOCKS SHOULD BE CONTIGUOUS
+================================================================================
+
+PROBLEM:
+--------
+Labs (e.g., Chemistry Lab, 3 hours/week) should be scheduled as ONE continuous
+3-hour block, not split into multiple sessions.
+
+Current code splits blocks arbitrarily:
+```python
+while remaining > 0:
+    block = min(remaining, MAX_BLOCK_SLOTS)  # ← Can split labs
+```
+
+SOLUTION:
+---------
+
+Add subject-type-specific splitting rules:
+
+```python
+def calculate_block_splits(subject: SubjectInput) -> List[int]:
+    """
+    Determine how to split weekly hours into blocks based on subject type.
+    Returns list of block durations (in slots).
+    """
+    weekly_slots = slots_for_duration(subject.weekly_hours)
+    
+    if subject.is_lab:
+        # Labs: prefer single continuous block
+        if weekly_slots <= MAX_BLOCK_SLOTS:
+            return [weekly_slots]  # One block
+        else:
+            # If too long, split evenly
+            num_blocks = (weekly_slots + MAX_BLOCK_SLOTS - 1) // MAX_BLOCK_SLOTS
+            base = weekly_slots // num_blocks
+            remainder = weekly_slots % num_blocks
+            return [base + (1 if i < remainder else 0) for i in range(num_blocks)]
+    
+    else:
+        # Lectures: prefer 1.5-hour blocks (3 slots)
+        preferred_block = 3  # 1.5 hours
+        
+        if weekly_slots <= preferred_block:
+            return [weekly_slots]
+        else:
+            # Split into preferred_block-sized chunks
+            blocks = []
+            remaining = weekly_slots
+            while remaining > 0:
+                block_size = min(remaining, preferred_block)
+                blocks.append(block_size)
+                remaining -= block_size
+            return blocks
+
+
+# In build_chromosome:
+for subj in subjects:
+    block_splits = calculate_block_splits(subj)  # ← Use this
+    for block_slots in block_splits:
+        s = dict(subj)
+        s['block_slots'] = block_slots
+        genes.append(random_gene(s, rooms, prof_availability))
+```
+
+
+================================================================================
+ISSUE 8: NO RNG SEEDING FOR REPRODUCIBILITY
+================================================================================
+
+PROBLEM:
+--------
+Can't reproduce GA runs for debugging. "Why did this specific conflict appear?"
+
+SOLUTION:
+---------
+
+Add optional seed parameter:
+
+```python
+@dataclass
+class FullGAConfig:
+    # ... existing fields ...
+    random_seed: Optional[int] = None  # For reproducibility
+
+
+def run_full_generation(config: FullGAConfig):
+    # Set seed if provided
+    if config.random_seed is not None:
+        random.seed(config.random_seed)
+        print(f"🎲 RNG seed: {config.random_seed}")
+    
+    # ... rest of GA ...
+
+
+# In API endpoint
+data = request.get_json()
+config.random_seed = data.get('random_seed')  # Optional from frontend
+```
+
+BENEFITS:
+- Can reproduce exact same GA run for debugging
+- Automated tests can verify GA behavior
+- User can re-run with same seed if they liked the result
+
+
+================================================================================
+ISSUE 9: REAL-TIME PROGRESS FEEDBACK
+================================================================================
+
+PROBLEM:
+--------
+Blank screen for 30-120 seconds → users think app crashed.
+
+SOLUTION: PROGRESS POLLING
+---------------------------
+
+Use threading + shared state:
+
+```python
+# Global progress tracker
+ga_progress = {
+    'running': False,
+    'generation': 0,
+    'max_generations': 0,
+    'best_fitness': float('inf'),
+    'time_elapsed': 0.0,
+    'status': 'idle'
+}
+ga_progress_lock = threading.Lock()
+
+
+def update_ga_progress(generation, best_fitness, status='running'):
+    """Thread-safe progress update."""
+    with ga_progress_lock:
+        ga_progress['generation'] = generation
+        ga_progress['best_fitness'] = best_fitness
+        ga_progress['status'] = status
+
+
+# In GA main loop:
+for generation in range(max_generations):
+    # ... GA logic ...
+    
+    update_ga_progress(generation, best_fitness)  # ← Add this
+    
+    # ... rest of loop ...
+
+
+# New API endpoint
+@app.route('/api/schedule/generate-progress', methods=['GET'])
+def get_ga_progress():
+    """Poll GA progress during generation."""
+    with ga_progress_lock:
+        return jsonify(ga_progress)
+
+
+# Frontend polling (every 500ms):
+let pollInterval = setInterval(async () => {
+    const resp = await fetch('/api/schedule/generate-progress');
+    const progress = await resp.json();
+    
+    document.getElementById('ga-status').textContent = 
+        `Generation ${progress.generation}/${progress.max_generations}`;
+    document.getElementById('ga-fitness').textContent = 
+        `Best Fitness: ${progress.best_fitness.toFixed(2)}`;
+    
+    if (progress.status !== 'running') {
+        clearInterval(pollInterval);
+    }
+}, 500);
+```
+
+
+================================================================================
+ISSUE 10: MISSING H5/H6 IN DOCUMENTATION
+================================================================================
+
+CORRECTION:
+-----------
+
+H5 and H6 DO exist in the code, just weren't numbered consistently in docs:
+
+H5: Room type match (lecture vs lab) - check_room_type_match()
+H6: Room capacity ≥ section size - check_room_capacity()
+
+ACTION: Update GA_SCHEDULE_GENERATION_EXPLAINED.txt with correct numbering.
+
+
+================================================================================
+PRIORITY IMPLEMENTATION ORDER
+================================================================================
+
+PHASE 1: CRITICAL FIXES (Do before any testing)
+1. Replace one-point crossover with uniform crossover (Issue 1)
+2. Add post-crossover repair mechanism (Issue 2)
+3. Fix penalty weight inconsistencies (Issue 3)
+
+PHASE 2: PERFORMANCE & VALIDATION (Do before production)
+4. Implement indexed conflict detection (Issue 4)
+5. Add pre-generation validation (Issue 6)
+6. Add real-time progress feedback (Issue 9)
+
+PHASE 3: QUALITY IMPROVEMENTS (Do after basic testing)
+7. Implement hybrid feasibility approach (Issue 5)
+8. Fix lab block splitting rules (Issue 7)
+9. Add RNG seeding (Issue 8)
+
+PHASE 4: POLISH (After everything works)
+10. Update documentation (Issue 10)
+11. Add automated tests for each fix
+12. Benchmark performance improvements
+
+
+================================================================================
+ESTIMATED EFFORT
+================================================================================
+
+Issue 1 (Crossover):         2-4 hours (code + test)
+Issue 2 (Repair):            4-6 hours (complex logic)
+Issue 3 (Penalties):         1 hour (config change)
+Issue 4 (Indexing):          3-5 hours (refactor + test)
+Issue 5 (Hybrid):            6-8 hours (new algorithm)
+Issue 6 (Validation):        3-4 hours (comprehensive checks)
+Issue 7 (Lab blocks):        2-3 hours (logic + test)
+Issue 8 (RNG seed):          1 hour (simple add)
+Issue 9 (Progress):          3-4 hours (threading + polling)
+Issue 10 (Docs):             1 hour (update text)
+
+Total: 26-40 hours of development work
+
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+After implementing fixes, test:
+
+□ Small schedule (5 faculty, 20 subjects) generates in <10 seconds
+□ Medium schedule (15 faculty, 60 subjects) generates in <60 seconds
+□ Large schedule (30 faculty, 150 subjects) generates in <120 seconds
+□ Impossible config fails validation instantly (not after 120s)
+□ All generated schedules have 0 hard violations (feasible)
+□ Progress updates appear every second during generation
+□ Same seed produces same schedule (reproducibility)
+□ Lab courses scheduled as single continuous blocks
+□ Crossover produces children better than or equal to parents
+□ Repair mechanism fixes >90% of conflicts
+
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Review this plan with team
+2. Prioritize which issues to fix first
+3. Create GitHub issues for each fix
+4. Implement Phase 1 (critical fixes) first
+5. Test thoroughly on real data
+6. Iterate based on results
+7. Proceed to Phase 2 and beyond
+
+================================================================================
+END OF IMPROVEMENT PLAN
+================================================================================
