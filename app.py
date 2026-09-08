@@ -22,6 +22,9 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 # Set to True in production with HTTPS
 app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_PATH'] = '/'  # Available for entire site
+# Auto-refresh on each request
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 # 7 days in seconds (increased from 24 hours)
 app.config['PERMANENT_SESSION_LIFETIME'] = 604800
 
@@ -43,6 +46,9 @@ def refresh_session():
     """Refresh session lifetime on each request to prevent timeout during active use."""
     if 'uid' in session:
         session.modified = True  # Mark session as modified to update expiry time
+        logger.debug(f"Session refreshed for user: {session.get('uid')}")
+    else:
+        logger.debug(f"No active session for request: {request.path}")
 
 
 TAP_SECTIONS = [
@@ -200,6 +206,9 @@ def api_login():
     session['uid'] = uid
     session['email'] = email
     session['role'] = role
+
+    logger.info(
+        f"Session created for user {uid} with role {role}, permanent={session.permanent}")
 
     # Check if this is first login and needs verification
     if first_login and role == 'user':
