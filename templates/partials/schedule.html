@@ -2952,11 +2952,8 @@
                 }
             }
 
-            // Load on page load
-            loadSavedUnitConfig().then(function () {
-                calculateAllocatedUnits();
-                renderDraggableBlocks();
-            });
+            // Load on page load - handled by applySchedFilter in loadSchedules()
+            // Initial rendering will happen after professor dropdown is populated
 
             // ═══ Updated Toggle Unit Config ═══
             async function toggleUnitConfig() {
