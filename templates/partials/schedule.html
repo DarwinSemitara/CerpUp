@@ -5521,6 +5521,10 @@
                 try {
                     await fetch('/api/schedules/' + id, { method: 'DELETE' });
                     await loadSchedules();
+
+                    // CRITICAL: Recalculate and re-render after deletion
+                    applyFilters();
+                    calculateAllocatedUnits();
                     renderDraggableBlocks();
                     populateSubjectDropdowns(); // Update dropdown
 
