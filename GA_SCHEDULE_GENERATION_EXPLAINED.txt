@@ -1,0 +1,691 @@
+================================================================================
+GENETIC ALGORITHM (GA) SCHEDULE GENERATION - COMPREHENSIVE EXPLANATION
+================================================================================
+
+This document explains how the Genetic Algorithm (GA) works for class schedule
+generation in CERP 2.0, the processes involved, and step-by-step workflow.
+
+================================================================================
+1. WHAT IS THE GA AND WHY WE USE IT
+================================================================================
+
+The Genetic Algorithm is a computational optimization technique inspired by 
+natural evolution. It's used to generate class schedules because:
+
+1. Schedule generation is a "Constraint Satisfaction Problem" (CSP)
+   - Many rules must be satisfied simultaneously
+   - No simple formula gives the perfect answer
+   - Must explore many possible combinations
+
+2. Traditional approaches fail when:
+   - Too many faculty members (>20)
+   - Too many subjects (>50)
+   - Too many constraints (availability, room conflicts, etc.)
+   - Would take hours or days to try all combinations
+
+3. GA advantages:
+   - Finds "good enough" solutions quickly (seconds to minutes)
+   - Can handle hundreds of constraints
+   - Gets better over time (evolves toward optimal solution)
+   - Can recover from conflicts by "mutating" the schedule
+
+================================================================================
+2. KEY CONCEPTS & TERMINOLOGY
+================================================================================
+
+CHROMOSOME (Complete Schedule):
+- One complete schedule for all faculty/sections for a semester
+- Contains all class blocks (subjects, times, rooms) for everyone
+- Example: "All classes for Semester 1, 2026-2027"
+
+GENE (Individual Class Block):
+- One scheduled class block (e.g., "CERP 101, Monday 8:00-10:00, Room 301")
+- Contains: Subject code, Professor, Room, Section, Day, Start time, Duration
+- A chromosome has many genes (one for each class block that needs scheduling)
+
+POPULATION:
+- A group of candidate schedules (chromosomes)
+- Example: 100 different possible schedules for the semester
+- Each generation has a population
+
+GENERATION:
+- One iteration of the evolution process
+- Population evolves from generation to generation
+- Each generation creates better schedules than the previous
+
+FITNESS SCORE:
+- A number representing how "good" a schedule is
+- Lower score = better schedule
+- 0 = perfect schedule (no conflicts, all constraints satisfied)
+- Calculated by counting constraint violations
+
+HARD CONSTRAINTS:
+- MUST be satisfied (non-negotiable rules)
+- Examples:
+  * H1: Faculty cannot teach two classes at the same time
+  * H2: Room cannot host two classes at the same time
+  * H3: Section cannot attend two classes at the same time
+  * H4: Faculty must be qualified to teach the course
+  * H7: Faculty must be available on the scheduled day
+- Violation penalty: 1000 points each
+
+SOFT CONSTRAINTS:
+- SHOULD be satisfied (preferences, quality rules)
+- Examples:
+  * S1: Faculty should meet minimum teaching load (12 units)
+  * S2: Faculty should not exceed maximum teaching load (18 units)
+  * S3: Faculty load should be balanced across the week
+  * S4: Prefer same faculty for same course (continuity)
+  * S6: Sections should not have large gaps between classes
+- Violation penalty: 10 points each
+
+CROSSOVER:
+- Combining two parent schedules to create a child schedule
+- Takes good parts from both parents
+- Like mixing genes from two parents to create offspring
+
+MUTATION:
+- Random small changes to a schedule
+- Helps explore new solutions
+- Prevents getting stuck in local optima
+
+ELITISM:
+- Keeping the best schedules from one generation to the next
+- Ensures we don't lose good solutions
+- Top 2 schedules always survive
+
+================================================================================
+3. INPUT DATA REQUIRED FOR GA
+================================================================================
+
+The GA needs the following data to generate schedules:
+
+A. FACULTY DATA:
+   - Faculty ID/Name
+   - Qualified courses (what subjects can they teach?)
+   - Availability (which days are they available?)
+   - Teaching load limits (min/max units)
+   - Employment status (full-time, part-time, affiliate)
+   - Previous courses taught (for continuity)
+
+B. SUBJECT/COURSE DATA:
+   - Subject code (e.g., CERP 101)
+   - Subject name (e.g., "Introduction to Food Science")
+   - Units (credit hours)
+   - Weekly hours needed (e.g., 3 hours/week)
+   - Section (e.g., "A", "B", "1")
+   - Lab vs. Lecture type
+   - Room type required (lecture hall, laboratory)
+
+C. ROOM DATA:
+   - Room name/ID (e.g., "Room 301", "Chemistry Lab")
+   - Room type (lecture, laboratory, computer lab)
+   - Capacity (student count limit)
+   - Building location
+   - Availability blocks (maintenance windows)
+
+D. SECTION DATA:
+   - Section ID (e.g., "BS HE 3A")
+   - Program (e.g., "BS HE", "BS FN")
+   - Year level (1, 2, 3, 4)
+   - Student count
+   - Required courses for this section
+
+E. CONFIGURED SUBJECTS (from Course Config):
+   - Which faculty have which subjects configured
+   - How many units each faculty gets per subject
+   - Example: "Faculty A: CERP 101 (1.5 units), Faculty B: CERP 101 (1.5 units)"
+
+F. REFERENCE SCHEDULE (Optional):
+   - Previous semester's schedule
+   - Used for "seeding" - giving the GA a good starting point
+   - Used for continuity scoring - prefer same faculty on same course
+
+================================================================================
+4. HOW THE GA WORKS: STEP-BY-STEP PROCESS
+================================================================================
+
+STEP 1: INITIALIZATION
+----------------------
+Input: All data from section 3 above
+Process:
+1. Convert configured subjects to schedule requirements
+   - Example: "CERP 101, 3 units, Faculty A, Section 1A" becomes 
+     "Need 3 hours of CERP 101 for Section 1A taught by Faculty A"
+   
+2. Break weekly hours into blocks
+   - 3 hours/week → might become two 1.5-hour blocks
+   - Max block size: 3 hours (6 slots of 30 minutes each)
+   - Blocks can span across different days
+
+3. Create initial population (100 schedules)
+   - Each schedule is randomly generated
+   - Random day, time, room for each class block
+   - BUT respects faculty availability (won't schedule on unavailable days)
+
+4. Optional: Seed with reference schedule
+   - If previous semester data provided, use it as starting point
+   - Copies some blocks from previous schedule
+   - Increases chance of finding good solution faster
+
+Output: 100 candidate schedules (population)
+
+
+STEP 2: FITNESS EVALUATION
+---------------------------
+For EACH schedule in the population:
+
+Process:
+1. Check ALL hard constraints for EVERY gene (class block)
+   - Does Faculty A have two classes at 8:00 AM? → +1000 penalty
+   - Is Room 301 double-booked? → +1000 penalty
+   - Is Section 1A in two places at once? → +1000 penalty
+   - Is Faculty B teaching a course they're not qualified for? → +1000 penalty
+   - Total hard penalty = sum of all hard violations
+
+2. Check ALL soft constraints for ENTIRE schedule
+   - Is Faculty C below 12 units? → +100 penalty per unit short
+   - Is Faculty D over 18 units? → +1000 penalty per unit over
+   - Does Faculty E have 6 hours on Monday but 0 on Friday? → +10 penalty per variance
+   - Does Section 2A have a 3-hour gap between classes? → +10 penalty
+   - Total soft penalty = sum of all soft violations
+
+3. Calculate total fitness score
+   - Fitness = Hard Penalty + Soft Penalty
+   - Lower is better (0 = perfect)
+
+4. Mark as "feasible" or "infeasible"
+   - Feasible = 0 hard violations (might have soft violations)
+   - Infeasible = has hard violations (broken schedule)
+
+Output: Each schedule now has a fitness score
+
+
+STEP 3: SELECTION (Choosing Parents)
+-------------------------------------
+Goal: Choose which schedules get to "reproduce" (create offspring)
+
+Process:
+1. Tournament Selection (most common method)
+   - Pick 4 random schedules from population
+   - The one with LOWEST fitness score wins the tournament
+   - Winner becomes a parent
+   - Repeat to get second parent
+
+2. Why tournament selection?
+   - Better schedules have higher chance of being selected
+   - But weaker schedules still have a chance (diversity)
+   - Prevents premature convergence (getting stuck)
+
+Output: Two parent schedules selected
+
+
+STEP 4: CROSSOVER (Creating Children)
+--------------------------------------
+Goal: Combine two parent schedules to create child schedules
+
+Process:
+1. Decide if crossover happens
+   - Roll random number (0-1)
+   - If < crossover_rate (0.8 = 80%), do crossover
+   - Otherwise, copy parents as-is
+
+2. One-Point Crossover (most common)
+   - Pick a random split point in the schedule
+   - Example: Split at gene 25 (out of 50 genes)
+   
+   Parent A: [Gene1, Gene2, ... Gene24, Gene25, ... Gene50]
+   Parent B: [Gene1, Gene2, ... Gene24, Gene25, ... Gene50]
+   
+   Child 1: [Parent A's genes 1-24] + [Parent B's genes 25-50]
+   Child 2: [Parent B's genes 1-24] + [Parent A's genes 25-50]
+
+3. Why crossover works?
+   - Parent A might have good Monday schedule
+   - Parent B might have good Friday schedule
+   - Child could inherit both good parts
+
+Output: Two child schedules created
+
+
+STEP 5: MUTATION (Random Changes)
+----------------------------------
+Goal: Introduce random variations to explore new solutions
+
+Process:
+1. For EACH gene in child schedule:
+   - Roll random number (0-1)
+   - If < mutation_rate (0.15 = 15%), mutate this gene
+
+2. Mutation types (random choice):
+   a. Change day: Monday → Tuesday
+   b. Change time: 8:00 AM → 10:00 AM
+   c. Change room: Room 301 → Room 305
+   d. Swap two genes: Exchange positions of two class blocks
+
+3. Respect constraints during mutation:
+   - Only mutate to days faculty is available
+   - Keep block within operating hours (7 AM - 5 PM)
+
+4. Why mutation is important?
+   - Prevents getting stuck in "local optimum"
+   - Explores solutions crossover can't reach
+   - Helps escape from deadlocks
+
+Output: Child schedule with some random changes
+
+
+STEP 6: ELITISM (Keeping Best Solutions)
+-----------------------------------------
+Goal: Ensure we don't lose the best schedules
+
+Process:
+1. Before replacing old population with new children:
+   - Identify top 2 schedules from old population (lowest fitness)
+   - Copy them directly to new population
+   - These are guaranteed to survive
+
+2. Why elitism?
+   - Without it, best solution could be lost due to crossover/mutation
+   - Ensures fitness never gets worse across generations
+   - Only 2 schedules (2% of population) to preserve diversity
+
+Output: Best 2 schedules preserved
+
+
+STEP 7: REPLACEMENT
+-------------------
+Goal: Create next generation population
+
+Process:
+1. New population = 2 elites + 98 children
+2. Replace old population with new population
+3. Increment generation counter
+
+Output: New generation ready for evaluation
+
+
+STEP 8: TERMINATION CHECK
+--------------------------
+Goal: Decide when to stop evolving
+
+Check (in order):
+1. Perfect solution found?
+   - Fitness = 0 (no violations at all)
+   - If yes → STOP, return this schedule
+
+2. Time limit reached?
+   - Default: 120 seconds (2 minutes)
+   - If yes → STOP, return best schedule found so far
+
+3. Max generations reached?
+   - Default: 1000 generations
+   - If yes → STOP, return best schedule
+
+4. Plateau detected? (No improvement)
+   - If fitness hasn't improved for 50 generations
+   - If yes → STOP, likely stuck in local optimum
+
+If NONE of above → GO TO STEP 2 (evaluate new generation)
+
+
+STEP 9: RESULT EXTRACTION
+--------------------------
+When GA stops, return the best schedule found:
+
+Process:
+1. Get schedule with lowest fitness score from final population
+2. Convert chromosome to readable format:
+   - Each gene becomes a database row
+   - Format: {subject_code, prof, room, section, day, start_time, end_time}
+
+3. Generate fitness breakdown report:
+   - Total fitness score
+   - Hard violation count (should be 0 if feasible)
+   - Soft violation count
+   - List of violations by type
+   - Feasibility status
+
+4. Save to database (schedules table)
+5. Return schedule to frontend for display
+
+Output: Complete semester schedule ready to use
+
+
+================================================================================
+5. CONFIGURATION & PROCESS FLOW IN CERP 2.0
+================================================================================
+
+HOW ADMIN CONFIGURES AND GENERATES SCHEDULE:
+--------------------------------------------
+
+PHASE 1: SUBJECT CONFIGURATION (Manual Setup)
+1. Admin navigates to Class Schedule page
+2. Selects target semester/year (e.g., Semester 1, 2026-2027)
+3. For EACH faculty member:
+   a. Select faculty from dropdown
+   b. Click "Course Config" button
+   c. Select subjects from checkboxes
+   d. Set units for each subject (max 3 units per subject globally)
+   e. Save configuration
+   f. Subject blocks appear in "Subject Block Config" staging area
+   
+4. Repeat step 3 for all faculty members
+
+Result: All subjects configured with faculty allocations
+
+
+PHASE 2: SCHEDULE GENERATION (GA Execution)
+1. Admin clicks "Generate Full Schedule" button
+2. Modal appears asking for:
+   - Target semester
+   - Target school year
+   - Optional: Reference semester (to copy from)
+
+3. Frontend sends request to backend:
+   POST /api/schedule/generate-full
+   Body: {
+     target_semester: "1",
+     target_school_year: "2026-2027",
+     reference_semester: "2", // optional
+     reference_school_year: "2025-2026" // optional
+   }
+
+4. Backend process:
+   a. Load all configured subjects for target semester
+   b. Load all faculty data (availability, qualifications, teaching loads)
+   c. Load all room data
+   d. Load reference schedule if provided
+   e. Build FullGAConfig object with all data
+   f. Call GA: run_full_generation(config)
+   g. GA runs (takes 30-120 seconds typically)
+   h. Return best schedule found
+
+5. Frontend receives response:
+   - Success: Shows "Schedule Generated!" with fitness score
+   - Displays new schedule in timetable view
+   - Can now edit individual blocks manually if needed
+
+6. Admin reviews schedule:
+   - Check for conflicts (red highlights)
+   - Adjust manually if needed (drag blocks, change times)
+   - Save final schedule
+
+
+PHASE 3: MANUAL ADJUSTMENT (Optional)
+1. Admin can manually modify individual blocks:
+   - Drag to different time slot
+   - Change room
+   - Delete block
+   - Add new block
+
+2. System performs "local repair" when changes made:
+   - Checks for new conflicts
+   - Warns admin if conflict detected
+   - Suggests alternative times/rooms
+
+3. Final save commits schedule to database
+
+
+================================================================================
+6. GA PARAMETERS & TUNING
+================================================================================
+
+These parameters control GA behavior and can be adjusted:
+
+POPULATION SIZE (pop_size = 100)
+- How many candidate schedules per generation
+- Larger = explores more solutions, but slower
+- Smaller = faster, but might miss good solutions
+- Recommended: 50-200
+
+MAX GENERATIONS (max_generations = 1000)
+- Maximum iterations allowed
+- Usually stops earlier due to time limit or convergence
+- Recommended: 500-2000
+
+TIME LIMIT (time_limit_seconds = 120.0)
+- Maximum time allowed for GA to run
+- Recommended: 60-300 seconds (1-5 minutes)
+- Trade-off: Quality vs. Speed
+
+CROSSOVER RATE (crossover_rate = 0.8)
+- Probability of combining parent schedules
+- 0.8 = 80% chance of crossover, 20% just copy parents
+- Recommended: 0.7-0.9
+
+MUTATION RATE (mutation_rate = 0.15)
+- Probability of random changes to genes
+- 0.15 = 15% of genes get mutated
+- Too high = random search (bad)
+- Too low = gets stuck (bad)
+- Recommended: 0.05-0.25
+
+ELITISM COUNT (elitism_count = 2)
+- How many best schedules to preserve each generation
+- Recommended: 1-5
+
+TOURNAMENT SIZE (tournament_size = 4)
+- How many schedules compete in selection tournament
+- Larger = stronger selection pressure
+- Recommended: 3-7
+
+
+================================================================================
+7. EXPECTED OUTCOMES & SUCCESS CRITERIA
+================================================================================
+
+SUCCESSFUL GENERATION:
+- Fitness score < 100 (minimal violations)
+- 0 hard violations (feasible schedule)
+- All faculty have 12-18 units
+- No faculty/room/section conflicts
+- Most subjects spread across multiple days
+
+ACCEPTABLE GENERATION:
+- Fitness score 100-500
+- 0 hard violations
+- Few soft violations (1-5)
+- May need minor manual adjustment
+
+POOR GENERATION (Needs Re-run):
+- Fitness score > 500
+- Many soft violations (>10)
+- Unbalanced faculty loads
+- Many gaps in section schedules
+- Should re-run with different seed or parameters
+
+FAILED GENERATION:
+- Has hard violations (infeasible)
+- Faculty conflicts or room conflicts
+- System will retry with different seed
+- May need to review subject configurations
+
+
+================================================================================
+8. TROUBLESHOOTING & COMMON ISSUES
+================================================================================
+
+ISSUE 1: GA can't find feasible solution (hard violations remain)
+Causes:
+- Impossible constraints (too many subjects, not enough rooms/time)
+- Faculty over-allocated (one faculty with 30 units)
+- Conflicting availability (all faculty unavailable on Fridays)
+
+Solutions:
+- Reduce subject load per faculty
+- Add more room resources
+- Adjust faculty availability
+- Extend timeslot range (earlier start or later end)
+
+ISSUE 2: GA takes too long (>5 minutes)
+Causes:
+- Too many subjects (>200 blocks)
+- Population size too large
+- Max generations too high
+
+Solutions:
+- Reduce pop_size to 50
+- Reduce time_limit to 60 seconds
+- Enable plateau detection
+
+ISSUE 3: GA produces poor quality schedules (high soft penalties)
+Causes:
+- Insufficient generations (stopped too early)
+- Mutation rate too high (random search)
+- No reference schedule provided
+
+Solutions:
+- Increase time_limit to 180 seconds
+- Reduce mutation_rate to 0.10
+- Provide reference schedule from previous semester
+- Increase pop_size to 150
+
+ISSUE 4: Same faculty gets same bad schedule every time
+Causes:
+- Random seed collision
+- Local optimum trap
+- Faculty constraints too tight
+
+Solutions:
+- Use different reference schedule
+- Increase mutation rate slightly (0.20)
+- Review faculty availability
+- Manually configure starting schedule differently
+
+
+================================================================================
+9. BACKEND API ENDPOINTS
+================================================================================
+
+ENDPOINT: POST /api/schedule/generate-full
+Description: Generate full semester schedule using GA
+Request Body:
+{
+  "target_semester": "1",
+  "target_school_year": "2026-2027",
+  "reference_semester": "2",          // optional
+  "reference_school_year": "2025-2026" // optional
+}
+
+Response (Success):
+{
+  "success": true,
+  "message": "Schedule generated successfully",
+  "fitness_score": 45.5,
+  "generation_count": 342,
+  "time_elapsed": 87.3,
+  "feasible": true,
+  "hard_violations": 0,
+  "soft_violations": 4,
+  "schedule_summary": {
+    "total_blocks": 156,
+    "faculty_count": 23,
+    "room_utilization": "78%"
+  }
+}
+
+Response (Failure):
+{
+  "success": false,
+  "message": "Could not find feasible solution",
+  "fitness_score": 3420.0,
+  "hard_violations": 8,
+  "violation_details": [...]
+}
+
+
+ENDPOINT: GET /api/schedules
+Description: Get all schedules for a semester
+Query Params: ?school_year=2026-2027&semester=1
+
+
+ENDPOINT: POST /api/schedule-block
+Description: Add/update individual schedule block
+Request Body:
+{
+  "subjCode": "CERP 101",
+  "prof": "Faculty A",
+  "room": "Room 301",
+  "section": "1A",
+  "day": "Monday",
+  "start": "8:00",
+  "end": "10:00",
+  ...
+}
+
+
+================================================================================
+10. ADVANCED FEATURES & FUTURE ENHANCEMENTS
+================================================================================
+
+CURRENT ADVANCED FEATURES:
+1. Reference schedule seeding (copies previous semester)
+2. Faculty continuity scoring (prefers same prof on same course)
+3. Two-tier fitness (hard vs soft constraints)
+4. Local repair on manual edits
+5. Room type matching (lecture vs lab)
+6. Part-time faculty day minimization
+
+PLANNED ENHANCEMENTS:
+1. Multi-objective optimization (Pareto front)
+   - Trade-off between multiple goals
+   - User selects preferred solution from options
+
+2. Real-time progress updates
+   - Show generation count and best fitness during GA run
+   - Animated progress bar
+
+3. Constraint relaxation
+   - If no feasible solution, suggest which constraints to relax
+   - "Remove Faculty X's Monday restriction?"
+
+4. Schedule comparison tool
+   - Compare current vs previous semester
+   - Highlight what changed
+
+5. Faculty preference learning
+   - Learn from past schedules which times faculty prefer
+   - Auto-suggest based on patterns
+
+6. Multi-campus support
+   - Handle travel time between buildings
+   - Prefer clustering classes by location
+
+
+================================================================================
+11. SUMMARY: THE COMPLETE WORKFLOW
+================================================================================
+
+USER ACTIONS                           SYSTEM ACTIONS
+---------------------------------------------------------------------------
+1. Configure subjects for all faculty  → Store in configured_subjects table
+2. Click "Generate Full Schedule"      → Load all data, build GA config
+3. Wait 30-120 seconds                 → GA runs 500-1000 generations
+4. [System shows progress]             → Evaluates 50,000-100,000 schedules
+5. [System shows result]               → Returns best schedule found
+6. Review generated schedule           → Display in timetable view
+7. Make manual adjustments (optional)  → Local repair checks conflicts
+8. Save final schedule                 → Commit to schedules table
+9. [Done - ready for semester]         → Faculty can view their schedules
+
+
+BEHIND THE SCENES (GA Process):
+1. Initialize 100 random schedules
+2. Evaluate fitness of all 100
+3. Select best schedules as parents
+4. Crossover to create children
+5. Mutate children randomly
+6. Keep top 2 schedules (elitism)
+7. Repeat steps 2-6 until time limit or perfect solution
+8. Return best schedule found
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+
+Questions or need clarification? Check the code in:
+- services/scheduler_service.py (GA implementation)
+- app.py (API endpoints)
+- templates/partials/schedule.html (frontend UI)
