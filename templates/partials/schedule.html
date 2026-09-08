@@ -2833,20 +2833,24 @@
             });
 
             // ═══ Updated Toggle Unit Config ═══
-            function toggleUnitConfig() {
+            async function toggleUnitConfig() {
                 var form = document.getElementById('unit-config-form');
                 var btn = document.getElementById('unit-config-toggle-btn');
 
                 if (form.style.display === 'none') {
+                    // Load all configured subjects before opening
+                    await loadAllConfiguredSubjects();
+
                     form.style.display = 'block';
                     btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg> Cancel';
                     btn.classList.remove('nbm-btn-primary');
                     btn.classList.add('nbm-btn-secondary');
 
-                    // Initialize course lists if not already done
+                    // Clear and repopulate course lists to reflect current state
                     ['cerp', 'hume', 'nstp'].forEach(function (category) {
                         var courseList = document.getElementById(category + '-courses');
-                        if (courseList && courseList.children.length === 0) {
+                        if (courseList) {
+                            courseList.innerHTML = ''; // Clear existing
                             populateCourseCheckboxes(category);
                         }
                     });
@@ -2875,10 +2879,9 @@
                     courseList.style.display = 'block';
                     chevron.style.transform = 'rotate(180deg)';
 
-                    // Populate checkboxes if not already done
-                    if (courseList.children.length === 0) {
-                        populateCourseCheckboxes(category);
-                    }
+                    // Always repopulate to reflect current state (allocation changes, etc.)
+                    courseList.innerHTML = '';
+                    populateCourseCheckboxes(category);
                 } else {
                     courseList.style.display = 'none';
                     chevron.style.transform = 'rotate(0deg)';
@@ -2888,8 +2891,10 @@
             // ═══ Calculate Global Allocation (Across All Faculty) ═══
             function calculateGlobalAllocation(subjCode) {
                 // Calculate total units allocated for this subject across ALL faculty in current semester/year
+                // This includes BOTH placed schedules (on timetable) AND configured subjects (staging area)
                 var totalAllocated = 0;
 
+                // 1. Count units from placed schedules on timetable
                 schedules.forEach(function (sch) {
                     var matchesSemester = ((sch.school_year || sch.schoolYear) === currentSchoolYear) && sch.semester === currentSemester;
 
@@ -2903,12 +2908,50 @@
                     }
                 });
 
+                // 2. Count units from configured subjects (staging area) across all faculty
+                // Load configured subjects from backend for this subject code
+                try {
+                    // Use synchronous check of loaded configured subjects
+                    // (We'll need to load these when opening course config)
+                    if (window.allConfiguredSubjects) {
+                        window.allConfiguredSubjects.forEach(function (config) {
+                            if (config.subjCode === subjCode &&
+                                config.school_year === currentSchoolYear &&
+                                config.semester === currentSemester) {
+                                totalAllocated += parseFloat(config.units) || 0;
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error calculating configured subjects:', err);
+                }
+
                 return totalAllocated;
+            }
+
+            // ═══ Load All Configured Subjects (Across All Faculty) ═══
+            async function loadAllConfiguredSubjects() {
+                try {
+                    var res = await fetch('/api/configured-subjects?school_year=' + encodeURIComponent(currentSchoolYear) + '&semester=' + encodeURIComponent(currentSemester));
+                    if (res.ok) {
+                        window.allConfiguredSubjects = await res.json();
+                        console.log('📥 Loaded', window.allConfiguredSubjects.length, 'configured subjects across all faculty');
+                    } else {
+                        window.allConfiguredSubjects = [];
+                    }
+                } catch (err) {
+                    console.error('Failed to load configured subjects:', err);
+                    window.allConfiguredSubjects = [];
+                }
             }
 
             function populateCourseCheckboxes(category) {
                 var courseList = document.getElementById(category + '-courses');
                 var courses = [];
+
+                // Get currently selected professor
+                var profEl = document.getElementById('sf-professor');
+                var selectedProf = profEl ? profEl.value : '';
 
                 // Filter courses by category
                 if (category === 'cerp') {
@@ -2925,24 +2968,39 @@
                     var globalAllocated = calculateGlobalAllocation(course.code);
                     var isFullyAllocated = globalAllocated >= 3; // Max 3 units total
 
+                    // Check if current faculty already has this subject configured
+                    var isAlreadyConfigured = false;
+                    if (selectedProf && window.allConfiguredSubjects) {
+                        isAlreadyConfigured = window.allConfiguredSubjects.some(function (config) {
+                            return config.subjCode === course.code &&
+                                config.prof === selectedProf &&
+                                config.school_year === currentSchoolYear &&
+                                config.semester === currentSemester;
+                        });
+                    }
+
                     var item = document.createElement('div');
                     item.className = 'course-checkbox-item';
                     item.style.display = 'flex';
                     item.style.alignItems = 'center';
                     item.style.gap = '8px';
 
-                    // Grey out if fully allocated
-                    if (isFullyAllocated) {
+                    // Grey out if fully allocated OR already configured by this faculty
+                    if (isFullyAllocated || isAlreadyConfigured) {
                         item.style.opacity = '0.4';
                         item.style.cursor = 'not-allowed';
-                        item.title = course.code + ' is fully allocated (3/3 units assigned across all faculty)';
+                        if (isAlreadyConfigured) {
+                            item.title = course.code + ' is already configured for ' + selectedProf;
+                        } else {
+                            item.title = course.code + ' is fully allocated (3/3 units assigned across all faculty)';
+                        }
                     }
 
                     var checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.id = 'course-' + course.code.replace(/\s/g, '-');
                     checkbox.value = course.code;
-                    checkbox.disabled = isFullyAllocated; // Disable if fully allocated
+                    checkbox.disabled = isFullyAllocated || isAlreadyConfigured; // Disable if fully allocated or already configured
                     checkbox.onchange = function () {
                         updateSelectedCount(category);
                         updateUnitConfigGrid();
@@ -2957,10 +3015,13 @@
                     label.htmlFor = checkbox.id;
                     label.style.flex = '1';
                     label.style.fontSize = '0.82rem';
-                    label.style.cursor = isFullyAllocated ? 'not-allowed' : 'pointer';
+                    label.style.cursor = (isFullyAllocated || isAlreadyConfigured) ? 'not-allowed' : 'pointer';
 
                     // Show allocation status in label
-                    if (isFullyAllocated) {
+                    if (isAlreadyConfigured) {
+                        label.textContent = course.code + ' - ' + course.name + ' (Already Configured)';
+                        label.style.color = '#9ca3af';
+                    } else if (isFullyAllocated) {
                         label.textContent = course.code + ' - ' + course.name + ' (Fully Allocated: ' + globalAllocated.toFixed(1) + '/3 units)';
                         label.style.color = '#9ca3af';
                     } else if (globalAllocated > 0) {
@@ -2984,13 +3045,17 @@
                     unitInput.style.border = '1px solid #d1d5db';
                     unitInput.style.borderRadius = '6px';
                     unitInput.dataset.code = course.code;
-                    unitInput.disabled = isFullyAllocated; // Disable if fully allocated
+                    unitInput.disabled = isFullyAllocated || isAlreadyConfigured; // Disable if fully allocated or already configured
 
                     // Update max value dynamically based on remaining capacity
-                    if (!isFullyAllocated && globalAllocated > 0) {
+                    if (!isFullyAllocated && !isAlreadyConfigured && globalAllocated > 0) {
                         var remaining = 3 - globalAllocated;
                         unitInput.max = Math.min(3, remaining).toString();
                         unitInput.title = 'Hours/units for ' + course.code + ' (max ' + remaining.toFixed(1) + ' units remaining, 0.5 intervals)';
+                    } else if (isAlreadyConfigured) {
+                        unitInput.style.backgroundColor = '#f3f4f6';
+                        unitInput.style.cursor = 'not-allowed';
+                        unitInput.title = 'Already configured for ' + selectedProf;
                     } else if (isFullyAllocated) {
                         unitInput.style.backgroundColor = '#f3f4f6';
                         unitInput.style.cursor = 'not-allowed';
