@@ -20,8 +20,10 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SESSION_COOKIE_NAME'] = 'cerp_session'
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours in seconds
+# Set to True in production with HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
+# 7 days in seconds (increased from 24 hours)
+app.config['PERMANENT_SESSION_LIFETIME'] = 604800
 
 
 # Prevent caching of protected pages to avoid back button access after logout
@@ -34,6 +36,13 @@ def add_cache_control_headers(response):
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
     return response
+
+
+@app.before_request
+def refresh_session():
+    """Refresh session lifetime on each request to prevent timeout during active use."""
+    if 'uid' in session:
+        session.modified = True  # Mark session as modified to update expiry time
 
 
 TAP_SECTIONS = [
@@ -151,6 +160,7 @@ def api_login():
     if username and password:
         # Direct username/password login (for admin)
         if username == 'admin' and password == 'admin123':
+            session.permanent = True  # Make session persistent
             session['uid'] = 'admin-hardcoded'
             session['email'] = 'admin'
             session['role'] = 'admin'
@@ -186,6 +196,7 @@ def api_login():
         # New user - mark as first login
         first_login = True
 
+    session.permanent = True  # Make session persistent across browser tabs/windows
     session['uid'] = uid
     session['email'] = email
     session['role'] = role
