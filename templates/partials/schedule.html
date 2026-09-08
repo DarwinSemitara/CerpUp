@@ -2893,10 +2893,15 @@
                     // Filter for this professor only
                     var profSubjects = configuredSubjects.filter(function (cs) {
                         var csProf = cs.prof || '';
+                        var originalProf = csProf;
                         if (csProf.indexOf(',') > -1) {
                             csProf = csProf.split(',')[0].trim();
                         }
-                        return csProf === selectedProf;
+
+                        var matches = csProf === selectedProf;
+                        console.log(`  Checking subject: ${cs.subjCode} | DB Prof: "${originalProf}" | Normalized: "${csProf}" | Filter: "${selectedProf}" | Match: ${matches}`);
+
+                        return matches;
                     });
 
                     console.log(`👤 Found ${profSubjects.length} subjects for ${selectedProf}`);
