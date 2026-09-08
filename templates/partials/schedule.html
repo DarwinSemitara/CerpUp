@@ -5985,12 +5985,21 @@
                 if (!subjectToRemove) return;
 
                 try {
+                    // Get currently selected faculty
+                    var profEl = document.getElementById('sf-professor');
+                    var selectedProf = profEl ? profEl.value : '';
+
+                    if (!selectedProf) {
+                        alert('No faculty selected');
+                        return;
+                    }
+
                     // Remove configured subject from backend
                     var res = await fetch('/api/configured-subjects/remove', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            faculty_id: currentFacultyId,
+                            faculty_id: selectedProf,
                             subject_code: subjectToRemove,
                             school_year: currentSchoolYear,
                             semester: currentSemester
