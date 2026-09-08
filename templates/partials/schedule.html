@@ -2885,6 +2885,27 @@
                 }
             };
 
+            // ═══ Calculate Global Allocation (Across All Faculty) ═══
+            function calculateGlobalAllocation(subjCode) {
+                // Calculate total units allocated for this subject across ALL faculty in current semester/year
+                var totalAllocated = 0;
+
+                schedules.forEach(function (sch) {
+                    var matchesSemester = ((sch.school_year || sch.schoolYear) === currentSchoolYear) && sch.semester === currentSemester;
+
+                    if (matchesSemester && sch.subjCode === subjCode) {
+                        var startIdx = slotIdx(sch.start);
+                        var endIdx = slotIdx(sch.end);
+                        if (startIdx >= 0 && endIdx > startIdx) {
+                            var duration = (endIdx - startIdx) / 2;
+                            totalAllocated += duration;
+                        }
+                    }
+                });
+
+                return totalAllocated;
+            }
+
             function populateCourseCheckboxes(category) {
                 var courseList = document.getElementById(category + '-courses');
                 var courses = [];
@@ -2900,16 +2921,28 @@
 
                 // Create checkbox items with unit input
                 courses.forEach(function (course) {
+                    // Check if this subject is fully allocated globally (across all faculty)
+                    var globalAllocated = calculateGlobalAllocation(course.code);
+                    var isFullyAllocated = globalAllocated >= 3; // Max 3 units total
+
                     var item = document.createElement('div');
                     item.className = 'course-checkbox-item';
                     item.style.display = 'flex';
                     item.style.alignItems = 'center';
                     item.style.gap = '8px';
 
+                    // Grey out if fully allocated
+                    if (isFullyAllocated) {
+                        item.style.opacity = '0.4';
+                        item.style.cursor = 'not-allowed';
+                        item.title = course.code + ' is fully allocated (3/3 units assigned across all faculty)';
+                    }
+
                     var checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.id = 'course-' + course.code.replace(/\s/g, '-');
                     checkbox.value = course.code;
+                    checkbox.disabled = isFullyAllocated; // Disable if fully allocated
                     checkbox.onchange = function () {
                         updateSelectedCount(category);
                         updateUnitConfigGrid();
@@ -2924,13 +2957,23 @@
                     label.htmlFor = checkbox.id;
                     label.style.flex = '1';
                     label.style.fontSize = '0.82rem';
-                    label.textContent = course.code + ' - ' + course.name;
+                    label.style.cursor = isFullyAllocated ? 'not-allowed' : 'pointer';
+
+                    // Show allocation status in label
+                    if (isFullyAllocated) {
+                        label.textContent = course.code + ' - ' + course.name + ' (Fully Allocated: ' + globalAllocated.toFixed(1) + '/3 units)';
+                        label.style.color = '#9ca3af';
+                    } else if (globalAllocated > 0) {
+                        label.textContent = course.code + ' - ' + course.name + ' (' + globalAllocated.toFixed(1) + '/3 units assigned)';
+                    } else {
+                        label.textContent = course.code + ' - ' + course.name;
+                    }
 
                     // Unit input next to each course
                     var unitInput = document.createElement('input');
                     unitInput.type = 'number';
-                    unitInput.min = '1';
-                    unitInput.max = '12';
+                    unitInput.min = '0.5';
+                    unitInput.max = '3';
                     unitInput.step = '0.5';
                     unitInput.value = subjectUnits[course.code] ? subjectUnits[course.code].configured : 3;
                     unitInput.className = 'unit-input';
@@ -2941,8 +2984,36 @@
                     unitInput.style.border = '1px solid #d1d5db';
                     unitInput.style.borderRadius = '6px';
                     unitInput.dataset.code = course.code;
-                    unitInput.title = 'Hours/units for ' + course.code;
-                    unitInput.onchange = function () { updateUnitConfigGrid(); };
+                    unitInput.disabled = isFullyAllocated; // Disable if fully allocated
+
+                    // Update max value dynamically based on remaining capacity
+                    if (!isFullyAllocated && globalAllocated > 0) {
+                        var remaining = 3 - globalAllocated;
+                        unitInput.max = Math.min(3, remaining).toString();
+                        unitInput.title = 'Hours/units for ' + course.code + ' (max ' + remaining.toFixed(1) + ' units remaining, 0.5 intervals)';
+                    } else if (isFullyAllocated) {
+                        unitInput.style.backgroundColor = '#f3f4f6';
+                        unitInput.style.cursor = 'not-allowed';
+                        unitInput.title = 'Subject fully allocated';
+                    } else {
+                        unitInput.title = 'Hours/units for ' + course.code + ' (max 3 units, 0.5 intervals)';
+                    }
+
+                    unitInput.onchange = function () {
+                        // Enforce 3-unit max and 0.5 intervals
+                        var val = parseFloat(this.value);
+                        var maxAllowed = parseFloat(this.max);
+
+                        if (isNaN(val) || val < 0.5) {
+                            this.value = 0.5;
+                        } else if (val > maxAllowed) {
+                            this.value = maxAllowed;
+                        } else {
+                            // Round to nearest 0.5
+                            this.value = (Math.round(val * 2) / 2).toFixed(1);
+                        }
+                        updateUnitConfigGrid();
+                    };
 
                     var unitLabel = document.createElement('span');
                     unitLabel.style.fontSize = '0.7rem';
@@ -4759,6 +4830,10 @@
                 applySchedFilter();
             };
 
+            // ═══ Unsaved Changes Tracking ═══
+            var unsavedScheduleIds = []; // Track schedule IDs that haven't been confirmed with "Save Schedule"
+            var hasUnsavedChanges = false; // Flag to track if there are unsaved changes
+
             // ═══ Schedule Lock/Unlock Toggle ═══
             // Load saved state from localStorage (default: false = unlocked)
             var savedLockState = localStorage.getItem('cerp_scheduleLockedState');
@@ -4783,7 +4858,11 @@
                 var tbody = document.querySelector('#sched-table tbody');
 
                 if (scheduleLockedState) {
-                    // LOCKED STATE (Edit mode)
+                    // LOCKED STATE (Edit mode) - This means schedules are SAVED
+                    // Clear unsaved changes tracking when saving
+                    unsavedScheduleIds = [];
+                    hasUnsavedChanges = false;
+
                     saveBtn.innerHTML = `
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -5211,6 +5290,21 @@
                     await loadSchedules();
                     renderDraggableBlocks();
                     populateSubjectDropdowns(); // Update dropdown
+
+                    // Mark as unsaved change (deletion needs to be confirmed with Save)
+                    // Note: We track deletion by removing from unsavedScheduleIds if it was there
+                    var unsavedIndex = unsavedScheduleIds.indexOf(id);
+                    if (unsavedIndex > -1) {
+                        unsavedScheduleIds.splice(unsavedIndex, 1);
+                        console.log('📝 Removed deleted schedule from unsaved list:', id);
+                    }
+                    // Deletion itself is an unsaved change - but we don't re-add since it's already deleted
+                    // The important part is that any remaining unsaved schedules still need confirmation
+                    if (unsavedScheduleIds.length > 0) {
+                        hasUnsavedChanges = true;
+                    } else {
+                        hasUnsavedChanges = false;
+                    }
                 } catch (err) { alert('Failed to delete.'); }
             };
 
@@ -5475,8 +5569,12 @@
                                             if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
                                             alert('Failed to save changes to database. Changes have been reverted.');
                                         } else {
-                                            // Success — just refresh UI, no need to reload from DB
-                                            // (Optimistic update already happened above)
+                                            // Success — mark as unsaved change if not already tracked
+                                            if (!unsavedScheduleIds.includes(dragId)) {
+                                                unsavedScheduleIds.push(dragId);
+                                                hasUnsavedChanges = true;
+                                                console.log('📝 Schedule moved, marked as unsaved:', dragId);
+                                            }
                                             console.log('✅ Schedule updated successfully');
                                             refreshFilterOptions();
                                             renderReport();
@@ -5758,6 +5856,11 @@
                     if (!res.ok) throw new Error(data.error || 'Failed.');
                     schedules.push(Object.assign({ id: data.id }, data.entry));
                     window.schedules = schedules;
+
+                    // Track this as an unsaved change
+                    unsavedScheduleIds.push(data.id);
+                    hasUnsavedChanges = true;
+                    console.log('📝 Added schedule to unsaved list:', data.id);
 
                     // Reload from DB to ensure full consistency then re-render
                     await loadSchedules();
@@ -7293,6 +7396,79 @@
                 populateRoomSchedule();
             }
         };
+
+        // ═══ Unsaved Changes Warning and Cleanup ═══
+
+        // Function to clean up unsaved schedules
+        async function cleanupUnsavedSchedules() {
+            if (unsavedScheduleIds.length === 0) {
+                return;
+            }
+
+            console.log('🗑️ Cleaning up', unsavedScheduleIds.length, 'unsaved schedules');
+
+            // Delete all unsaved schedules from database
+            for (var i = 0; i < unsavedScheduleIds.length; i++) {
+                var id = unsavedScheduleIds[i];
+                try {
+                    await fetch('/api/schedules/' + id, { method: 'DELETE' });
+                    console.log('✅ Deleted unsaved schedule:', id);
+                } catch (err) {
+                    console.error('❌ Failed to delete schedule:', id, err);
+                }
+            }
+
+            unsavedScheduleIds = [];
+            hasUnsavedChanges = false;
+        }
+
+        // Warn user before leaving with unsaved changes
+        window.addEventListener('beforeunload', function (e) {
+            if (hasUnsavedChanges && unsavedScheduleIds.length > 0) {
+                // Show browser's native confirmation dialog
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes to the schedule. If you leave, these changes will be lost.';
+                return e.returnValue;
+            }
+        });
+
+        // Clean up unsaved schedules when actually leaving the page
+        window.addEventListener('unload', function () {
+            if (hasUnsavedChanges && unsavedScheduleIds.length > 0) {
+                // Use synchronous XMLHttpRequest for cleanup during unload
+                // (fetch with keepalive is not reliable for multiple requests)
+                unsavedScheduleIds.forEach(function (id) {
+                    try {
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('DELETE', '/api/schedules/' + id, false); // false = synchronous
+                        xhr.send();
+                        console.log('🗑️ Cleaned up unsaved schedule:', id);
+                    } catch (err) {
+                        console.error('Failed to cleanup:', err);
+                    }
+                });
+            }
+        });
+
+        // Also handle navigation within the app (clicking sidebar links)
+        document.addEventListener('click', async function (e) {
+            // Check if clicked element or its parent is a navigation link
+            var target = e.target.closest('a[href]');
+            if (target && hasUnsavedChanges && unsavedScheduleIds.length > 0) {
+                // Check if it's an internal navigation link (not external or hash)
+                var href = target.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('http')) {
+                    e.preventDefault();
+
+                    if (confirm('You have unsaved changes to the schedule. If you leave, these changes will be lost.\n\nDo you want to leave without saving?')) {
+                        // Clean up unsaved schedules
+                        await cleanupUnsavedSchedules();
+                        // Navigate to the link
+                        window.location.href = href;
+                    }
+                }
+            }
+        });
     </script>
 
     <!-- ═══════════════════════════════════════════════════════════════
