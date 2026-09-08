@@ -1126,6 +1126,253 @@ def score_all_soft_constraints(chromosome: List['Gene'], config: FullGAConfig) -
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: PRE-FLIGHT VALIDATION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def validate_schedule_config(config: FullGAConfig) -> Dict[str, Any]:
+    """
+    Validate configuration before running GA.
+    Catches impossible configurations early to avoid wasted GA time.
+
+    Returns:
+        {
+            'valid': bool,
+            'errors': List[str],  # Critical issues that prevent generation
+            'warnings': List[str]  # Non-critical issues that might affect quality
+        }
+    """
+    errors = []
+    warnings = []
+
+    # Check 1: Every subject has at least one qualified, available faculty
+    for subject in config.subjects:
+        # Get qualified faculty
+        if config.qualification_matrix:
+            qualified = config.qualification_matrix.get_qualified_faculty(
+                subject.code)
+        else:
+            qualified = config.subject_allocations.get(subject.code, [])
+
+        if not qualified:
+            errors.append(
+                f"Subject {subject.code} section {subject.section}: "
+                f"No qualified faculty assigned"
+            )
+            continue
+
+        # Check if allocated professors are available
+        allocated = subject.allocated_professors or qualified
+        legacy = extract_legacy_format_from_config(config)
+        prof_availability = legacy['prof_availability']
+
+        has_available = False
+        for prof in allocated:
+            avail_days = prof_availability.get(prof, WEEKDAYS)
+            if avail_days:  # Has at least one available day
+                has_available = True
+                break
+
+        if not has_available:
+            errors.append(
+                f"Subject {subject.code} section {subject.section}: "
+                f"Allocated faculty have no available days"
+            )
+
+    # Check 2: Total room capacity (hours available vs required)
+    legacy = extract_legacy_format_from_config(config)
+    rooms = legacy['rooms']
+
+    total_room_hours = len(rooms) * SLOTS_PER_DAY * len(WEEKDAYS) / 2.0
+    total_required_hours = sum(s.weekly_hours for s in config.subjects)
+
+    if total_room_hours < total_required_hours:
+        errors.append(
+            f"Insufficient room capacity: {total_room_hours:.1f} hours available, "
+            f"{total_required_hours:.1f} hours required. "
+            f"Need {total_required_hours - total_room_hours:.1f} more room-hours."
+        )
+    elif total_room_hours < total_required_hours * 1.2:  # Less than 20% buffer
+        warnings.append(
+            f"Tight room capacity: {total_room_hours:.1f} hours available, "
+            f"{total_required_hours:.1f} hours required. "
+            f"Consider adding more rooms for flexibility."
+        )
+
+    # Check 3: Faculty teaching load feasibility
+    teaching_loads = legacy['teaching_loads']
+
+    for faculty in config.faculty:
+        # Calculate assigned units
+        assigned_units = 0
+        for subject in config.subjects:
+            profs = subject.allocated_professors or []
+            if faculty.id in profs or faculty.name in profs:
+                assigned_units += subject.units
+
+        # Check against limits
+        max_load = teaching_loads.get(faculty.id, faculty.max_units)
+        if assigned_units > max_load:
+            errors.append(
+                f"Faculty {faculty.name}: {assigned_units:.1f} units assigned "
+                f"exceeds maximum {max_load:.1f} units"
+            )
+
+        min_load = faculty.min_units
+        if assigned_units < min_load and assigned_units > 0:
+            warnings.append(
+                f"Faculty {faculty.name}: {assigned_units:.1f} units assigned "
+                f"below minimum {min_load:.1f} units"
+            )
+
+    # Check 4: Lab courses have lab rooms
+    lab_subjects = [s for s in config.subjects if s.is_lab]
+    lab_rooms = [r for r in config.rooms if r.room_type in [
+        'laboratory', 'computer_lab']]
+
+    if lab_subjects and not lab_rooms:
+        errors.append(
+            f"{len(lab_subjects)} lab course(s) scheduled but no lab rooms available. "
+            f"Add lab rooms or change course types."
+        )
+    elif lab_subjects and len(lab_rooms) < len(lab_subjects) / 5:
+        warnings.append(
+            f"{len(lab_subjects)} lab courses with only {len(lab_rooms)} lab room(s). "
+            f"May cause room conflicts."
+        )
+
+    # Check 5: Subject weekly hours are reasonable
+    for subject in config.subjects:
+        if subject.weekly_hours > 6:  # More than 6 hours/week is unusual
+            warnings.append(
+                f"Subject {subject.code}: {subject.weekly_hours} hours/week is high. "
+                f"Verify this is correct."
+            )
+        if subject.weekly_hours < 0.5:
+            errors.append(
+                f"Subject {subject.code}: {subject.weekly_hours} hours/week is too low. "
+                f"Minimum 0.5 hours required."
+            )
+
+    return {
+        'valid': len(errors) == 0,
+        'errors': errors,
+        'warnings': warnings
+    }
+
+
+def greedy_feasible_schedule(config: FullGAConfig) -> Optional[List['Gene']]:
+    """
+    Greedy algorithm to find ANY feasible schedule (0 hard violations).
+    Fast but not optimal - just finds something that works.
+
+    Strategy:
+    1. Sort subjects by constraint difficulty (most constrained first)
+    2. For each subject, try to place all its blocks
+    3. Try all possible (day, time, room) combinations
+    4. Pick first valid placement (no conflicts)
+    5. If any subject can't be placed → return None (impossible)
+
+    Returns:
+        List[Gene] if feasible schedule found, None if impossible
+    """
+    chromosome = []
+    legacy = extract_legacy_format_from_config(config)
+    prof_availability = legacy['prof_availability']
+    rooms = legacy['rooms']
+
+    # Sort subjects by difficulty (fewest available options first)
+    def subject_difficulty(subj):
+        """Calculate constraint difficulty score (lower = more constrained)."""
+        profs = subj.allocated_professors or []
+        if not profs:
+            return 0  # Most constrained - no professors!
+
+        # Count available days for allocated professors
+        total_avail_days = 0
+        for prof in profs:
+            avail_days = prof_availability.get(prof, WEEKDAYS)
+            total_avail_days += len(avail_days)
+
+        # Fewer available days = more constrained
+        return total_avail_days
+
+    subjects_sorted = sorted(config.subjects, key=subject_difficulty)
+
+    # Try to place each subject
+    for subject in subjects_sorted:
+        professor = subject.allocated_professors[0] if subject.allocated_professors else None
+        if not professor:
+            return None  # Can't schedule without professor
+
+        # Calculate blocks needed
+        remaining_hours = subject.weekly_hours
+        blocks_placed = 0
+
+        while remaining_hours > 0:
+            block_hours = min(remaining_hours, 3)  # Max 3-hour blocks
+            block_slots = slots_for_duration(block_hours)
+
+            # Try to find valid placement
+            placed = False
+
+            # Get available days for this professor
+            avail_days = prof_availability.get(professor, WEEKDAYS)
+            if not avail_days:
+                avail_days = WEEKDAYS
+
+            # Try each available day
+            for day in avail_days:
+                if placed:
+                    break
+
+                # Try each possible start time
+                for start_slot in range(0, SLOTS_PER_DAY - block_slots + 1):
+                    if placed:
+                        break
+
+                    # Try each room
+                    for room in rooms:
+                        # Create candidate gene
+                        from services.scheduler_service import Gene  # Forward reference
+                        gene = Gene(
+                            subj_code=subject.code,
+                            subj_name=subject.name,
+                            professor=professor,
+                            room=room,
+                            section=subject.section,
+                            units=subject.units,
+                            day=day,
+                            start_slot=start_slot,
+                            duration=block_slots
+                        )
+
+                        # Check if this placement is valid (no conflicts)
+                        temp_chromosome = chromosome + [gene]
+                        violations = check_all_hard_constraints(
+                            temp_chromosome, len(temp_chromosome) - 1, config)
+
+                        # Only check time conflicts (most critical)
+                        critical_viols = [v for v in violations if v.constraint_type in [
+                            'faculty_time_conflict', 'room_time_conflict', 'section_time_conflict'
+                        ]]
+
+                        if not critical_viols:
+                            # Valid placement found!
+                            chromosome.append(gene)
+                            placed = True
+                            blocks_placed += 1
+                            break
+
+            if not placed:
+                # Couldn't place this block - configuration is impossible
+                return None
+
+            remaining_hours -= block_hours
+
+    return chromosome
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # GENE & CHROMOSOME
 # ══════════════════════════════════════════════════════════════════════════════
 
