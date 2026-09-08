@@ -44,11 +44,28 @@ def add_cache_control_headers(response):
 @app.before_request
 def refresh_session():
     """Refresh session lifetime on each request to prevent timeout during active use."""
+    # Log detailed session information for debugging
+    session_data = {
+        'path': request.path,
+        'method': request.method,
+        'has_uid': 'uid' in session,
+        'session_keys': list(session.keys()) if session else [],
+        'permanent': session.permanent if session else False,
+        'cookie_name': app.config.get('SESSION_COOKIE_NAME'),
+        'cookies_present': list(request.cookies.keys())
+    }
+
     if 'uid' in session:
+        session_data['uid'] = session.get('uid')
+        session_data['role'] = session.get('role')
         session.modified = True  # Mark session as modified to update expiry time
-        logger.debug(f"Session refreshed for user: {session.get('uid')}")
+        logger.info(
+            f"✅ SESSION ACTIVE - Path: {request.path} | UID: {session.get('uid')} | Role: {session.get('role')}")
     else:
-        logger.debug(f"No active session for request: {request.path}")
+        logger.warning(
+            f"❌ NO SESSION - Path: {request.path} | Cookies: {list(request.cookies.keys())} | Session Keys: {list(session.keys())}")
+
+    logger.debug(f"SESSION DEBUG: {session_data}")
 
 
 TAP_SECTIONS = [
@@ -73,26 +90,40 @@ def login_required(f):
 
     @wraps(f)
     def decorated(*args, **kwargs):
+        logger.info(f"🔐 LOGIN_REQUIRED CHECK - Path: {request.path}")
+        logger.info(f"   Session exists: {bool(session)}")
+        logger.info(f"   Session keys: {list(session.keys())}")
+        logger.info(f"   Has 'uid': {'uid' in session}")
+        logger.info(f"   Cookies received: {list(request.cookies.keys())}")
+
         if 'uid' not in session:
             # Clear any stale session data
+            logger.error(
+                f"❌ AUTHENTICATION FAILED - No 'uid' in session for {request.path}")
             session.clear()
 
             # For API calls (JSON requests), return 401 instead of redirecting
             if request.is_json or request.headers.get('Accept') == 'application/json' or request.path.startswith('/api/'):
-                return jsonify({'error': 'Not authenticated'}), 401
+                logger.error(f"   Returning 401 for API call")
+                return jsonify({'error': 'Not authenticated', 'debug': 'uid not in session'}), 401
 
+            logger.error(f"   Redirecting to login page")
             return redirect(url_for('login'))
 
         # Validate session hasn't expired (optional: add timestamp check)
         uid = session.get('uid')
         role = session.get('role')
 
+        logger.info(f"✅ AUTHENTICATION SUCCESS - UID: {uid} | Role: {role}")
+
         if not uid or not role:
+            logger.error(
+                f"❌ SESSION INVALID - UID or Role missing: uid={uid}, role={role}")
             session.clear()
 
             # For API calls, return 401 instead of redirecting
             if request.is_json or request.headers.get('Accept') == 'application/json' or request.path.startswith('/api/'):
-                return jsonify({'error': 'Not authenticated'}), 401
+                return jsonify({'error': 'Not authenticated', 'debug': 'uid or role missing'}), 401
 
             return redirect(url_for('login'))
 
@@ -207,8 +238,17 @@ def api_login():
     session['email'] = email
     session['role'] = role
 
+    logger.info("=" * 80)
+    logger.info(f"🔑 SESSION CREATED")
+    logger.info(f"   UID: {uid}")
+    logger.info(f"   Email: {email}")
+    logger.info(f"   Role: {role}")
+    logger.info(f"   Permanent: {session.permanent}")
+    logger.info(f"   Session Keys: {list(session.keys())}")
+    logger.info(f"   Cookie Name: {app.config.get('SESSION_COOKIE_NAME')}")
     logger.info(
-        f"Session created for user {uid} with role {role}, permanent={session.permanent}")
+        f"   Session Lifetime: {app.config.get('PERMANENT_SESSION_LIFETIME')} seconds")
+    logger.info("=" * 80)
 
     # Check if this is first login and needs verification
     if first_login and role == 'user':
@@ -278,8 +318,11 @@ def get_current_member():
     """Get current logged-in member's data."""
     try:
         uid = session.get('uid')
+        logger.info(f"📋 GET_CURRENT_MEMBER - UID from session: {uid}")
+
         if not uid:
-            return jsonify({'error': 'Not authenticated'}), 401
+            logger.error("❌ GET_CURRENT_MEMBER - No UID in session!")
+            return jsonify({'error': 'Not authenticated', 'debug': 'No uid in session'}), 401
 
         # Find member by uid
         members = db.collection('members').where(
@@ -287,11 +330,38 @@ def get_current_member():
         member_list = [{'id': d.id, **d.to_dict()} for d in members]
 
         if member_list:
+            logger.info(
+                f"✅ GET_CURRENT_MEMBER - Found member: {member_list[0].get('firstName', 'Unknown')}")
             return jsonify(member_list[0])
         else:
+            logger.warning(
+                f"⚠️ GET_CURRENT_MEMBER - Member not found for UID: {uid}")
             return jsonify({'error': 'Member not found'}), 404
     except Exception as e:
+        logger.error(f"💥 GET_CURRENT_MEMBER - Exception: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# DEBUG ENDPOINT - Remove after fixing
+@app.route('/api/session-debug', methods=['GET'])
+def session_debug():
+    """Debug endpoint to check session status - REMOVE AFTER FIXING"""
+    debug_info = {
+        'session_exists': bool(session),
+        'session_keys': list(session.keys()),
+        'has_uid': 'uid' in session,
+        'uid': session.get('uid', 'NOT SET'),
+        'role': session.get('role', 'NOT SET'),
+        'email': session.get('email', 'NOT SET'),
+        'permanent': session.permanent if session else False,
+        'cookies_received': list(request.cookies.keys()),
+        'cookie_name_expected': app.config.get('SESSION_COOKIE_NAME'),
+        'session_lifetime': app.config.get('PERMANENT_SESSION_LIFETIME'),
+        'request_path': request.path,
+        'request_method': request.method
+    }
+    logger.info(f"🔍 SESSION DEBUG ENDPOINT CALLED: {debug_info}")
+    return jsonify(debug_info)
 
 
 # â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
