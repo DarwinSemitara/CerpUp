@@ -1532,6 +1532,31 @@ def mutate_v3(chromosome: List[Gene], config: FullGAConfig,
     return result
 
 
+def crossover_uniform(p1: List[Gene], p2: List[Gene]) -> List[Gene]:
+    """
+    Uniform crossover: each gene independently inherits from parent A or B.
+
+    This is superior to one-point crossover for timetabling problems because:
+    - Doesn't impose false "locality" on gene sequence
+    - Preserves more parent structure
+    - Less likely to introduce conflicts
+
+    Each gene has 50% chance of coming from p1 or p2.
+    """
+    if len(p1) != len(p2):
+        # Fallback: if parents have different lengths, use shorter as base
+        return copy.deepcopy(p1 if len(p1) <= len(p2) else p2)
+
+    child = []
+    for g1, g2 in zip(p1, p2):
+        if random.random() < 0.5:
+            child.append(copy.deepcopy(g1))
+        else:
+            child.append(copy.deepcopy(g2))
+
+    return child
+
+
 def crossover_v3_section_level(p1: List[Gene], p2: List[Gene]) -> List[Gene]:
     """
     Section-level crossover: swap entire section schedules between parents.
@@ -1612,28 +1637,130 @@ def crossover_v3_day_level(p1: List[Gene], p2: List[Gene]) -> List[Gene]:
     return child_genes
 
 
-def crossover_v3(p1: List[Gene], p2: List[Gene], method: str = 'gene') -> List[Gene]:
+def crossover_v3(p1: List[Gene], p2: List[Gene], method: str = 'uniform') -> List[Gene]:
     """
     Enhanced crossover with multiple strategies.
 
     Args:
         p1, p2: Parent chromosomes
-        method: 'gene' (gene-level), 'section' (section-level), 'day' (day-level), or 'mixed'
+        method: 'uniform' (recommended), 'gene', 'section', 'day', or 'mixed'
 
     Returns:
         Child chromosome
     """
-    if method == 'section':
+    if method == 'uniform':
+        return crossover_uniform(p1, p2)
+    elif method == 'section':
         return crossover_v3_section_level(p1, p2)
     elif method == 'day':
         return crossover_v3_day_level(p1, p2)
     elif method == 'mixed':
-        # Randomly choose strategy
-        choice = random.choice(['gene', 'section', 'day'])
+        # Randomly choose strategy (now includes uniform)
+        choice = random.choice(['uniform', 'section', 'day'])
         return crossover_v3(p1, p2, method=choice)
-    else:
-        # Default: gene-preserving crossover (existing v2 logic)
+    elif method == 'gene':
+        # Legacy gene-preserving crossover
         return crossover_v2(p1, p2)
+    else:
+        # Default: uniform crossover (best for timetabling)
+        return crossover_uniform(p1, p2)
+
+
+def repair_chromosome(chromosome: List[Gene], config: FullGAConfig, max_attempts: int = 100) -> List[Gene]:
+    """
+    Repair hard constraint violations using greedy re-slotting.
+
+    This is crucial after crossover to ensure children don't inherit
+    incompatible genes from different parents.
+
+    Strategy:
+    - Find genes with hard violations
+    - Try to re-slot them to valid positions
+    - Only touches violated genes, preserves good ones
+
+    Args:
+        chromosome: Chromosome to repair
+        config: GA configuration
+        max_attempts: Maximum repair iterations to prevent infinite loops
+
+    Returns:
+        Repaired chromosome (best effort, may still have some violations)
+    """
+    attempts = 0
+    legacy = extract_legacy_format_from_config(config)
+    prof_availability = legacy['prof_availability']
+    rooms = legacy['rooms']
+
+    while attempts < max_attempts:
+        # Check for hard violations
+        violations_found = []
+        for gene_idx in range(len(chromosome)):
+            viols = check_all_hard_constraints(chromosome, gene_idx, config)
+            # Only care about time conflicts (most critical)
+            critical_viols = [v for v in viols if v.constraint_type in [
+                'faculty_time_conflict', 'room_time_conflict', 'section_time_conflict'
+            ]]
+            if critical_viols:
+                violations_found.append(gene_idx)
+
+        if not violations_found:
+            # All repaired!
+            break
+
+        # Pick one violated gene to fix
+        gene_idx = violations_found[0]
+        gene = chromosome[gene_idx]
+
+        # Try to find a valid slot
+        found_valid = False
+        for _ in range(20):  # Try 20 random slots
+            # Random day from faculty availability
+            avail_days = prof_availability.get(gene.professor, WEEKDAYS)
+            if not avail_days:
+                avail_days = WEEKDAYS
+            new_day = random.choice(avail_days)
+
+            # Random time slot
+            max_start = SLOTS_PER_DAY - gene.duration
+            if max_start < 0:
+                max_start = 0
+            new_start = random.randint(0, max(0, max_start))
+
+            # Try random room
+            new_room = random.choice(rooms) if rooms else gene.room
+
+            # Save old values
+            old_day, old_start, old_room = gene.day, gene.start_slot, gene.room
+
+            # Apply new values
+            gene.day = new_day
+            gene.start_slot = new_start
+            gene.room = new_room
+
+            # Check if this fixes conflicts
+            new_viols = check_all_hard_constraints(
+                chromosome, gene_idx, config)
+            critical_new = [v for v in new_viols if v.constraint_type in [
+                'faculty_time_conflict', 'room_time_conflict', 'section_time_conflict'
+            ]]
+
+            if not critical_new:
+                # Fixed!
+                found_valid = True
+                break
+            else:
+                # Revert
+                gene.day = old_day
+                gene.start_slot = old_start
+                gene.room = old_room
+
+        if not found_valid:
+            # Couldn't repair this gene, try next violation
+            pass
+
+        attempts += 1
+
+    return chromosome
 
 
 def tournament_select_v3(population: List[List[Gene]],
@@ -3507,6 +3634,9 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
                 p2 = tournament_select_v3(
                     population, fitness_breakdowns, config)
                 child = crossover_v3(p1, p2, method='mixed')
+
+                # PHASE 1 FIX: Repair after crossover to fix inherited conflicts
+                child = repair_chromosome(child, config, max_attempts=50)
             else:
                 # No crossover, just select one parent
                 child = copy.deepcopy(tournament_select_v3(
