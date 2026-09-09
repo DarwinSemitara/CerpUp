@@ -1146,29 +1146,34 @@ def validate_schedule_config(config: FullGAConfig) -> Dict[str, Any]:
 
     # Check 1: Every subject has at least one qualified, available faculty
     for subject in config.subjects:
-        # Get qualified faculty
-        if config.qualification_matrix:
-            qualified = config.qualification_matrix.get_qualified_faculty(
-                subject.code)
-        else:
-            qualified = config.subject_allocations.get(subject.code, [])
+        # Get qualified faculty - check allocated_professors first (most direct)
+        allocated = subject.allocated_professors
 
-        if not qualified:
-            errors.append(
-                f"Subject {subject.code} section {subject.section}: "
-                f"No qualified faculty assigned"
-            )
-            continue
+        if not allocated:
+            # Fallback to qualification matrix or subject allocations
+            if config.qualification_matrix:
+                qualified = config.qualification_matrix.get_qualified_faculty(
+                    subject.code)
+            else:
+                qualified = config.subject_allocations.get(subject.code, [])
+
+            if not qualified:
+                errors.append(
+                    f"Subject {subject.code} section {subject.section}: "
+                    f"No qualified faculty assigned"
+                )
+                continue
+
+            allocated = qualified
 
         # Check if allocated professors are available
-        allocated = subject.allocated_professors or qualified
         legacy = extract_legacy_format_from_config(config)
         prof_availability = legacy['prof_availability']
 
         has_available = False
         for prof in allocated:
             avail_days = prof_availability.get(prof, WEEKDAYS)
-            if avail_days:  # Has at least one available day
+            if avail_days or not prof_availability:  # Has at least one available day, or no availability restrictions
                 has_available = True
                 break
 
@@ -2738,7 +2743,7 @@ class AsyncGAStatus:
     """Status of an async GA execution."""
     session_id: str
     status: str  # 'running', 'completed', 'failed', 'cancelled'
-    progress: Optional[GAProgress] = None
+    progress: Optional['GAProgress'] = None  # Forward reference
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     started_at: float = 0.0
@@ -2913,7 +2918,7 @@ def list_active_ga_runs() -> List[Dict[str, Any]]:
 
 # Update chatbot integration to support async execution
 
-def handle_chatbot_request_async(request: ChatbotRequest) -> ChatbotResponse:
+def handle_chatbot_request_async(request: 'ChatbotRequest') -> 'ChatbotResponse':
     """
     Enhanced chatbot handler with async support.
 
@@ -3123,7 +3128,7 @@ class ChatbotResponse:
         return result
 
 
-def handle_chatbot_request(request: ChatbotRequest) -> ChatbotResponse:
+def handle_chatbot_request(request: 'ChatbotRequest') -> 'ChatbotResponse':
     """
     Main entry point for chatbot integration.
     Handles all chatbot actions with proper validation and error handling.
@@ -3164,7 +3169,7 @@ def handle_chatbot_request(request: ChatbotRequest) -> ChatbotResponse:
         )
 
 
-def _handle_generate(request: ChatbotRequest) -> ChatbotResponse:
+def _handle_generate(request: 'ChatbotRequest') -> 'ChatbotResponse':
     """Handle 'generate' action - create new schedule."""
     # Validate input
     if not request.subjects:
@@ -3204,7 +3209,7 @@ def _handle_generate(request: ChatbotRequest) -> ChatbotResponse:
         )
 
 
-def _handle_regenerate(request: ChatbotRequest) -> ChatbotResponse:
+def _handle_regenerate(request: 'ChatbotRequest') -> 'ChatbotResponse':
     """Handle 'regenerate' action - regenerate with adjustments."""
     # Build config with adjustments
     config = _build_config_from_request(request)
@@ -3245,7 +3250,7 @@ def _handle_regenerate(request: ChatbotRequest) -> ChatbotResponse:
         )
 
 
-def _handle_explain(request: ChatbotRequest) -> ChatbotResponse:
+def _handle_explain(request: 'ChatbotRequest') -> 'ChatbotResponse':
     """Handle 'explain' action - explain configuration."""
     config = _build_config_from_request(request)
     explanation = explain_ga_config(config)
@@ -3258,7 +3263,7 @@ def _handle_explain(request: ChatbotRequest) -> ChatbotResponse:
     )
 
 
-def _handle_adjust_params(request: ChatbotRequest) -> ChatbotResponse:
+def _handle_adjust_params(request: 'ChatbotRequest') -> 'ChatbotResponse':
     """Handle 'adjust_params' action - update parameters."""
     # Start with preset if specified
     if request.config_preset == 'fast':
@@ -3287,7 +3292,7 @@ def _handle_adjust_params(request: ChatbotRequest) -> ChatbotResponse:
     )
 
 
-def _handle_get_status(request: ChatbotRequest) -> ChatbotResponse:
+def _handle_get_status(request: 'ChatbotRequest') -> 'ChatbotResponse':
     """Handle 'get_status' action - get current execution status."""
     # This is a placeholder for async execution status
     # In Task #11, we'll implement actual status tracking
@@ -3300,7 +3305,7 @@ def _handle_get_status(request: ChatbotRequest) -> ChatbotResponse:
     )
 
 
-def _build_config_from_request(request: ChatbotRequest) -> FullGAConfig:
+def _build_config_from_request(request: 'ChatbotRequest') -> FullGAConfig:
     """Build FullGAConfig from chatbot request."""
     # Start with preset if specified, otherwise default
     if request.config_preset == 'fast':
@@ -3736,6 +3741,39 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
     # Ensure config has comprehensive models
     config = legacy_config_to_new_format(config)
 
+    # ═══════════════════════════════════════════════════════════════
+    # PHASE 2: PRE-FLIGHT VALIDATION
+    # ═══════════════════════════════════════════════════════════════
+    print("\n" + "="*70)
+    print("PHASE 2: PRE-FLIGHT VALIDATION")
+    print("="*70)
+
+    validation_result = validate_schedule_config(config)
+
+    if validation_result['warnings']:
+        print("\n⚠️  WARNINGS:")
+        for warning in validation_result['warnings']:
+            print(f"   • {warning}")
+            warnings.append(warning)
+
+    if not validation_result['valid']:
+        print("\n❌ VALIDATION FAILED:")
+        for error in validation_result['errors']:
+            print(f"   • {error}")
+        print("="*70 + "\n")
+
+        return {
+            'success': False,
+            'message': 'Configuration validation failed. Please fix the issues listed below.',
+            'schedules': [],
+            'warnings': warnings,
+            'errors': validation_result['errors'],
+            'suggestion': 'Check faculty availability, room capacity, and teaching load assignments.'
+        }
+
+    print("✅ Configuration validated successfully!")
+    print("="*70 + "\n")
+
     # Validate
     if not config.subjects:
         return {
@@ -3780,8 +3818,72 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
     rooms = legacy['rooms']
     prof_availability = legacy['prof_availability']
 
+    # ═══════════════════════════════════════════════════════════════
+    # PHASE 2: GREEDY FEASIBILITY - GUARANTEE A WORKING SCHEDULE
+    # ═══════════════════════════════════════════════════════════════
+    print("\n" + "="*70)
+    print("PHASE 2: GREEDY FEASIBILITY SEARCH")
+    print("="*70)
+    print("Finding a conflict-free base schedule...")
+
+    greedy_start = _time.time()
+    feasible_solution = greedy_feasible_schedule(config)
+    greedy_time = _time.time() - greedy_start
+
+    if feasible_solution is None:
+        print(f"\n❌ No feasible schedule found after {greedy_time:.1f}s")
+        print("   This configuration is IMPOSSIBLE with current constraints.")
+        print("="*70 + "\n")
+
+        return {
+            'success': False,
+            'message': 'No feasible schedule exists with current constraints.',
+            'schedules': [],
+            'warnings': warnings,
+            'errors': ['Unable to find conflict-free schedule. Configuration is over-constrained.'],
+            'suggestion': 'Try: Add more rooms, relax faculty availability, or reduce subject load.'
+        }
+
+    # Evaluate the greedy solution
+    greedy_fitness = fitness_v3(feasible_solution, config)
+
+    print(f"✅ Feasible schedule found in {greedy_time:.1f}s!")
+    print(f"   Fitness: {greedy_fitness.total_score:.1f}")
+    print(f"   Hard violations: {len(greedy_fitness.hard_violations)}")
+    print(f"   Soft violations: {len(greedy_fitness.soft_violations)}")
+    print(f"   Hard penalty: {greedy_fitness.hard_penalty:.1f}")
+    print(f"   Soft penalty: {greedy_fitness.soft_penalty:.1f}")
+    print("\n🎯 Now optimizing with GA for better quality...")
+    print("="*70 + "\n")
+
+    # Add greedy solution to progress log
+    progress_log.append({
+        'phase': 'greedy',
+        'elapsed_seconds': greedy_time,
+        'fitness': greedy_fitness.total_score,
+        'hard_penalty': greedy_fitness.hard_penalty,
+        'soft_penalty': greedy_fitness.soft_penalty,
+        'is_feasible': greedy_fitness.is_feasible
+    })
+
     # Build initial population
     population = []
+
+    # Seed population with greedy solution (multiple copies with slight variations)
+    print("Seeding population with feasible solution...")
+    for i in range(min(config.pop_size // 2, 20)):  # Use up to half population or 20 copies
+        if i == 0:
+            # First copy is exact greedy solution
+            population.append(copy.deepcopy(feasible_solution))
+        else:
+            # Other copies have slight mutations for diversity
+            mutated = copy.deepcopy(feasible_solution)
+            mutated = mutate_v2(mutated, rooms, prof_availability, rate=0.1)
+            population.append(mutated)
+
+    print(f"✓ Added {len(population)} greedy-seeded chromosomes")
+
+    # Continue with reference seeding if available
 
     if config.reference_schedules:
         seeded = seed_from_reference(

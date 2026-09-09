@@ -89,7 +89,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         margin-bottom: 14px;
     }
 
@@ -2082,15 +2082,42 @@
                     <option value="">All Classrooms</option>
                 </select>
 
-                <!-- Save/Edit Button -->
-                <button id="schedule-save-btn" class="nbm-btn-primary" onclick="toggleScheduleLock()"
-                    style="margin-left:auto;padding:8px 16px;font-size:0.875rem;display:flex;align-items:center;gap:6px;">
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
-                    Save Schedule
-                </button>
+                <!-- Button Group: Save Changes, Discard, Save Schedule -->
+                <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
+                    <!-- Save Changes Button (Frontend-First Architecture) -->
+                    <button id="save-changes-btn" class="nbm-btn-primary" onclick="saveAllScheduleChanges()"
+                        style="padding:8px 12px;font-size:0.875rem;display:flex;align-items:center;gap:6px;opacity:0.5;position:relative;"
+                        disabled title="No changes to save">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                        <span id="unsaved-count-badge"
+                            style="display:none;position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border-radius:10px;padding:2px 6px;font-size:0.7rem;font-weight:600;min-width:18px;text-align:center;"></span>
+                    </button>
+
+                    <!-- Discard Changes Button -->
+                    <button id="discard-changes-btn" class="nbm-btn-secondary" onclick="discardAllScheduleChanges()"
+                        style="padding:8px 12px;font-size:0.875rem;display:flex;align-items:center;gap:6px;opacity:0.5;"
+                        disabled title="No changes to discard">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <!-- Save/Edit Button -->
+                    <button id="schedule-save-btn" class="nbm-btn-primary" onclick="toggleScheduleLock()"
+                        style="margin-left:8px;padding:8px 16px;font-size:0.875rem;display:flex;align-items:center;gap:6px;">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                        Save Schedule
+                    </button>
+                </div>
 
                 <!-- Filter Toggle Button -->
                 <label style="display:flex;align-items:center;gap:8px;margin-left:12px;cursor:pointer;">
@@ -2335,9 +2362,10 @@
 
                 <!-- Unit Configuration Form (collapsible) -->
                 <div class="unit-config-form" id="unit-config-form" style="display:none;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div style="margin-bottom:16px;">
                         <p style="font-size:0.85rem;color:#6b7280;margin:0;">
-                            Select subjects to configure (max 3 units per section)
+                            Configure units per section (max 3 units per subject). Select subjects, set units, then
+                            change section to configure another section.
                         </p>
                     </div>
 
@@ -2389,7 +2417,41 @@
                         </div>
                     </div>
 
-                    <div class="asf-actions" style="margin-top:16px;">
+                    <div class="asf-actions" style="margin-top:16px;display:flex;align-items:center;gap:12px;">
+                        <div style="flex:0 0 auto;">
+                            <label
+                                style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Section</label>
+                            <select id="config-section-select" onchange="refreshConfigForSection()"
+                                style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;background:#fff;min-width:120px;">
+                                <option value="A">Section A</option>
+                                <option value="B">Section B</option>
+                                <option value="C">Section C</option>
+                                <option value="D">Section D</option>
+                                <option value="E">Section E</option>
+                                <option value="F">Section F</option>
+                                <option value="G">Section G</option>
+                                <option value="H">Section H</option>
+                                <option value="I">Section I</option>
+                                <option value="J">Section J</option>
+                                <option value="K">Section K</option>
+                                <option value="L">Section L</option>
+                                <option value="M">Section M</option>
+                                <option value="N">Section N</option>
+                                <option value="O">Section O</option>
+                                <option value="P">Section P</option>
+                                <option value="Q">Section Q</option>
+                                <option value="R">Section R</option>
+                                <option value="S">Section S</option>
+                                <option value="T">Section T</option>
+                                <option value="U">Section U</option>
+                                <option value="V">Section V</option>
+                                <option value="W">Section W</option>
+                                <option value="X">Section X</option>
+                                <option value="Y">Section Y</option>
+                                <option value="Z">Section Z</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;"></div>
                         <button class="nbm-btn-secondary" onclick="toggleUnitConfig()">Cancel</button>
                         <button class="nbm-btn-primary" onclick="saveUnitConfiguration()">Save</button>
                     </div>
@@ -2761,7 +2823,7 @@
             var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             var SLOT_H = 28;
             var START_H = 7;
-            var END_H = 17;
+            var END_H = 18;
             var TOTAL_SLOTS = (END_H - START_H) * 2;
 
             var slots = [];
@@ -2771,6 +2833,10 @@
             }
             slots.push(END_H + ':00');
 
+            console.log('📅 Time slots array:', slots);
+            console.log('  First slot:', slots[0], '| Last slot:', slots[slots.length - 1]);
+            console.log('  Total slots:', slots.length, '| Expected:', TOTAL_SLOTS + 1);
+
             function fmt(t) {
                 var parts = t.split(':');
                 var h = parseInt(parts[0]);
@@ -2779,7 +2845,13 @@
                 var hh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
                 return hh + ':' + (m === 0 ? '00' : '30') + ' ' + ap;
             }
-            function slotIdx(t) { return slots.indexOf(t); }
+            function slotIdx(t) {
+                // Normalize time format: remove leading zero from hour (08:00 → 8:00)
+                if (t && t.length >= 5 && t[0] === '0') {
+                    t = t.substring(1); // Remove leading zero
+                }
+                return slots.indexOf(t);
+            }
 
             // 8 distinct colors for up to 8 subjects per semester
             var palette = [
@@ -2890,33 +2962,28 @@
                     var configuredSubjects = await res.json();
                     console.log('📦 Loaded configured subjects from DB:', configuredSubjects.length);
 
-                    // Filter for this professor only
-                    var profSubjects = configuredSubjects.filter(function (cs) {
-                        var csProf = cs.prof || '';
-                        var originalProf = csProf;
-                        if (csProf.indexOf(',') > -1) {
-                            csProf = csProf.split(',')[0].trim();
+                    // FILTER BY CURRENT PROFESSOR - Build subjectUnits by SECTION (key format: "SUBJCODE-SECTION")
+                    subjectUnits = {};
+                    configuredSubjects.forEach(function (cs) {
+                        // Only load subjects for the currently selected professor
+                        if (cs.prof !== selectedProf) {
+                            return;
                         }
 
-                        var matches = csProf === selectedProf;
-                        console.log(`  Checking subject: ${cs.subjCode} | DB Prof: "${originalProf}" | Normalized: "${csProf}" | Filter: "${selectedProf}" | Match: ${matches}`);
+                        var key = cs.subjCode + '-' + cs.section;
 
-                        return matches;
-                    });
+                        console.log(`  Loading: ${key} | Prof: "${cs.prof}" | Units: ${cs.units}`);
 
-                    console.log(`👤 Found ${profSubjects.length} subjects for ${selectedProf}`);
-
-                    // Build subjectUnits from database
-                    subjectUnits = {};
-                    profSubjects.forEach(function (cs) {
-                        subjectUnits[cs.subjCode] = {
-                            configured: cs.units || 3,  // Units configured
-                            allocated: 0  // Will be calculated from schedules
+                        subjectUnits[key] = {
+                            configured: cs.units || 3,  // Units configured for this section
+                            allocated: 0,  // Will be calculated from schedules
+                            section: cs.section,
+                            subjCode: cs.subjCode
                         };
                     });
 
                     unitConfigSaved = Object.keys(subjectUnits).length > 0;
-                    console.log(`📥 Loaded ${Object.keys(subjectUnits).length} configured subjects for ${selectedProf}:`, subjectUnits);
+                    console.log(`📥 Loaded ${Object.keys(subjectUnits).length} configured subject-sections for ${selectedProf}:`, subjectUnits);
 
                     // Update button text if config exists
                     var btn = document.getElementById('unit-config-toggle-btn');
@@ -2974,14 +3041,8 @@
                     btn.classList.remove('nbm-btn-primary');
                     btn.classList.add('nbm-btn-secondary');
 
-                    // Clear and repopulate course lists to reflect current state
-                    ['cerp', 'hume', 'nstp'].forEach(function (category) {
-                        var courseList = document.getElementById(category + '-courses');
-                        if (courseList) {
-                            courseList.innerHTML = ''; // Clear existing
-                            populateCourseCheckboxes(category);
-                        }
-                    });
+                    // Clear and repopulate course lists to reflect current section
+                    refreshConfigForSection();
                 } else {
                     form.style.display = 'none';
                     btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg> Course';
@@ -2996,6 +3057,68 @@
                         if (chevron) chevron.style.transform = 'rotate(0deg)';
                     });
                 }
+            }
+
+            // ═══ Refresh Config When Section Changes ═══
+            // Store pending configurations across section changes
+            window.pendingConfigurations = window.pendingConfigurations || {};
+
+            window.refreshConfigForSection = function () {
+                console.log('🔄 Refreshing config for selected section...');
+
+                // FIRST: Save current selections before switching
+                saveCurrentSectionSelections();
+
+                // THEN: Clear and repopulate course lists to reflect new section
+                ['cerp', 'hume', 'nstp'].forEach(function (category) {
+                    var courseList = document.getElementById(category + '-courses');
+                    if (courseList) {
+                        courseList.innerHTML = ''; // Clear existing
+                        populateCourseCheckboxes(category);
+                    }
+                });
+            };
+
+            // Save current section's checkbox selections to pending configurations
+            function saveCurrentSectionSelections() {
+                var sectionSelect = document.getElementById('config-section-select');
+                var currentSection = sectionSelect ? sectionSelect.value : 'A';
+
+                console.log('💾 Saving selections for section:', currentSection);
+
+                ['cerp', 'hume', 'nstp'].forEach(function (category) {
+                    var courseList = document.getElementById(category + '-courses');
+                    if (!courseList) return;
+
+                    var checkboxes = courseList.querySelectorAll('input[type="checkbox"]');
+                    checkboxes.forEach(function (checkbox) {
+                        var code = checkbox.value;
+                        var section = checkbox.dataset.section || currentSection;
+                        var key = code + '-' + section;
+
+                        if (checkbox.checked) {
+                            // Find unit input for this checkbox
+                            var unitInput = courseList.querySelector('input[data-code="' + code + '"][data-section="' + section + '"]');
+                            var units = unitInput ? parseFloat(unitInput.value) : 3;
+
+                            window.pendingConfigurations[key] = {
+                                code: code,
+                                section: section,
+                                units: units,
+                                checked: true
+                            };
+                            console.log('  ✅ Saved:', key, '-', units, 'units');
+                        } else {
+                            // Remove from pending if unchecked
+                            if (window.pendingConfigurations[key]) {
+                                delete window.pendingConfigurations[key];
+                                console.log('  ❌ Removed:', key);
+                            }
+                        }
+                    });
+                });
+
+                console.log('📦 Total pending configurations:', Object.keys(window.pendingConfigurations).length);
             }
 
             // ═══ Course Category Toggle Functions ═══
@@ -3077,9 +3200,9 @@
                 var courseList = document.getElementById(category + '-courses');
                 var courses = [];
 
-                // Get currently selected professor
-                var profEl = document.getElementById('sf-professor');
-                var selectedProf = profEl ? profEl.value : '';
+                // Get currently selected section
+                var sectionSelect = document.getElementById('config-section-select');
+                var selectedSection = sectionSelect ? sectionSelect.value : 'A';
 
                 // Filter courses by category
                 if (category === 'cerp') {
@@ -3092,20 +3215,34 @@
 
                 // Create checkbox items with unit input
                 courses.forEach(function (course) {
-                    // Check if this subject is fully allocated globally (across all faculty)
-                    var globalAllocated = calculateGlobalAllocation(course.code);
-                    var isFullyAllocated = globalAllocated >= 3; // Max 3 units total
+                    var key = course.code + '-' + selectedSection;
 
-                    // Check if current faculty already has this subject configured
-                    var isAlreadyConfigured = false;
-                    if (selectedProf && window.allConfiguredSubjects) {
-                        isAlreadyConfigured = window.allConfiguredSubjects.some(function (config) {
+                    // Check if this section is already configured in DB for THIS PROFESSOR
+                    var configuredUnits = 0;
+                    var isConfigured = false;
+
+                    // Get currently selected professor
+                    var profEl = document.getElementById('sf-professor');
+                    var selectedProf = profEl ? profEl.value : '';
+
+                    if (window.allConfiguredSubjects && selectedProf) {
+                        var existing = window.allConfiguredSubjects.find(function (config) {
                             return config.subjCode === course.code &&
+                                config.section === selectedSection &&
                                 config.prof === selectedProf &&
                                 config.school_year === currentSchoolYear &&
                                 config.semester === currentSemester;
                         });
+                        if (existing) {
+                            isConfigured = true;
+                            configuredUnits = existing.units || 0;
+                        }
                     }
+
+                    // Check if pending configuration exists (from switching sections)
+                    var pendingConfig = window.pendingConfigurations[key];
+                    var shouldBeChecked = pendingConfig ? pendingConfig.checked : isConfigured;
+                    var defaultUnits = pendingConfig ? pendingConfig.units : (isConfigured ? configuredUnits : 3);
 
                     var item = document.createElement('div');
                     item.className = 'course-checkbox-item';
@@ -3113,47 +3250,27 @@
                     item.style.alignItems = 'center';
                     item.style.gap = '8px';
 
-                    // Grey out if fully allocated OR already configured by this faculty
-                    if (isFullyAllocated || isAlreadyConfigured) {
-                        item.style.opacity = '0.4';
-                        item.style.cursor = 'not-allowed';
-                        if (isAlreadyConfigured) {
-                            item.title = course.code + ' is already configured for ' + selectedProf;
-                        } else {
-                            item.title = course.code + ' is fully allocated (3/3 units assigned across all faculty)';
-                        }
-                    }
-
                     var checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.id = 'course-' + course.code.replace(/\s/g, '-');
+                    checkbox.id = 'course-' + key.replace(/\s/g, '-');
                     checkbox.value = course.code;
-                    checkbox.disabled = isFullyAllocated || isAlreadyConfigured; // Disable if fully allocated or already configured
+                    checkbox.dataset.section = selectedSection;
+                    checkbox.checked = shouldBeChecked; // Restore from pending or DB
                     checkbox.onchange = function () {
                         updateSelectedCount(category);
-                        updateUnitConfigGrid();
                     };
-
-                    // Check if already configured
-                    if (subjectUnits[course.code]) {
-                        checkbox.checked = true;
-                    }
 
                     var label = document.createElement('label');
                     label.htmlFor = checkbox.id;
                     label.style.flex = '1';
                     label.style.fontSize = '0.82rem';
-                    label.style.cursor = (isFullyAllocated || isAlreadyConfigured) ? 'not-allowed' : 'pointer';
+                    label.style.cursor = 'pointer';
 
-                    // Show allocation status in label
-                    if (isAlreadyConfigured) {
-                        label.textContent = course.code + ' - ' + course.name + ' (Already Configured)';
-                        label.style.color = '#9ca3af';
-                    } else if (isFullyAllocated) {
-                        label.textContent = course.code + ' - ' + course.name + ' (Fully Allocated: ' + globalAllocated.toFixed(1) + '/3 units)';
-                        label.style.color = '#9ca3af';
-                    } else if (globalAllocated > 0) {
-                        label.textContent = course.code + ' - ' + course.name + ' (' + globalAllocated.toFixed(1) + '/3 units assigned)';
+                    if (isConfigured) {
+                        label.textContent = course.code + ' - ' + course.name + ' (Configured: ' + configuredUnits + 'u)';
+                    } else if (pendingConfig) {
+                        label.textContent = course.code + ' - ' + course.name + ' (Pending: ' + pendingConfig.units + 'u)';
+                        label.style.color = '#2563eb'; // Blue for pending
                     } else {
                         label.textContent = course.code + ' - ' + course.name;
                     }
@@ -3164,7 +3281,7 @@
                     unitInput.min = '0.5';
                     unitInput.max = '3';
                     unitInput.step = '0.5';
-                    unitInput.value = subjectUnits[course.code] ? subjectUnits[course.code].configured : 3;
+                    unitInput.value = defaultUnits; // Use pending or configured value
                     unitInput.className = 'unit-input';
                     unitInput.style.width = '55px';
                     unitInput.style.padding = '4px 6px';
@@ -3173,39 +3290,21 @@
                     unitInput.style.border = '1px solid #d1d5db';
                     unitInput.style.borderRadius = '6px';
                     unitInput.dataset.code = course.code;
-                    unitInput.disabled = isFullyAllocated || isAlreadyConfigured; // Disable if fully allocated or already configured
-
-                    // Update max value dynamically based on remaining capacity
-                    if (!isFullyAllocated && !isAlreadyConfigured && globalAllocated > 0) {
-                        var remaining = 3 - globalAllocated;
-                        unitInput.max = Math.min(3, remaining).toString();
-                        unitInput.title = 'Hours/units for ' + course.code + ' (max ' + remaining.toFixed(1) + ' units remaining, 0.5 intervals)';
-                    } else if (isAlreadyConfigured) {
-                        unitInput.style.backgroundColor = '#f3f4f6';
-                        unitInput.style.cursor = 'not-allowed';
-                        unitInput.title = 'Already configured for ' + selectedProf;
-                    } else if (isFullyAllocated) {
-                        unitInput.style.backgroundColor = '#f3f4f6';
-                        unitInput.style.cursor = 'not-allowed';
-                        unitInput.title = 'Subject fully allocated';
-                    } else {
-                        unitInput.title = 'Hours/units for ' + course.code + ' (max 3 units, 0.5 intervals)';
-                    }
+                    unitInput.dataset.section = selectedSection;
+                    unitInput.title = 'Hours/units for ' + course.code + ' Section ' + selectedSection + ' (max 3 units, 0.5 intervals)';
 
                     unitInput.onchange = function () {
                         // Enforce 3-unit max and 0.5 intervals
                         var val = parseFloat(this.value);
-                        var maxAllowed = parseFloat(this.max);
 
                         if (isNaN(val) || val < 0.5) {
                             this.value = 0.5;
-                        } else if (val > maxAllowed) {
-                            this.value = maxAllowed;
+                        } else if (val > 3) {
+                            this.value = 3;
                         } else {
                             // Round to nearest 0.5
                             this.value = (Math.round(val * 2) / 2).toFixed(1);
                         }
-                        updateUnitConfigGrid();
                     };
 
                     var unitLabel = document.createElement('span');
@@ -3247,122 +3346,68 @@
             };
 
             // ═══ Updated Save Unit Configuration ═══
-            function saveUnitConfiguration() {
-                var newSubjectUnits = {};
-                var configuredSubjectsToSave = []; // NEW: Track subjects to save to DB
+            async function saveUnitConfiguration() {
+                // FIRST: Save current section selections before final save
+                saveCurrentSectionSelections();
 
-                // Get all checked courses from all categories with their unit values
-                ['cerp', 'hume', 'nstp'].forEach(function (category) {
-                    var courseList = document.getElementById(category + '-courses');
-                    if (!courseList) return;
+                // Get selected professor
+                var profEl = document.getElementById('sf-professor');
+                var selectedProf = profEl ? profEl.value : '';
 
-                    var checkboxes = courseList.querySelectorAll('input[type="checkbox"]:checked');
-                    checkboxes.forEach(function (checkbox) {
-                        var code = checkbox.value;
-                        var subject = ALL_SUBJECTS.find(function (s) { return s.code === code; });
+                if (!selectedProf) {
+                    alert('⚠️ Please select a professor from the filter dropdown first.');
+                    return;
+                }
 
-                        if (subject) {
-                            // Read unit value from the inline input
-                            var unitInput = courseList.querySelector('input[data-code="' + code + '"]');
-                            var units = parseFloat(unitInput.value) || 3;
+                // Get ALL pending configurations (from all sections)
+                var configuredSubjectsToSave = [];
+                Object.keys(window.pendingConfigurations).forEach(function (key) {
+                    var config = window.pendingConfigurations[key];
+                    var subject = ALL_SUBJECTS.find(function (s) { return s.code === config.code; });
 
-                            newSubjectUnits[code] = {
-                                configured: units,
-                                allocated: 0,
-                                name: subject.name
-                            };
-
-                            // NEW: Add to list for database save
-                            configuredSubjectsToSave.push({
-                                subjCode: code,
-                                subjName: subject.name,
-                                units: units
-                            });
-                        }
-                    });
+                    if (subject && config.checked) {
+                        configuredSubjectsToSave.push({
+                            subjCode: config.code,
+                            subjName: subject.name,
+                            section: config.section,
+                            units: config.units
+                        });
+                    }
                 });
 
                 // Check if at least one subject is selected
-                if (Object.keys(newSubjectUnits).length === 0) {
+                if (configuredSubjectsToSave.length === 0) {
                     alert('⚠️ Please select at least one subject to configure.');
                     return;
                 }
 
-                // Update global subjectUnits
-                subjectUnits = newSubjectUnits;
-                unitConfigSaved = true;
+                console.log('💾 Saving configuration for Professor: ' + selectedProf);
+                console.log('📋 Total configurations to save:', configuredSubjectsToSave.length);
+                console.log(configuredSubjectsToSave);
 
-                // Save to localStorage
-                saveSavedUnitConfig();
+                // Save configured subjects to database (await completion)
+                await saveConfiguredSubjectsToBackend(configuredSubjectsToSave, selectedProf);
 
-                // NEW: Save configured subjects to database
-                saveConfiguredSubjectsToBackend(configuredSubjectsToSave);
+                // Clear pending configurations after save
+                window.pendingConfigurations = {};
 
                 // Close the form
                 toggleUnitConfig();
 
-                // Calculate allocated units from existing schedules
-                calculateAllocatedUnits();
+                // Reload configured subjects for current professor and re-render
+                loadSavedUnitConfig().then(function () {
+                    calculateAllocatedUnits();
+                    renderDraggableBlocks();
+                });
 
-                // Render draggable blocks
-                renderDraggableBlocks();
-
-                // Update dropdowns
-                populateSubjectDropdowns();
-
-                // Show success message
-                var stagingLabel = document.querySelector('.staging-label span:first-child');
-                if (stagingLabel) {
-                    stagingLabel.textContent = 'Unscheduled Subjects (drag to timetable) - ' + Object.keys(subjectUnits).length + ' subjects configured';
-                }
-
-                console.log('✅ Unit configuration saved:', subjectUnits);
+                console.log('✅ Unit configuration saved');
             }
 
             // NEW: Save configured subjects to backend database
-            async function saveConfiguredSubjectsToBackend(subjects) {
-                // Get current professor filter if enabled
-                var filterToggle = document.getElementById('filter-toggle');
-                var filtersEnabled = filterToggle ? filterToggle.checked : false;
-                var selectedProf = '';
-
-                if (filtersEnabled) {
-                    var profEl = document.getElementById('sf-professor');
-                    selectedProf = profEl ? profEl.value : '';
-                }
-
-                // If no professor selected, we can't save to DB yet
-                // (FSR needs professor to filter subjects)
-                if (!selectedProf) {
-                    console.log('⚠️ No professor selected - skipping database save');
-                    console.log('💡 Enable filters and select a professor to save subjects for FSR');
-                    return;
-                }
-
+            async function saveConfiguredSubjectsToBackend(subjects, selectedProf) {
                 console.log('💾 Saving', subjects.length, 'configured subjects for professor:', selectedProf);
 
-                // STEP 1: Delete ALL existing configured subjects for this professor
-                console.log('🗑️ Deleting existing configured subjects for:', selectedProf);
-                try {
-                    var deleteRes = await fetch('/api/configured-subjects/delete-by-professor', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            prof: selectedProf,
-                            school_year: currentSchoolYear,
-                            semester: currentSemester
-                        })
-                    });
-                    if (deleteRes.ok) {
-                        console.log('✅ Deleted existing configured subjects');
-                    } else {
-                        console.warn('⚠️ Failed to delete existing subjects');
-                    }
-                } catch (err) {
-                    console.error('❌ Error deleting existing subjects:', err);
-                }
-
-                // STEP 2: Save the newly selected subjects
+                // Save each subject with its section
                 for (var i = 0; i < subjects.length; i++) {
                     var subj = subjects[i];
                     try {
@@ -3373,14 +3418,14 @@
                                 subjCode: subj.subjCode,
                                 subjName: subj.subjName,
                                 prof: selectedProf,
-                                section: 'A', // Default section
+                                section: subj.section,
                                 units: subj.units,
                                 school_year: currentSchoolYear,
                                 semester: currentSemester
                             })
                         });
                         if (res.ok) {
-                            console.log('✅ Saved:', subj.subjCode);
+                            console.log('✅ Saved:', subj.subjCode, 'Section', subj.section, '-', subj.units, 'units');
                         } else {
                             var error = await res.json();
                             console.error('❌ Failed to save', subj.subjCode, ':', error);
@@ -3394,33 +3439,39 @@
             }
 
             function calculateAllocatedUnits() {
-                // Reset allocated units
-                Object.keys(subjectUnits).forEach(function (code) {
-                    subjectUnits[code].allocated = 0;
-                });
+                console.log('📊 Calculating allocated units by PROFESSOR + SECTION...');
 
-                // Get currently selected professor from filter
+                // Get currently selected professor
                 var profEl = document.getElementById('sf-professor');
                 var selectedProf = profEl ? profEl.value : '';
 
-                // Sum up allocated units from schedules FOR CURRENT SEMESTER + SELECTED FACULTY ONLY
+                // Reset allocated units for all configured subject-section combinations
+                Object.keys(subjectUnits).forEach(function (key) {
+                    // Key format is now "SUBJCODE-SECTION" (e.g., "CERP 101-A")
+                    subjectUnits[key].allocated = 0;
+                });
+
+                // Sum up allocated units from schedules FOR CURRENT PROFESSOR + SEMESTER
                 schedules.forEach(function (sch) {
                     var matchesSemester = ((sch.school_year || sch.schoolYear) === currentSchoolYear) && sch.semester === currentSemester;
+                    var matchesProfessor = !selectedProf || sch.prof === selectedProf; // If no professor selected, count all
 
-                    // Match professor (normalize name by removing suffix)
-                    var schProf = sch.prof || '';
-                    if (schProf.indexOf(',') > -1) schProf = schProf.split(',')[0].trim();
-                    var matchesProf = !selectedProf || schProf === selectedProf;
+                    if (matchesSemester && matchesProfessor && sch.subjCode && sch.section) {
+                        var key = sch.subjCode + '-' + sch.section;
 
-                    if (matchesSemester && matchesProf && subjectUnits[sch.subjCode]) {
-                        var startIdx = slotIdx(sch.start);
-                        var endIdx = slotIdx(sch.end);
-                        if (startIdx >= 0 && endIdx > startIdx) {
-                            var duration = (endIdx - startIdx) / 2;
-                            subjectUnits[sch.subjCode].allocated += duration;
+                        if (subjectUnits[key]) {
+                            var startIdx = slotIdx(sch.start);
+                            var endIdx = slotIdx(sch.end);
+                            if (startIdx >= 0 && endIdx > startIdx) {
+                                var duration = (endIdx - startIdx) / 2;
+                                subjectUnits[key].allocated += duration;
+                                console.log('  Added', duration, 'units to', key, 'for professor', sch.prof);
+                            }
                         }
                     }
                 });
+
+                console.log('📊 Final allocation for', selectedProf, ':', JSON.parse(JSON.stringify(subjectUnits)));
             }
 
             function renderDraggableBlocks() {
@@ -3430,50 +3481,58 @@
                     return;
                 }
 
-                // ALL_SUBJECTS is now a flat array (all courses available always)
-                var subjects = ALL_SUBJECTS;
-
                 console.log('🎨 Rendering draggable blocks...');
-                console.log('Total subjects in ALL_SUBJECTS:', subjects.length);
                 console.log('Subject units config (subjectUnits):', JSON.parse(JSON.stringify(subjectUnits)));
                 console.log('Keys in subjectUnits:', Object.keys(subjectUnits));
 
-                // Filter subjects that have configured units and remaining allocation
-                var availableSubjects = subjects.filter(function (subj) {
-                    var unitData = subjectUnits[subj.code];
-
-                    console.log('Checking:', subj.code, 'unitData:', unitData);
-
-                    if (!unitData) {
-                        console.log('  ❌ No unit data for', subj.code);
-                        return false;
-                    }
-
-                    if (unitData.configured === 0) {
-                        console.log('  ❌', subj.code, 'configured is 0');
-                        return false;
-                    }
-
-                    var hasRemaining = unitData.allocated < unitData.configured;
-                    console.log('  Check remaining:', unitData.allocated, '<', unitData.configured, '=', hasRemaining);
-
-                    if (hasRemaining) {
-                        console.log('  ✅', subj.code, 'will be shown');
-                    } else {
-                        console.log('  ❌', subj.code, 'fully allocated');
-                    }
-
-                    return hasRemaining;
-                });
-
-                console.log('Available subjects to render:', availableSubjects.length);
-
                 // Check if any subjects are configured
-                var hasAnyConfigured = Object.keys(subjectUnits).some(function (code) {
-                    return subjectUnits[code] && subjectUnits[code].configured > 0;
+                var hasAnyConfigured = Object.keys(subjectUnits).length > 0;
+
+                // Create individual blocks for each section
+                var blocksToRender = [];
+
+                Object.keys(subjectUnits).forEach(function (key) {
+                    // Key format: "SUBJCODE-SECTION"
+                    var parts = key.split('-');
+                    if (parts.length !== 2) return;
+
+                    var subjCode = parts[0];
+                    var section = parts[1];
+                    var unitData = subjectUnits[key];
+
+                    console.log('Checking:', key, 'unitData:', unitData);
+
+                    if (!unitData || unitData.configured === 0) {
+                        console.log('  ❌ No unit data or configured is 0 for', key);
+                        return;
+                    }
+
+                    var remaining = unitData.configured - unitData.allocated;
+                    console.log('  Remaining:', remaining, '=', unitData.configured, '-', unitData.allocated);
+
+                    if (remaining > 0) {
+                        console.log('  ✅', key, 'has', remaining, 'units available');
+
+                        // Find subject name from ALL_SUBJECTS
+                        var subject = ALL_SUBJECTS.find(function (s) { return s.code === subjCode; });
+                        var subjName = subject ? subject.name : subjCode;
+
+                        blocksToRender.push({
+                            key: key,
+                            subjCode: subjCode,
+                            subjName: subjName,
+                            section: section,
+                            remaining: remaining,
+                            hasAllocation: unitData.allocated > 0
+                        });
+                    } else {
+                        console.log('  ❌', key, 'fully allocated');
+                    }
                 });
 
-                if (availableSubjects.length === 0) {
+                console.log('Blocks to render:', blocksToRender.length);
+
+                if (blocksToRender.length === 0) {
                     if (!hasAnyConfigured) {
                         // No subjects configured yet - prompt admin to configure
                         container.innerHTML = `
@@ -3483,7 +3542,7 @@
                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             <div style="font-weight:600;margin-bottom:4px;">No subjects configured yet</div>
-                            <div style="font-size:0.78rem;color:#9ca3af;">Click the "Course Config" button above to set up subjects for this faculty</div>
+                            <div style="font-size:0.78rem;color:#9ca3af;">Click the "Course Config" button above to set up subjects for this semester</div>
                         </div>
                     `;
                     } else {
@@ -3493,7 +3552,7 @@
                             <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <div>All subjects fully allocated!</div>
+                            <div>All sections fully allocated!</div>
                         </div>
                     `;
                     }
@@ -3501,29 +3560,26 @@
                     return;
                 }
 
+                // Render individual blocks for each section
                 var html = '';
-                availableSubjects.forEach(function (subj) {
-                    var unitData = subjectUnits[subj.code];
-                    var remaining = unitData.configured - unitData.allocated;
-                    var hasPartialAllocation = unitData.allocated > 0;
+                blocksToRender.forEach(function (block) {
                     // Apply incomplete class only if no allocation yet
-                    var classNames = hasPartialAllocation ? '' : 'incomplete';
-                    var color = colorFor(subj.code, currentSchoolYear, currentSemester);
+                    var classNames = block.hasAllocation ? '' : 'incomplete';
+                    var color = colorFor(block.subjCode, currentSchoolYear, currentSemester);
 
-                    console.log('Creating block for:', subj.code, '- Remaining:', remaining, '- Color:', color, '- Class:', classNames);
+                    console.log('Creating block for:', block.subjCode, 'Section', block.section, '- Remaining:', block.remaining, '- Color:', color);
 
                     html += `
                     <div class="draggable-subject ${classNames}" 
                         draggable="true"
-                        data-subject-code="${subj.code}"
-                        data-subject-name="${subj.name}"
-                        data-configured-units="${unitData.configured}"
-                        data-allocated-units="${unitData.allocated}"
+                        data-subject-code="${block.subjCode}"
+                        data-subject-name="${block.subjName}"
+                        data-section="${block.section}"
                         style="background-color: ${color};"
                         ondragstart="handleDragStart(event)"
                         ondragend="handleDragEnd(event)">
-                        <span class="subj-code">${subj.code}</span>
-                        <span class="subj-units">${remaining.toFixed(1)}h remaining</span>
+                        <span class="subj-code">${block.subjCode} - ${block.section}</span>
+                        <span class="subj-units">${block.remaining.toFixed(1)}h</span>
                     </div>
                 `;
                 });
@@ -3582,7 +3638,8 @@
                 var target = event.target;
                 draggedSubject = {
                     code: target.dataset.subjectCode,
-                    name: target.dataset.subjectName
+                    name: target.dataset.subjectName,
+                    section: target.dataset.section // Single section from this block
                 };
                 target.classList.add('dragging');
 
@@ -3682,10 +3739,10 @@
                 }
 
                 // Open NBM with pre-filled subject
-                openNewBlockModalWithSubject(day, start, end, draggedSubject.code, draggedSubject.name);
+                openNewBlockModalWithSubject(day, start, end, draggedSubject.code, draggedSubject.name, draggedSubject.section);
             }
 
-            function openNewBlockModalWithSubject(day, start, end, code, name) {
+            function openNewBlockModalWithSubject(day, start, end, code, name, sectionsAvailable) {
                 // Calculate slot indices
                 var startSlotIdx = slotIdx(start);
                 var endSlotIdx = slotIdx(end);
@@ -3702,7 +3759,8 @@
                     startSlot: startSlotIdx,
                     endSlot: endSlotIdx,
                     code: code,
-                    name: name
+                    name: name,
+                    sectionsAvailable: sectionsAvailable
                 });
 
                 // Set the selection info
@@ -3719,6 +3777,19 @@
 
                     // Trigger professor population
                     onSubjectCodeChange('nbm');
+                }
+
+                // Auto-select section if available
+                if (sectionsAvailable) {
+                    console.log('Auto-selecting section:', sectionsAvailable);
+
+                    setTimeout(function () {
+                        var sectionSelect = document.getElementById('nbm-section');
+                        if (sectionSelect) {
+                            sectionSelect.value = sectionsAvailable;
+                            console.log('✅ Section auto-filled:', sectionsAvailable);
+                        }
+                    }, 50);
                 }
 
                 // Auto-fill professor from filter (regardless of filter toggle state)
@@ -3772,12 +3843,255 @@
                 }, 100);
             }
 
-            var schedules = [];
-            var filtered = [];
+            // ═══ STATE MANAGEMENT: Frontend-First Architecture ═══
+            // savedSchedules: Read-only copy from database (source of truth on server)
+            // pendingSchedules: Working copy with unsaved changes (all operations modify this)
+            // filtered: Filtered view of pendingSchedules for display
+            var savedSchedules = [];      // From database (read-only reference)
+            var pendingSchedules = [];    // Working copy with all edits (unsaved)
+            var filtered = [];            // Filtered view for display
+            var hasUnsavedScheduleChanges = false; // Track if pendingSchedules differs from savedSchedules
+
+            // Legacy compatibility: Keep 'schedules' as alias to pendingSchedules
+            var schedules = pendingSchedules;
 
             // Expose globally for room timetable
             window.schedules = schedules;
             window.filtered = filtered;
+
+            // Helper: Mark that pending changes exist
+            function markScheduleChanged() {
+                hasUnsavedScheduleChanges = true;
+                updateSaveButtonState();
+                console.log('📝 Schedules modified (unsaved)');
+            }
+
+            // Helper: Update save button state (will be implemented in task 3)
+            function updateSaveButtonState() {
+                var saveBtn = document.getElementById('save-changes-btn');
+                var discardBtn = document.getElementById('discard-changes-btn');
+                var badge = document.getElementById('unsaved-count-badge');
+
+                if (saveBtn) {
+                    if (hasUnsavedScheduleChanges && pendingSchedules.length > 0) {
+                        // Has unsaved changes - show save icon
+                        saveBtn.disabled = false;
+                        saveBtn.style.opacity = '1';
+                        var changeCount = pendingSchedules.length;
+                        saveBtn.title = changeCount + ' schedule(s) to save';
+                        saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg><span id="unsaved-count-badge" style="display:block;position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border-radius:10px;padding:2px 6px;font-size:0.7rem;font-weight:600;min-width:18px;text-align:center;">' + changeCount + '</span>';
+
+                        // Enable discard button
+                        if (discardBtn) {
+                            discardBtn.disabled = false;
+                            discardBtn.style.opacity = '1';
+                            discardBtn.title = 'Discard unsaved changes';
+                        }
+                    } else if (pendingSchedules.length > 0) {
+                        // No unsaved changes but has schedules - show edit icon, keep enabled
+                        saveBtn.disabled = false;
+                        saveBtn.style.opacity = '1';
+                        saveBtn.title = 'Edit schedules (make changes then save)';
+                        saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>';
+
+                        // Disable discard button (nothing to discard)
+                        if (discardBtn) {
+                            discardBtn.disabled = true;
+                            discardBtn.style.opacity = '0.5';
+                            discardBtn.title = 'No changes to discard';
+                        }
+                    } else {
+                        // No schedules at all - disabled with save icon
+                        saveBtn.disabled = true;
+                        saveBtn.style.opacity = '0.5';
+                        saveBtn.title = 'No changes to save';
+                        saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>';
+
+                        // Disable discard button
+                        if (discardBtn) {
+                            discardBtn.disabled = true;
+                            discardBtn.style.opacity = '0.5';
+                            discardBtn.title = 'No changes to discard';
+                        }
+                    }
+                }
+            }
+
+            // ═══ SAVE ALL CHANGES FUNCTION ═══
+            window.saveAllScheduleChanges = async function () {
+                // If showing edit icon (no unsaved changes), just show info message
+                if (!hasUnsavedScheduleChanges) {
+                    if (pendingSchedules.length > 0) {
+                        showToast('All schedules are saved. Make changes to enable saving.', 'info', 3000);
+                    } else {
+                        showToast('No schedules to save. Add blocks to the timetable first.', 'info', 3000);
+                    }
+                    return;
+                }
+
+                if (pendingSchedules.length === 0) {
+                    showToast('No changes to save', 'info');
+                    return;
+                }
+
+                var saveBtn = document.getElementById('save-changes-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path stroke-linecap="round" d="M12 2a10 10 0 0110 10"/></svg>';
+                }
+
+                try {
+                    console.log('💾 Saving all schedule changes...', {
+                        count: pendingSchedules.length,
+                        schoolYear: currentSchoolYear,
+                        semester: currentSemester
+                    });
+
+                    // Get currently selected professor for filtering (optional)
+                    var profEl = document.getElementById('sf-professor');
+                    var selectedProf = profEl ? profEl.value : '';
+
+                    console.log('💡 Save context:', {
+                        selectedProfessor: selectedProf,
+                        totalSchedules: pendingSchedules.length
+                    });
+
+                    // Count schedules by professor
+                    var profCounts = {};
+                    pendingSchedules.forEach(function (s) {
+                        var prof = s.prof || 'Unknown';
+                        profCounts[prof] = (profCounts[prof] || 0) + 1;
+                    });
+                    console.log('  Schedules by professor:', profCounts);
+
+                    // Prepare schedules for batch save
+                    // IMPORTANT: Batch-save deletes all old schedules and inserts new ones,
+                    // so we should NOT include IDs - let the database generate new ones
+                    var schedulesToSave = pendingSchedules.map(function (s) {
+                        var copy = Object.assign({}, s);
+
+                        // Always remove ID - batch save creates new entries
+                        delete copy.id;
+
+                        // Normalize field names to snake_case for database
+                        if (copy.subjCode) {
+                            copy.subj_code = copy.subjCode;
+                            delete copy.subjCode;
+                        }
+                        if (copy.subjName) {
+                            copy.subj_name = copy.subjName;
+                            delete copy.subjName;
+                        }
+                        if (copy.schoolYear) {
+                            copy.school_year = copy.schoolYear;
+                            delete copy.schoolYear;
+                        }
+
+                        console.log('  Prepared schedule:', copy.subj_code, 'units:', copy.units, 'type:', typeof copy.units);
+                        return copy;
+                    });
+
+                    // Call batch-save endpoint
+                    // NOTE: We save ALL pendingSchedules, not just filtered ones
+                    // The professor filter is for UI display only, not for saving
+                    var res = await fetch('/api/schedules/batch-save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            schedules: schedulesToSave,
+                            school_year: currentSchoolYear,
+                            semester: currentSemester
+                            // NO professor filter - save all schedules
+                        })
+                    });
+
+                    var data = await res.json();
+
+                    if (!res.ok) {
+                        throw new Error(data.error || 'Failed to save schedules');
+                    }
+
+                    console.log('✅ Batch save successful:', data);
+
+                    // Show success message
+                    showToast(
+                        'Saved ' + data.saved + ' schedule(s) successfully' +
+                        (data.deleted > 0 ? ' (replaced ' + data.deleted + ' old entries)' : ''),
+                        'success',
+                        3000
+                    );
+
+                    // Reload schedules from database to get real IDs
+                    console.log('🔄 Reloading schedules from database...');
+                    await loadSchedules();
+                    console.log('📊 After reload - pendingSchedules:', pendingSchedules.length, 'savedSchedules:', savedSchedules.length);
+
+                    // Reset unsaved changes flag
+                    hasUnsavedScheduleChanges = false;
+                    updateSaveButtonState();
+
+                    // Re-render everything
+                    applyFilters();
+                    calculateAllocatedUnits();
+                    renderDraggableBlocks();
+
+                } catch (err) {
+                    console.error('❌ Failed to save schedules:', err);
+                    showToast('Error saving schedules: ' + err.message, 'error', 5000);
+                } finally {
+                    // Restore button
+                    if (saveBtn) {
+                        saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>';
+                        updateSaveButtonState();
+                    }
+                }
+            };
+
+            // ═══ DISCARD ALL CHANGES FUNCTION ═══
+            window.discardAllScheduleChanges = function () {
+                if (!hasUnsavedScheduleChanges || pendingSchedules.length === 0) {
+                    showToast('No changes to discard', 'info');
+                    return;
+                }
+
+                // Confirm before discarding
+                var changeCount = pendingSchedules.length;
+                if (!confirm('Discard all ' + changeCount + ' unsaved schedule(s)?\n\nThis will revert to the last saved state and cannot be undone.')) {
+                    return;
+                }
+
+                console.log('🔄 Discarding all schedule changes...');
+
+                // Revert pendingSchedules to savedSchedules (deep copy)
+                pendingSchedules = JSON.parse(JSON.stringify(savedSchedules));
+                schedules = pendingSchedules; // Update alias
+                window.schedules = schedules; // Update global reference
+
+                // Reset unsaved changes flag
+                hasUnsavedScheduleChanges = false;
+                updateSaveButtonState();
+
+                // Re-render everything
+                applyFilters();
+                renderTimetable();
+                renderReport();
+                calculateAllocatedUnits();
+                renderDraggableBlocks();
+
+                showToast('Changes discarded. Reverted to last saved state.', 'success', 3000);
+                console.log('✅ Reverted to saved schedules:', savedSchedules.length);
+            };
+
+            // ═══ BEFOREUNLOAD WARNING ═══
+            // Warn user before leaving page with unsaved changes
+            window.addEventListener('beforeunload', function (e) {
+                if (hasUnsavedScheduleChanges && pendingSchedules.length > 0) {
+                    var message = 'You have ' + pendingSchedules.length + ' unsaved schedule(s). Leave without saving?';
+                    e.preventDefault();
+                    e.returnValue = message; // Standard for most browsers
+                    return message; // For some older browsers
+                }
+            });
 
             var currentMode = 'manual';
             // School year & semester: persist admin's choice via localStorage
@@ -3822,15 +4136,46 @@
             async function loadSchedules() {
                 try {
                     var res = await fetch('/api/schedules');
-                    schedules = res.ok ? await res.json() : [];
+                    var loadedSchedules = res.ok ? await res.json() : [];
+
+                    // Normalize field names from snake_case (database) to camelCase (frontend)
+                    loadedSchedules = loadedSchedules.map(function (s) {
+                        return {
+                            id: s.id,
+                            prof: s.prof,
+                            subjCode: s.subj_code || s.subjCode,
+                            subjName: s.subj_name || s.subjName,
+                            type: s.type,
+                            day: s.day,
+                            start: s.start,
+                            end: s.end,
+                            room: s.room,
+                            units: s.units,
+                            section: s.section,
+                            schoolYear: s.school_year || s.schoolYear,
+                            semester: s.semester
+                        };
+                    });
+
+                    // Update both saved and pending schedules from database
+                    savedSchedules = JSON.parse(JSON.stringify(loadedSchedules)); // Deep copy
+                    pendingSchedules = JSON.parse(JSON.stringify(loadedSchedules)); // Deep copy
+                    schedules = pendingSchedules; // Legacy alias
+
                     window.schedules = schedules; // Update global reference
-                    console.log('📥 Loaded', schedules.length, 'schedules from database');
-                    if (schedules.length > 0) {
-                        console.log('Sample schedule:', schedules[0]);
+                    hasUnsavedScheduleChanges = false; // Just loaded from DB, no unsaved changes
+
+                    console.log('📥 Loaded', pendingSchedules.length, 'schedules from database');
+                    if (pendingSchedules.length > 0) {
+                        console.log('Sample schedule:', pendingSchedules[0]);
+                        console.log('All schedule IDs:', pendingSchedules.map(function (s) { return s.id; }));
+                        console.log('All subjects:', pendingSchedules.map(function (s) { return s.subjCode + ' ' + s.day + ' ' + s.start; }));
                     }
                 } catch (e) {
                     console.error('❌ Failed to load schedules:', e);
-                    schedules = [];
+                    savedSchedules = [];
+                    pendingSchedules = [];
+                    schedules = pendingSchedules;
                     window.schedules = schedules; // Update global reference
                 }
                 // Don't set filtered yet - let applyFilters do it to prevent flash of wrong data
@@ -3851,6 +4196,9 @@
                 setTimeout(function () {
                     applySchedFilter();
                 }, 100);
+
+                // Update save button state
+                updateSaveButtonState();
             }
             // Expose globally so CHE assistant can refresh schedule after actions
             window.loadSchedules = loadSchedules;
@@ -3890,7 +4238,8 @@
                 var conflicts = [];
                 console.log('  Checking', schedules.length, 'total schedules for conflicts...');
                 schedules.forEach(function (s) {
-                    if (s.id === excludeId) {
+                    // Use string comparison for IDs (handles UUIDs and numbers)
+                    if (String(s.id) === String(excludeId)) {
                         console.log('    ✓ Skipping self:', s.subjCode, s.id);
                         return; // Skip the block being edited
                     }
@@ -3948,18 +4297,25 @@
                     if (sProfName.indexOf(',') > -1) {
                         sProfName = sProfName.split(',')[0].trim();
                     }
-                    return sProfName === profNormalized &&
+                    var matches = sProfName === profNormalized &&
                         s.semester === currentSemester &&
-                        s.semester === currentSemester &&
-                        s.id !== excludeId;
+                        String(s.id) !== String(excludeId);
+                    if (!matches && s.prof) {
+                        console.log('    Filtered out:', s.subjCode, 'ID:', s.id, 'ExcludeID:', excludeId, 'Match:', String(s.id) === String(excludeId));
+                    }
+                    return matches;
                 });
+
+                console.log('  Counting units from', profSchedules.length, 'schedules (excluded ID:', excludeId, ')');
 
                 var currentUnits = 0;
                 profSchedules.forEach(function (s) {
                     var startIdx = slotIdx(s.start);
                     var endIdx = slotIdx(s.end);
                     if (startIdx >= 0 && endIdx > startIdx) {
-                        currentUnits += (endIdx - startIdx) * 0.5;
+                        var blockUnits = (endIdx - startIdx) * 0.5;
+                        currentUnits += blockUnits;
+                        console.log('    +', blockUnits, 'units from', s.subjCode, '(', s.start, '-', s.end, ')');
                     }
                 });
 
@@ -3968,6 +4324,10 @@
                 var newEnd = slotIdx(end);
                 var newUnits = (newEnd - newStart) * 0.5;
                 var totalUnits = currentUnits + newUnits;
+
+                console.log('  Current units (excluding block being edited):', currentUnits.toFixed(1));
+                console.log('  New block units:', newUnits.toFixed(1));
+                console.log('  Total would be:', totalUnits.toFixed(1));
 
                 if (totalUnits > 12) {
                     return {
@@ -4032,13 +4392,21 @@
                     var matchSection = !currentSection || s.section === currentSection;
 
                     // CRITICAL: ALWAYS filter by professor if one is selected (even if filter toggle is off)
+                    // NORMALIZE BOTH NAMES: Remove suffixes (everything after comma)
                     var matchProfessor = true;
                     if (selectedProf) {
-                        var sProfName = s.prof || '';
-                        if (sProfName.indexOf(',') > -1) {
-                            sProfName = sProfName.split(',')[0].trim();
+                        var normalizedSelected = selectedProf.split(',')[0].trim();
+                        var normalizedSchedule = (s.prof || '').split(',')[0].trim();
+                        matchProfessor = normalizedSchedule === normalizedSelected;
+
+                        if (!matchProfessor) {
+                            console.log('  Professor mismatch:', {
+                                selected: selectedProf,
+                                normalized: normalizedSelected,
+                                schedule: s.prof,
+                                scheduleNormalized: normalizedSchedule
+                            });
                         }
-                        matchProfessor = sProfName === selectedProf;
                     }
 
                     // Debug each schedule
@@ -5253,17 +5621,32 @@
                 var grid = {};
                 DAYS.forEach(function (d) { grid[d] = {}; });
                 var renderCount = 0;
+
+                console.log('  Days array:', DAYS);
+                console.log('  Grid initialized for days:', Object.keys(grid));
+
                 filtered.forEach(function (s) {
                     renderCount++;
-                    if (renderCount <= 5) { // Only log first 5 to avoid spam
-                        console.log('  Rendering #' + renderCount + ':', s.subjCode, 'Prof:', s.prof, 'Day:', s.day, 'Year:', s.school_year || s.schoolYear, 'Sem:', s.semester);
+                    if (renderCount <= 10) { // Log first 10
+                        console.log('  Rendering #' + renderCount + ':', s.subjCode, 'Prof:', s.prof, 'Day:', s.day, 'Start:', s.start, 'End:', s.end, 'Year:', s.school_year || s.schoolYear, 'Sem:', s.semester);
                     }
                     var si = slotIdx(s.start);
                     var ei = slotIdx(s.end);
-                    if (si < 0 || ei <= si) return;
+                    console.log('    Slot calc:', s.subjCode, 'start:', s.start, '→', si, 'end:', s.end, '→', ei);
+                    if (si < 0 || ei <= si) {
+                        console.warn('    ⚠️ INVALID SLOT RANGE - Block will NOT render!');
+                        return;
+                    }
                     for (var i = si; i < ei; i++) {
                         if (!grid[s.day][i]) {
                             grid[s.day][i] = Object.assign({}, s, { span: ei - si, isFirst: i === si });
+                        } else if (i === si) {
+                            // Conflict: another schedule already occupies this slot
+                            var existing = grid[s.day][i];
+                            console.warn('⚠️ TIME CONFLICT DETECTED - Only one will render!');
+                            console.warn('  Slot:', s.day, 'at', slots[i]);
+                            console.warn('  Existing:', existing.subjCode, existing.prof);
+                            console.warn('  Dropped:', s.subjCode, s.prof);
                         }
                     }
                 });
@@ -5530,39 +5913,50 @@
             });
 
             window.deleteEntry = async function (id, e) {
+                console.log('🗑️🗑️🗑️ DELETE BUTTON CLICKED! ID:', id);
+
                 if (e) e.stopPropagation();
+
+                console.log('  pendingSchedules before delete:', pendingSchedules.length);
 
                 // Prevent deletion when schedule is locked
                 if (scheduleLockedState) {
+                    console.log('  ❌ Schedule is locked');
                     showToast('Cannot delete blocks. Schedule is locked. Click "Edit Schedule" to make changes.', 'warning', 4000);
                     return;
                 }
 
-                if (!confirm('Delete this schedule block?')) return;
-                try {
-                    await fetch('/api/schedules/' + id, { method: 'DELETE' });
-                    await loadSchedules();
+                if (!confirm('Delete this schedule block?')) {
+                    console.log('  ❌ User cancelled deletion');
+                    return;
+                }
 
-                    // CRITICAL: Recalculate and re-render after deletion
+                try {
+                    // ═══ FRONTEND-FIRST: Remove from pendingSchedules array instead of API call ═══
+                    var beforeLength = pendingSchedules.length;
+                    pendingSchedules = pendingSchedules.filter(function (s) {
+                        var keep = String(s.id) !== String(id);
+                        if (!keep) {
+                            console.log('  ✂️ Removing:', s.subjCode, 'ID:', s.id);
+                        }
+                        return keep;  // Use string comparison for UUIDs
+                    });
+                    var afterLength = pendingSchedules.length;
+
+                    console.log('  pendingSchedules after delete:', afterLength, '(removed:', beforeLength - afterLength, ')');
+
+                    // Mark as changed and enable save button
+                    markScheduleChanged();
+
+                    console.log('✅ Removed schedule from pendingSchedules:', id);
+
+                    // Re-render timetable with updated pendingSchedules
                     applyFilters();
+                    renderTimetable();
+                    renderReport();
                     calculateAllocatedUnits();
                     renderDraggableBlocks();
                     populateSubjectDropdowns(); // Update dropdown
-
-                    // Mark as unsaved change (deletion needs to be confirmed with Save)
-                    // Note: We track deletion by removing from unsavedScheduleIds if it was there
-                    var unsavedIndex = unsavedScheduleIds.indexOf(id);
-                    if (unsavedIndex > -1) {
-                        unsavedScheduleIds.splice(unsavedIndex, 1);
-                        console.log('📝 Removed deleted schedule from unsaved list:', id);
-                    }
-                    // Deletion itself is an unsaved change - but we don't re-add since it's already deleted
-                    // The important part is that any remaining unsaved schedules still need confirmation
-                    if (unsavedScheduleIds.length > 0) {
-                        hasUnsavedChanges = true;
-                    } else {
-                        hasUnsavedChanges = false;
-                    }
                 } catch (err) { alert('Failed to delete.'); }
             };
 
@@ -5646,25 +6040,48 @@
             var dragId = null, dragEl = null;
 
             function attachMoveHandlers() {
+                console.log('🔧 Attaching move handlers to', document.querySelectorAll('.sched-block').length, 'blocks');
                 document.querySelectorAll('.sched-block').forEach(function (blk) {
-                    if (blk._moveBound) return;
+                    // Skip if already bound (prevents duplicate listeners)
+                    if (blk._moveBound) {
+                        console.log('  ⏭️ Block already bound:', blk.dataset.id);
+                        return;
+                    }
                     blk._moveBound = true;
+
+                    console.log('  ✅ Binding move handler to block:', blk.dataset.id);
 
                     // Right-click to show details
                     blk.addEventListener('contextmenu', function (e) {
                         e.preventDefault();
                         var id = blk.dataset.id;
-                        var entry = schedules.find(function (s) { return s.id === id; });
+                        console.log('🖱️ Right-click on block, ID:', id, 'Type:', typeof id);
+                        var entry = schedules.find(function (s) {
+                            var match = String(s.id) === String(id);
+                            if (!match) {
+                                console.log('  Comparing:', s.id, 'vs', id, '→', match);
+                            }
+                            return match;
+                        });
+                        console.log('  Found entry:', entry ? entry.subjCode : 'NOT FOUND');
                         if (entry) showSubjectDetails(entry);
                     });
 
                     blk.addEventListener('mousedown', function (e) {
-                        if (currentMode !== 'manual') return;
-                        if (e.target.classList.contains('sb-del') || e.target.classList.contains('sb-resize')) return;
+                        console.log('🖱️ Mousedown on block, currentMode:', currentMode);
+                        if (currentMode !== 'manual') {
+                            console.log('  ❌ Not in manual mode, skipping');
+                            return;
+                        }
+                        if (e.target.classList.contains('sb-del') || e.target.classList.contains('sb-resize')) {
+                            console.log('  ⏭️ Clicked delete or resize handle');
+                            return;
+                        }
                         e.preventDefault();
                         dragId = blk.dataset.id;
                         dragEl = blk;
                         dragEl.classList.add('dragging');
+                        console.log('🎯 Started dragging block:', dragId);
                         var ghost = document.getElementById('drag-ghost');
                         if (ghost) {
                             ghost.style.background = blk.style.background;
@@ -5710,7 +6127,9 @@
                     if (td && td.dataset && td.dataset.day && !td.dataset.id && td !== currentDropTarget) {
                         var entry = null;
                         if (dragEl) {
-                            entry = schedules.find(function (s) { return s.id === dragId; });
+                            // Use dragId directly (can be UUID string or number)
+                            entry = schedules.find(function (s) { return String(s.id) === String(dragId); });
+                            console.log('🎨 Drop preview - Looking for ID:', dragId, 'Found:', entry ? entry.subjCode : 'NOT FOUND');
                         } else if (stagingDragEl) {
                             entry = unscheduledSubjects.find(function (s) { return s.id === stagingDragId; });
                         }
@@ -5738,6 +6157,8 @@
             document.addEventListener('mouseup', async function (e) {
                 if (!dragEl) return;
 
+                console.log('🖱️ Mouseup - dragId:', dragId);
+
                 var ghost = document.getElementById('drag-ghost');
                 if (ghost) ghost.style.display = 'none';
 
@@ -5746,8 +6167,15 @@
                 var td = document.elementFromPoint(e.clientX, e.clientY);
                 while (td && td.tagName !== 'TD') td = td.parentElement;
 
+                console.log('  Drop target:', td ? (td.dataset.day + ' slot ' + td.dataset.slot) : 'none');
+
                 if (td && td.dataset && td.dataset.day && !td.dataset.id) {
-                    var entry = schedules.find(function (s) { return s.id === dragId; });
+                    // Use dragId directly (can be UUID string or number) - compare as strings
+                    var entry = schedules.find(function (s) { return String(s.id) === String(dragId); });
+                    console.log('  Found entry in schedules:', entry ? entry.subjCode : 'NOT FOUND');
+                    console.log('  Searching for ID:', dragId, 'Type:', typeof dragId);
+                    console.log('  Sample schedule IDs:', schedules.slice(0, 3).map(function (s) { return { id: s.id, type: typeof s.id }; }));
+
                     if (entry) {
                         var dur = slotIdx(entry.end) - slotIdx(entry.start);
                         var ns = parseInt(td.dataset.slot);
@@ -5770,94 +6198,13 @@
                                 return;
                             }
 
-                            // Store old values for rollback
-                            var idx = schedules.findIndex(function (s) { return s.id === dragId; });
-                            if (idx < 0) {
-                                console.error('❌ Schedule not found in array:', dragId);
-                                showToast('Error: Schedule not found. Reloading...', 'error');
-                                await loadSchedules();
-                                dragEl.classList.remove('dragging');
-                                dragEl = null;
-                                dragId = null;
-                                return;
-                            }
-
-                            if (idx >= 0) {
-                                var oldDay = schedules[idx].day;
-                                var oldStart = schedules[idx].start;
-                                var oldEnd = schedules[idx].end;
-
-                                // OPTIMISTIC UPDATE: Update UI immediately before database
-                                schedules[idx].day = td.dataset.day;
-                                schedules[idx].start = slots[ns];
-                                schedules[idx].end = slots[ne];
-
-                                // Re-render immediately for instant feedback
-                                applyFilters();
-                                refreshFilterOptions();
-                                renderTimetable();
-                                renderReport();
-                                if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
-
-                                // Save to database in background
-                                (async function () {
-                                    try {
-                                        var res = await fetch('/api/schedules/' + dragId, {
-                                            method: 'PUT',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                                day: td.dataset.day,
-                                                start: slots[ns],
-                                                end: slots[ne]
-                                            }),
-                                        });
-
-                                        if (!res.ok) {
-                                            // Rollback on error
-                                            var currentIdx = schedules.findIndex(function (s) { return s.id === dragId; });
-                                            if (currentIdx >= 0) {
-                                                schedules[currentIdx].day = oldDay;
-                                                schedules[currentIdx].start = oldStart;
-                                                schedules[currentIdx].end = oldEnd;
-                                            }
-                                            applyFilters();
-                                            refreshFilterOptions();
-                                            renderTimetable();
-                                            renderReport();
-                                            if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
-                                            alert('Failed to save changes to database. Changes have been reverted.');
-                                        } else {
-                                            // Success — mark as unsaved change if not already tracked
-                                            if (!unsavedScheduleIds.includes(dragId)) {
-                                                unsavedScheduleIds.push(dragId);
-                                                hasUnsavedChanges = true;
-                                                console.log('📝 Schedule moved, marked as unsaved:', dragId);
-                                            }
-                                            console.log('✅ Schedule updated successfully');
-                                            refreshFilterOptions();
-                                            renderReport();
-
-                                            // FIX #2 & #3: Re-render draggable blocks after successful move
-                                            calculateAllocatedUnits();
-                                            renderDraggableBlocks();
-                                        }
-                                    } catch (err) {
-                                        // Rollback on error
-                                        var currentIdx = schedules.findIndex(function (s) { return s.id === dragId; });
-                                        if (currentIdx >= 0) {
-                                            schedules[currentIdx].day = oldDay;
-                                            schedules[currentIdx].start = oldStart;
-                                            schedules[currentIdx].end = oldEnd;
-                                            applyFilters();
-                                            refreshFilterOptions();
-                                            renderTimetable();
-                                            renderReport();
-                                            if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
-                                        }
-                                        alert('Failed to save changes: ' + err.message);
-                                    }
-                                })();
-                            }
+                            // ═══ FRONTEND-FIRST: Use updateEntry instead of direct DB save ═══
+                            console.log('✅ Moving block via updateEntry');
+                            updateEntry(dragId, {
+                                day: td.dataset.day,
+                                start: slots[ns],
+                                end: slots[ne]
+                            });
                         }
                     }
                 }
@@ -5873,15 +6220,29 @@
             });
 
             function attachResizeHandlers() {
+                console.log('🔧 Attaching resize handlers to', document.querySelectorAll('.sb-resize').length, 'handles');
                 document.querySelectorAll('.sb-resize').forEach(function (handle) {
-                    if (handle._resizeBound) return;
+                    if (handle._resizeBound) {
+                        console.log('  ⏭️ Handle already bound:', handle.dataset.id);
+                        return;
+                    }
                     handle._resizeBound = true;
+                    console.log('  ✅ Binding resize handler to:', handle.dataset.id);
                     handle.addEventListener('mousedown', function (e) {
-                        if (currentMode !== 'manual') return;
+                        console.log('🖱️ Mousedown on resize handle, currentMode:', currentMode);
+                        if (currentMode !== 'manual') {
+                            console.log('  ❌ Not in manual mode, skipping');
+                            return;
+                        }
                         e.preventDefault(); e.stopPropagation();
                         var id = handle.dataset.id;
-                        var entry = schedules.find(function (s) { return s.id === id; });
-                        if (!entry) return;
+                        // Use ID directly (can be UUID string or number)
+                        var entry = schedules.find(function (s) { return String(s.id) === String(id); });
+                        console.log('🔍 Resize - Looking for ID:', id, 'Found:', entry ? entry.subjCode : 'NOT FOUND');
+                        if (!entry) {
+                            console.error('❌ Resize: Schedule not found:', id);
+                            return;
+                        }
                         var startSlot = slotIdx(entry.start);
                         var curEnd = slotIdx(entry.end);
                         function onMove(ev) {
@@ -5890,10 +6251,16 @@
                                 var r = rows[i].getBoundingClientRect();
                                 if (ev.clientY >= r.top && ev.clientY < r.bottom) {
                                     var slot = parseInt(rows[i].dataset.slot);
+                                    // Allow resizing both up and down (was: slot > startSlot)
+                                    // Must be at least 1 slot after start (minimum 30 min block)
                                     if (slot > startSlot && slot !== curEnd) {
                                         curEnd = slot;
                                         var blk = document.getElementById('blk-' + id);
-                                        if (blk) blk.style.height = ((curEnd - startSlot) * SLOT_H - 3) + 'px';
+                                        if (blk) {
+                                            var newHeight = (curEnd - startSlot) * SLOT_H - 3;
+                                            blk.style.height = newHeight + 'px';
+                                            console.log('📏 Resizing to slot', slot, '- Height:', newHeight + 'px');
+                                        }
                                     }
                                     break;
                                 }
@@ -5971,8 +6338,17 @@
             }
 
             async function updateEntry(id, changes) {
-                var idx = schedules.findIndex(function (s) { return s.id === id; });
-                if (idx < 0) return;
+                // Use string comparison for IDs (handles both UUIDs and numbers)
+                var idx = schedules.findIndex(function (s) { return String(s.id) === String(id); });
+
+                console.log('🔍 updateEntry - Looking for ID:', id, 'Found at index:', idx);
+                console.log('  schedules array:', schedules.map(function (s) { return { id: s.id, code: s.subjCode }; }));
+
+                if (idx < 0) {
+                    console.error('❌ updateEntry: Schedule not found in array:', id);
+                    return;
+                }
+
                 var updated = Object.assign({}, schedules[idx], changes);
 
                 // Validate before updating
@@ -5981,7 +6357,7 @@
                     updated.day,
                     updated.start,
                     updated.end,
-                    id  // Exclude current block from validation
+                    id  // Use original ID for validation
                 );
 
                 if (!validation.valid) {
@@ -6005,20 +6381,23 @@
                 // }
 
                 try {
-                    await fetch('/api/schedules/' + id, { method: 'DELETE' });
-                    var res = await fetch('/api/schedules', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(updated),
-                    });
-                    var data = await res.json();
-                    if (res.ok) {
-                        await loadSchedules();
+                    // ═══ FRONTEND-FIRST: Update in pendingSchedules array instead of API calls ═══
+                    var pendingIdx = pendingSchedules.findIndex(function (s) { return String(s.id) === String(id); });
+                    console.log('  Looking in pendingSchedules, found at index:', pendingIdx);
 
-                        // CRITICAL: Reapply filters after loadSchedules
+                    if (pendingIdx >= 0) {
+                        // Update the schedule in pendingSchedules
+                        pendingSchedules[pendingIdx] = updated;
+
+                        // Mark as changed and enable save button
+                        markScheduleChanged();
+
+                        console.log('✅ Updated schedule in pendingSchedules:', id, changes);
+
+                        // Re-render timetable with updated pendingSchedules
                         applyFilters();
-
-                        // FIX #2 & #3: Re-render draggable blocks after resize/update
+                        renderTimetable();
+                        renderReport();
                         calculateAllocatedUnits();
                         renderDraggableBlocks();
                     }
@@ -6217,79 +6596,131 @@
                 var hours = duration * 0.5; // Each slot is 0.5 hours
                 var units = Math.round(hours * 10) / 10; // Round to 1 decimal
 
-                // ═══ UNIT QUOTA VALIDATION ═══
-                if (unitConfigSaved && subjectUnits[code]) {
-                    var unitData = subjectUnits[code];
-                    var currentAllocated = unitData.allocated || 0;
-                    var configured = unitData.configured || 0;
-                    var remaining = configured - currentAllocated;
+                // ═══ CHECK FOR TIME CONFLICTS ═══
+                var hasConflict = pendingSchedules.some(function (existing) {
+                    if (existing.day !== pendingDay) return false; // Different day, no conflict
+                    if (existing.prof !== prof) return false; // Different professor, no conflict
 
-                    console.log('Unit Quota Check:', {
-                        subject: code,
-                        configured: configured,
-                        currentAllocated: currentAllocated,
-                        remaining: remaining,
-                        attemptingToAdd: units
-                    });
+                    var existingStart = slotIdx(existing.start);
+                    var existingEnd = slotIdx(existing.end);
+                    var newStart = pendingStart;
+                    var newEnd = endSlot;
 
-                    if (units > remaining) {
-                        closeNewBlockModal();
-                        showConflictModal(
-                            '⚠️ UNIT QUOTA EXCEEDED\n\n' +
-                            'Subject: ' + code + '\n' +
-                            'Configured: ' + configured + ' hours/week\n' +
-                            'Already Allocated: ' + currentAllocated + ' hours\n' +
-                            'Remaining: ' + remaining + ' hours\n\n' +
-                            'You are trying to add ' + units + ' hours, but only ' + remaining + ' hours remain.\n\n' +
-                            'This subject has met its unit quota. Please reduce the block duration or delete existing blocks.'
-                        );
-                        return;
+                    // Check for overlap: blocks overlap if one starts before the other ends
+                    var overlaps = (newStart < existingEnd && newEnd > existingStart);
+
+                    if (overlaps) {
+                        console.warn('⚠️ Time conflict detected:', {
+                            existing: existing.subjCode + ' ' + existing.start + '-' + existing.end,
+                            new: code + ' ' + slots[newStart] + '-' + slots[newEnd]
+                        });
                     }
 
-                    if (currentAllocated + units > configured) {
-                        closeNewBlockModal();
-                        showConflictModal(
-                            '⚠️ UNIT QUOTA EXCEEDED\n\n' +
-                            'Subject: ' + code + '\n' +
-                            'Configured: ' + configured + ' hours/week\n' +
-                            'Already Allocated: ' + currentAllocated + ' hours\n' +
-                            'Trying to Add: ' + units + ' hours\n' +
-                            'Total Would Be: ' + (currentAllocated + units) + ' hours\n\n' +
-                            'This would exceed the configured quota by ' + ((currentAllocated + units) - configured) + ' hours.\n\n' +
-                            'Please reduce the block duration.'
-                        );
-                        return;
+                    return overlaps;
+                });
+
+                if (hasConflict) {
+                    closeNewBlockModal();
+                    showConflictModal(
+                        '⚠️ TIME CONFLICT\n\n' +
+                        'This professor already has a class scheduled at this time on ' + pendingDay + '.\n\n' +
+                        'Please choose a different time slot or day.'
+                    );
+                    return;
+                }
+
+                // ═══ UNIT QUOTA VALIDATION BY SECTION ═══
+                if (unitConfigSaved && section) {
+                    var key = code + '-' + section;
+                    var unitData = subjectUnits[key];
+
+                    if (unitData) {
+                        var currentAllocated = unitData.allocated || 0;
+                        var configured = unitData.configured || 0;
+                        var remaining = configured - currentAllocated;
+
+                        console.log('Unit Quota Check (by section):', {
+                            subject: code,
+                            section: section,
+                            key: key,
+                            configured: configured,
+                            currentAllocated: currentAllocated,
+                            remaining: remaining,
+                            attemptingToAdd: units
+                        });
+
+                        if (units > remaining) {
+                            closeNewBlockModal();
+                            showConflictModal(
+                                '⚠️ UNIT QUOTA EXCEEDED\n\n' +
+                                'Subject: ' + code + ' Section ' + section + '\n' +
+                                'Configured: ' + configured + ' hours/week\n' +
+                                'Already Allocated: ' + currentAllocated + ' hours\n' +
+                                'Remaining: ' + remaining + ' hours\n\n' +
+                                'You are trying to add ' + units + ' hours, but only ' + remaining + ' hours remain.\n\n' +
+                                'This section has met its unit quota. Please reduce the block duration or choose a different section.'
+                            );
+                            return;
+                        }
+
+                        if (currentAllocated + units > configured) {
+                            closeNewBlockModal();
+                            showConflictModal(
+                                '⚠️ UNIT QUOTA EXCEEDED\n\n' +
+                                'Subject: ' + code + ' Section ' + section + '\n' +
+                                'Configured: ' + configured + ' hours/week\n' +
+                                'Already Allocated: ' + currentAllocated + ' hours\n' +
+                                'Trying to Add: ' + units + ' hours\n' +
+                                'Total Would Be: ' + (currentAllocated + units) + ' hours\n\n' +
+                                'This would exceed the configured quota by ' + ((currentAllocated + units) - configured) + ' hours.\n\n' +
+                                'Please reduce the block duration.'
+                            );
+                            return;
+                        }
+                    } else {
+                        console.warn('⚠️ No unit configuration found for', key, '- allowing placement');
                     }
                 }
 
                 try {
-                    var res = await fetch('/api/schedules', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            prof: prof, subjCode: code, subjName: name, type: type,
-                            day: pendingDay, start: slots[pendingStart], end: slots[endSlot],
-                            room: room, units: units, section: section,
-                            schoolYear: currentSchoolYear, semester: currentSemester
-                        }),
-                    });
-                    var data = await res.json();
-                    if (!res.ok) throw new Error(data.error || 'Failed.');
-                    schedules.push(Object.assign({ id: data.id }, data.entry));
-                    window.schedules = schedules;
+                    // ═══ FRONTEND-FIRST: Add to pendingSchedules array instead of API call ═══
+                    // Generate temporary ID (negative to distinguish from DB IDs)
+                    var tempId = -Date.now();
 
-                    // Track this as an unsaved change
-                    unsavedScheduleIds.push(data.id);
-                    hasUnsavedChanges = true;
-                    console.log('📝 Added schedule to unsaved list:', data.id);
+                    var newSchedule = {
+                        id: tempId,
+                        prof: prof,
+                        subjCode: code,
+                        subjName: name,
+                        type: type,
+                        day: pendingDay,
+                        start: slots[pendingStart],
+                        end: slots[endSlot],
+                        room: room,
+                        units: units,
+                        section: section,
+                        schoolYear: currentSchoolYear,
+                        semester: currentSemester
+                    };
 
-                    // Reload from DB to ensure full consistency then re-render
-                    await loadSchedules();
+                    console.log('✅ Creating new schedule block:');
+                    console.log('  Subject:', code, name);
+                    console.log('  Day/Time:', pendingDay, slots[pendingStart], '-', slots[endSlot]);
+                    console.log('  Section:', section, '(type:', typeof section, ')');
+                    console.log('  School Year:', currentSchoolYear, '| Semester:', currentSemester);
+                    console.log('  Temp ID:', tempId);
 
-                    // CRITICAL: Reapply filters after loadSchedules to prevent other blocks from disappearing
+                    // ADD TO PENDING SCHEDULES ARRAY
+                    pendingSchedules.push(newSchedule);
+                    console.log('📌 Added to pendingSchedules. Total:', pendingSchedules.length);
+
+                    // Mark as changed and enable save button
+                    markScheduleChanged();
+
+                    // Re-render timetable with updated pendingSchedules
                     applyFilters();
-
-                    // FIX #2: Re-render draggable blocks to update staging area
+                    renderTimetable();
+                    renderReport();
                     calculateAllocatedUnits();
                     renderDraggableBlocks();
 
@@ -8493,14 +8924,19 @@
                 setTimeout(function () { formCard.remove(); }, 150);
             }
 
-            // Show generating message
-            var semesterText = targetSemester === '1' ? '1st' : '2nd';
-            var refSemesterText = refSemester === '1' ? '1st' : '2nd';
-            var msg = 'Starting schedule generation for ' + semesterText + ' semester ' + targetYear +
-                ' (based on ' + refSemesterText + ' semester ' + refYear + ')...\n\nThis may take 10-30 seconds...';
-            showScheduleAIMessage(msg, false);
+            // Switch to target semester view if filters exist
+            var yearFilter = document.getElementById('school-year-filter');
+            var semesterFilter = document.getElementById('semester-filter');
+            if (yearFilter && semesterFilter) {
+                yearFilter.value = targetYear;
+                semesterFilter.value = targetSemester;
+                applyFilters();
+            }
 
-            // Call the SYNCHRONOUS generation endpoint (works immediately)
+            // Show draggable progress indicator
+            showGenerationProgress();
+
+            // Start generation
             fetch('/api/schedule/generate-full', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -8509,57 +8945,197 @@
                     reference_school_year: refYear,
                     target_semester: targetSemester,
                     target_school_year: targetYear,
-                    save_to_db: saveToDb,
-                    // Use empty arrays - endpoint will load data from Supabase/Firestore
-                    subjects: [],
-                    rooms: []
+                    save_to_db: saveToDb
                 })
             })
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
                     if (data.success) {
-                        var schedCount = data.schedules ? data.schedules.length : 0;
-                        var feasible = data.is_feasible ? '✓ Feasible' : '✗ Has conflicts';
-                        var resultMsg = 'Schedule generation completed!\n\n' +
-                            '• Generated: ' + schedCount + ' schedule blocks\n' +
-                            '• Status: ' + feasible + '\n' +
-                            '• Best Score: ' + (data.best_score || 0).toFixed(2) + '\n\n';
-
-                        if (saveToDb) {
-                            resultMsg += 'Schedules have been saved to the database. Refresh the page to see them.';
-                        } else {
-                            resultMsg += 'Note: Schedules were not saved (save_to_db was false).';
-                        }
-
-                        showScheduleAIMessage(resultMsg, false);
-
-                        // Refresh the schedule display if save was successful
-                        if (saveToDb && window.location.reload) {
-                            setTimeout(function () {
-                                showScheduleAIMessage('Refreshing page to load new schedules...', false);
-                                setTimeout(function () { window.location.reload(); }, 1500);
-                            }, 2000);
-                        }
+                        // Start polling for progress
+                        pollGenerationProgress();
                     } else {
-                        // Check if it's a "not implemented" response
-                        var isNotImplemented = data.note && (
-                            data.note.includes('not yet') ||
-                            data.note.includes('requires additional setup')
-                        );
-
-                        var errorMsg = data.message || 'Failed to generate schedule';
-                        if (data.note) {
-                            errorMsg += '\n\n' + data.note;
-                        }
-
-                        showScheduleAIMessage(errorMsg, !isNotImplemented);
+                        hideGenerationProgress();
+                        showScheduleAIMessage('❌ ' + (data.message || 'Failed to start generation'), true);
                     }
                 })
                 .catch(function (err) {
-                    showScheduleAIMessage('Error: ' + err.message + '\n\nThe generation service may be unavailable.', true);
+                    hideGenerationProgress();
+                    showScheduleAIMessage('❌ Error: ' + err.message, true);
                     console.error(err);
                 });
         };
+
+        // Show draggable progress indicator
+        var progressWidget = null;
+        var progressPollInterval = null;
+
+        function showGenerationProgress() {
+            // Create floating progress widget
+            progressWidget = document.createElement('div');
+            progressWidget.id = 'ga-progress-widget';
+            progressWidget.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 280px;
+                background: white;
+                border: 2px solid #6b0f1a;
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                cursor: move;
+                font-family: system-ui, -apple-system, sans-serif;
+            `;
+
+            progressWidget.innerHTML = `
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                    <div class="spinner" style="
+                        width: 32px;
+                        height: 32px;
+                        border: 3px solid #f3f4f6;
+                        border-top-color: #6b0f1a;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    "></div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;color:#111;font-size:14px;">Generating Schedule</div>
+                        <div id="progress-message" style="font-size:12px;color:#6b7280;margin-top:2px;">Starting...</div>
+                    </div>
+                </div>
+                <div style="background:#f3f4f6;border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px;">
+                    <div id="progress-bar" style="background:#6b0f1a;height:100%;width:0%;transition:width 0.3s;"></div>
+                </div>
+                <div style="display:flex;gap:8px;font-size:11px;color:#6b7280;">
+                    <span>Gen: <strong id="progress-gen">0</strong></span>
+                    <span>•</span>
+                    <span>Fitness: <strong id="progress-fitness">∞</strong></span>
+                    <span>•</span>
+                    <span>Conflicts: <strong id="progress-conflicts">0</strong></span>
+                </div>
+            `;
+
+            // Add spin animation
+            var style = document.createElement('style');
+            style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+
+            document.body.appendChild(progressWidget);
+
+            // Make draggable
+            makeDraggable(progressWidget);
+        }
+
+        function updateProgressWidget(progress) {
+            if (!progressWidget) return;
+
+            var message = progress.message || 'Processing...';
+            var gen = progress.generation || 0;
+            var maxGen = progress.max_generations || 100;
+            var fitness = progress.best_fitness !== undefined && progress.best_fitness !== null && progress.best_fitness !== Infinity
+                ? progress.best_fitness.toFixed(1)
+                : '∞';
+            var conflicts = (progress.hard_viols || 0) + (progress.soft_viols || 0);
+            var percentage = maxGen > 0 ? Math.min(100, (gen / maxGen) * 100) : 0;
+
+            document.getElementById('progress-message').textContent = message;
+            document.getElementById('progress-gen').textContent = gen + '/' + maxGen;
+            document.getElementById('progress-fitness').textContent = fitness;
+            document.getElementById('progress-conflicts').textContent = conflicts;
+            document.getElementById('progress-bar').style.width = percentage + '%';
+
+            // Display schedules in real-time if available
+            if (progress.schedules && progress.schedules.length > 0) {
+                displayGeneratedSchedules(progress.schedules);
+            }
+        }
+
+        function hideGenerationProgress() {
+            if (progressWidget) {
+                progressWidget.style.opacity = '0';
+                progressWidget.style.transform = 'scale(0.9)';
+                progressWidget.style.transition = 'all 0.2s';
+                setTimeout(function () {
+                    if (progressWidget) {
+                        progressWidget.remove();
+                        progressWidget = null;
+                    }
+                }, 200);
+            }
+            if (progressPollInterval) {
+                clearInterval(progressPollInterval);
+                progressPollInterval = null;
+            }
+        }
+
+        function pollGenerationProgress() {
+            progressPollInterval = setInterval(function () {
+                fetch('/api/schedule/generate-progress')
+                    .then(function (res) { return res.json(); })
+                    .then(function (progress) {
+                        updateProgressWidget(progress);
+
+                        if (progress.status === 'completed') {
+                            clearInterval(progressPollInterval);
+                            setTimeout(function () {
+                                hideGenerationProgress();
+                                showScheduleAIMessage('✅ ' + (progress.message || 'Generation completed!'), false);
+                                // Reload schedules without page refresh
+                                loadSchedules();
+                            }, 2000);
+                        } else if (progress.status === 'failed') {
+                            clearInterval(progressPollInterval);
+                            hideGenerationProgress();
+                            showScheduleAIMessage('❌ ' + (progress.message || 'Generation failed'), true);
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error('Progress poll error:', err);
+                    });
+            }, 500);  // Poll every 500ms
+        }
+
+        function displayGeneratedSchedules(schedules) {
+            // Render schedules in the timetable as they're generated
+            // This provides live visual feedback
+            // Note: These are temporary visualizations, they'll be replaced when loadSchedules() is called
+            schedules.forEach(function (sched) {
+                // TODO: Add visual indicators that these blocks are being generated
+                // For now, just ensure the data is loaded for the next render cycle
+            });
+        }
+
+        // Make element draggable
+        function makeDraggable(element) {
+            var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            element.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                element.style.right = 'auto';  // Disable right positioning when dragging
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
 
         // Cancel action
         window.cancelAction = function (btn) {

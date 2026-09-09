@@ -7,6 +7,7 @@ import os
 import uuid
 import logging
 import threading
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +32,30 @@ ga_progress = {
     'message': '',
     'hard_violations': 0,
     'soft_violations': 0,
+    'schedules': [],  # Generated schedules for live display
 }
 ga_progress_lock = threading.Lock()
 
 
 def update_ga_progress(generation=None, best_fitness=None, status=None,
-                       message=None, hard_viols=None, soft_viols=None):
+                       message=None, hard_viols=None, soft_viols=None, schedules=None):
     """Thread-safe progress update for GA."""
+    with ga_progress_lock:
+        if generation is not None:
+            ga_progress['generation'] = generation
+        if best_fitness is not None:
+            ga_progress['best_fitness'] = best_fitness
+        if status:
+            ga_progress['status'] = status
+        if message:
+            ga_progress['message'] = message
+        if hard_viols is not None:
+            ga_progress['hard_viols'] = hard_viols
+        if soft_viols is not None:
+            ga_progress['soft_viols'] = soft_viols
+        if schedules is not None:
+            ga_progress['schedules'] = schedules
+        ga_progress['timestamp'] = time.time()
     with ga_progress_lock:
         if generation is not None:
             ga_progress['generation'] = generation
@@ -1063,7 +1081,7 @@ def che_execute_action():
 
             elif action_type == 'generate_full_schedule' and result['data'].get('redirect_to_endpoint'):
                 # Execute full generation directly here
-                from services.scheduler_service import run_full_ga, FullGAConfig, SubjectInput
+                from services.scheduler_service import run_full_ga_v3, FullGAConfig, SubjectInput
 
                 gen_params = result['data']['params']
 
@@ -1135,7 +1153,7 @@ def che_execute_action():
                     faculty_overrides=gen_params.get('faculty_overrides', {}),
                 )
 
-                ga_result = run_full_ga(config)
+                ga_result = run_full_ga_v3(config)
                 result = ga_result
 
                 # Save if requested
@@ -2506,6 +2524,15 @@ def get_schedules():
                 entries.append(entry)
 
             logger.info(f"✅ Found {len(entries)} schedules from Supabase")
+
+            # Detailed logging for debugging
+            print("\n" + "="*80)
+            print(f"📊 GET /api/schedules - Returning {len(entries)} schedules")
+            print("="*80)
+            for i, entry in enumerate(entries, 1):
+                print(f"{i}. {entry.get('subjCode')} | Day: {entry.get('day')} | Time: {entry.get('start')}-{entry.get('end')} | Section: {entry.get('section')} | Prof: {entry.get('prof')}")
+            print("="*80 + "\n")
+
             return jsonify(entries)
 
         except Exception as e:
@@ -2669,6 +2696,109 @@ def update_schedule(entry_id):
 
     except Exception as e:
         logger.error(f"Update schedule error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedules/batch-save', methods=['POST'])
+@login_required
+def batch_save_schedules():
+    """
+    Batch save schedules - deletes old schedules for the semester/year and saves all new ones atomically.
+    This replaces individual POST/PUT/DELETE calls with a single transaction-like operation.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        schedules_to_save = data.get('schedules', [])
+        school_year = data.get('school_year')
+        semester = data.get('semester')
+        professor = data.get('professor')  # Optional: filter by professor
+
+        if not school_year or not semester:
+            return jsonify({'error': 'school_year and semester are required'}), 400
+
+        logger.info(
+            f"📦 Batch save: {len(schedules_to_save)} schedules for {school_year} sem {semester}")
+
+        # STEP 1: Delete existing schedules for this semester/year (and optionally professor)
+        delete_query = supabase.table('schedules').delete().eq(
+            'school_year', school_year).eq('semester', semester)
+
+        if professor:
+            # Delete only for specific professor
+            delete_query = delete_query.eq('prof', professor)
+
+        delete_result = delete_query.execute()
+        deleted_count = len(delete_result.data) if delete_result.data else 0
+        logger.info(
+            f"🗑️  Deleted {deleted_count} existing schedules")
+
+        # STEP 2: Insert all new schedules
+        if schedules_to_save:
+            # Ensure all schedules have required fields (check both camelCase and snake_case)
+            for schedule in schedules_to_save:
+                # Check for required fields (accepting both naming conventions)
+                has_prof = 'prof' in schedule
+                has_subj_code = 'subjCode' in schedule or 'subj_code' in schedule
+                has_subj_name = 'subjName' in schedule or 'subj_name' in schedule
+                has_day = 'day' in schedule
+                has_start = 'start' in schedule
+                has_end = 'end' in schedule
+                has_room = 'room' in schedule
+                has_section = 'section' in schedule
+                has_type = 'type' in schedule
+
+                if not (has_prof and has_subj_code and has_subj_name and has_day and has_start and has_end and has_room and has_section and has_type):
+                    logger.error(f"Missing fields in schedule: {schedule}")
+                    return jsonify({'error': 'Missing required fields in schedule'}), 400
+
+                # Normalize to snake_case (database format)
+                if 'subjCode' in schedule:
+                    schedule['subj_code'] = schedule['subjCode']
+                    del schedule['subjCode']
+                if 'subjName' in schedule:
+                    schedule['subj_name'] = schedule['subjName']
+                    del schedule['subjName']
+                if 'schoolYear' in schedule:
+                    schedule['school_year'] = schedule['schoolYear']
+                    del schedule['schoolYear']
+
+                # Ensure school_year and semester are set
+                schedule['school_year'] = school_year
+                schedule['semester'] = semester
+
+            # Batch insert all schedules
+            insert_result = supabase.table('schedules').insert(
+                schedules_to_save).execute()
+
+            if not insert_result.data:
+                return jsonify({'error': 'Batch insert failed'}), 500
+
+            saved_count = len(insert_result.data)
+            logger.info(f"✅ Saved {saved_count} schedules")
+
+            return jsonify({
+                'status': 'ok',
+                'deleted': deleted_count,
+                'saved': saved_count,
+                'schedules': insert_result.data
+            })
+        else:
+            # No schedules to save, just return success
+            logger.info(f"✅ Cleared schedules (no new schedules to save)")
+            return jsonify({
+                'status': 'ok',
+                'deleted': deleted_count,
+                'saved': 0,
+                'schedules': []
+            })
+
+    except Exception as e:
+        logger.error(f"Batch save error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -3042,15 +3172,21 @@ def delete_configured_subjects_by_professor():
 @login_required
 def api_generate_full_schedule():
     """
-    Full semester schedule generation using enhanced GA with progress tracking.
+    Full semester schedule generation using enhanced GA with Phase 2 integration.
+    Runs in background with real-time progress updates.
     """
     try:
+        from services.scheduler_service import run_full_ga_v3, FullGAConfig, SubjectInput
+
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'message': 'No data provided.'}), 400
 
         target_semester = data.get('target_semester', '1')
         target_school_year = data.get('target_school_year', '2026-2027')
+        reference_semester = data.get('reference_semester', '1')
+        reference_school_year = data.get('reference_school_year', '2026-2027')
+        save_to_db = data.get('save_to_db', True)
 
         # Check if GA is already running
         with ga_progress_lock:
@@ -3063,34 +3199,164 @@ def api_generate_full_schedule():
 
         # Start GA in background thread
         reset_ga_progress()
-        update_ga_progress(status='starting', message='Initializing GA...')
+        update_ga_progress(status='starting',
+                           message='Initializing GA with Phase 2...')
 
         def run_ga_background():
-            """Run GA in background thread."""
+            """Run GA with Phase 2 in background thread."""
             try:
                 with ga_progress_lock:
                     ga_progress['running'] = True
 
                 update_ga_progress(
-                    status='running', message='Loading configuration...')
+                    status='running', message='Loading reference schedules...')
 
-                # TODO: Actually call the GA here
-                # For now, return mock response
-                import time
-                for i in range(10):
-                    time.sleep(0.5)
-                    update_ga_progress(
-                        generation=i+1,
-                        best_fitness=1000 - (i * 50),
-                        message=f'Evolving generation {i+1}/10...'
-                    )
+                # Load reference semester schedules
+                reference_schedules = []
+                try:
+                    ref_result = supabase.table('schedules').select('*').eq(
+                        'semester', reference_semester).eq('school_year', reference_school_year).execute()
+                    for rd in ref_result.data:
+                        reference_schedules.append({
+                            'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
+                            'subjName': rd.get('subj_name', rd.get('subjName', '')),
+                            'prof': rd.get('prof', ''),
+                            'room': rd.get('room', ''),
+                            'section': rd.get('section', ''),
+                            'units': rd.get('units', 3),
+                            'day': rd.get('day', ''),
+                            'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
+                            'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
+                        })
+                except Exception as e:
+                    logger.warning(f"Reference semester load error: {e}")
 
                 update_ga_progress(
-                    status='completed',
-                    message='Schedule generated successfully!',
-                    hard_viols=0,
-                    soft_viols=3
+                    status='running', message=f'Loaded {len(reference_schedules)} reference schedules')
+
+                # Load faculty data
+                prof_availability = {}
+                teaching_loads_map = {}
+                try:
+                    member_docs = db.collection('members').where(
+                        'is_faculty', '==', True).stream()
+                    for d in member_docs:
+                        md = d.to_dict()
+                        full_name = f"{md.get('first', '')} {md.get('last', '')}".strip(
+                        )
+                        if md.get('suffix'):
+                            full_name += f", {md['suffix']}"
+                        avail = md.get('availability', [])
+                        if avail:
+                            prof_availability[full_name] = avail
+                        load = md.get('teaching_load')
+                        if load:
+                            teaching_loads_map[full_name] = int(load)
+                except Exception as e:
+                    logger.warning(f"Faculty load error: {e}")
+
+                # Load rooms from Firestore
+                rooms_list = []
+                try:
+                    room_docs = db.collection('rooms').stream()
+                    for d in room_docs:
+                        rd = d.to_dict()
+                        rooms_list.append(rd.get('name', d.id))
+                except Exception:
+                    rooms_list = ['CERP AVR', 'CLH', 'DCERP Conference Room',
+                                  'TCC - 01', 'TCC - 02', 'TCC - 04', 'TCC - 11']
+
+                # Extract subjects from reference schedules
+                subjects_dict = {}
+                for rs in reference_schedules:
+                    key = f"{rs['subjCode']}-{rs['section']}-{rs['prof']}"
+                    if key not in subjects_dict:
+                        subjects_dict[key] = {
+                            'code': rs['subjCode'],
+                            'name': rs['subjName'],
+                            'section': rs['section'],
+                            'units': rs['units'],
+                            'weekly_hours': rs['units'],  # Approximate
+                            # Fixed: was 'professors'
+                            'allocated_professors': [rs['prof']]
+                        }
+
+                subjects = [SubjectInput(**s) for s in subjects_dict.values()]
+
+                update_ga_progress(
+                    status='running', message=f'Building GA config for {len(subjects)} subjects...')
+
+                # Build GA config
+                config = FullGAConfig(
+                    subjects=subjects,
+                    rooms_legacy=rooms_list,  # Use rooms_legacy for simple string list
+                    prof_availability=prof_availability,
+                    teaching_loads=teaching_loads_map,
+                    reference_schedules=reference_schedules,
+                    pop_size=50,
+                    max_generations=100,
+                    time_limit_seconds=45.0  # Minimum 45 seconds as requested
                 )
+
+                # Progress callback
+                def progress_callback(progress):
+                    update_ga_progress(
+                        status='running',
+                        generation=progress.generation,
+                        best_fitness=progress.best_score,
+                        message=f'Gen {progress.generation}: Fitness {progress.best_score:.1f}',
+                        hard_viols=progress.best_hard_penalty,
+                        soft_viols=progress.best_soft_penalty
+                    )
+
+                # RUN PHASE 2 GA!
+                update_ga_progress(
+                    status='running', message='🚀 Starting Phase 2 GA...')
+                result = run_full_ga_v3(
+                    config, progress_callback=progress_callback)
+
+                if result['success']:
+                    schedules = result.get('schedules', [])
+
+                    # Save to database if requested
+                    if save_to_db and schedules:
+                        update_ga_progress(
+                            status='running', message=f'Saving {len(schedules)} schedules to database...')
+                        saved = 0
+                        for sched in schedules:
+                            new_id = str(uuid.uuid4())
+                            supabase.table('schedules').insert({
+                                'id': new_id,
+                                'subj_code': sched.get('subjCode', ''),
+                                'subj_name': sched.get('subjName', ''),
+                                'prof': sched.get('prof', ''),
+                                'room': sched.get('room', ''),
+                                'section': sched.get('section', ''),
+                                'units': int(float(sched.get('units', 0))) if sched.get('units') else 0,
+                                'day': sched.get('day', ''),
+                                'start': sched.get('start', ''),
+                                'end': sched.get('end', ''),
+                                'type': 'Lecture',
+                                'year': '1',
+                                'semester': target_semester,
+                                'school_year': target_school_year,
+                                'created_at': datetime.now(timezone.utc).isoformat(),
+                            }).execute()
+                            saved += 1
+
+                    update_ga_progress(
+                        status='completed',
+                        message=f'✅ Generated {len(schedules)} schedules successfully!' + (
+                            f' Saved to database.' if save_to_db else ''),
+                        hard_viols=result.get('hard_violations', 0),
+                        soft_viols=result.get('soft_violations', 0),
+                        schedules=schedules  # Include schedules for frontend to display
+                    )
+                else:
+                    update_ga_progress(
+                        status='failed',
+                        message=f'❌ Generation failed: {result.get("message", "Unknown error")}'
+                    )
 
             except Exception as e:
                 logger.error(f"GA background error: {e}")
@@ -3098,7 +3364,7 @@ def api_generate_full_schedule():
                 traceback.print_exc()
                 update_ga_progress(
                     status='failed',
-                    message=f'Error: {str(e)}'
+                    message=f'❌ Error: {str(e)}'
                 )
             finally:
                 with ga_progress_lock:
@@ -3110,8 +3376,8 @@ def api_generate_full_schedule():
 
         return jsonify({
             'success': True,
-            'message': 'Schedule generation started',
-            'note': 'Poll /api/schedule/generate-progress for updates'
+            'message': 'Schedule generation started with Phase 2',
+            'note': 'Poll /api/schedule/generate-progress for real-time updates'
         })
 
     except Exception as e:
@@ -3126,7 +3392,11 @@ def api_generate_full_schedule():
 def get_ga_progress():
     """Poll GA generation progress."""
     with ga_progress_lock:
-        return jsonify(ga_progress.copy())
+        progress_data = ga_progress.copy()
+        # Convert infinity to None for JSON serialization
+        if progress_data.get('best_fitness') == float('inf'):
+            progress_data['best_fitness'] = None
+        return jsonify(progress_data)
 
 
 # ── AI Chat API ────────────────────────────────────────────────

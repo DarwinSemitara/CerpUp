@@ -104,13 +104,20 @@ You have direct access to an advanced Genetic Algorithm scheduling engine. When 
 - Respond conversationally and professionally
 - When an action is needed, describe what you'll do in plain language
 - The system will automatically show an interactive form for the user to confirm
-- After describing the action, end your reply with the JSON action block (it will be hidden from the user)
+- **CRITICAL**: Place the JSON action block at the VERY END of your response. The JSON block will be automatically hidden from the user - they will only see your text explanation.
 
-When you detect a scheduling intent, respond with:
-1. A clear explanation of what you understood
-2. What action you're proposing
-3. Any important details or warnings
-4. Then include the JSON action block at the END (wrapped in ```json ... ```)
+**Response Format When Taking Action:**
+1. Write a clear explanation in plain English (2-3 sentences max)
+2. State what action you're taking
+3. DO NOT write "Here's the plan" or show any JSON details in your text
+4. At the very end, add the JSON action block wrapped in ```json ... ```
+
+**Example Response:**
+"I'll generate a schedule for 2nd semester 2026-2027 using your 1st semester data as reference. The system will create conflict-free timetables for all 5 faculty members while keeping their room and section assignments.
+
+```json
+{action data here}
+```"
 
 ### Scheduling Action Format:
 ```json
@@ -141,25 +148,32 @@ When you detect a scheduling intent, respond with:
 
 6. `generate_full_schedule` — **ADVANCED**: Generate a COMPLETE semester schedule for ALL faculty and sections
    params: {
-     "reference_semester": "1" or "2" (semester to base on, optional),
-     "reference_school_year": "2025-2026" (school year to reference, optional),
+     "reference_semester": "1" or "2" (semester to base on),
+     "reference_school_year": "2025-2026" (school year to reference),
      "target_semester": "1" or "2" (semester to generate for),
      "target_school_year": "2026-2027" (school year to generate for),
-     "subjects": [{"code": "ENRP 101", "name": "Intro to ENRP", "section": "A", "units": 3, "weekly_hours": 3, "professors": ["Prof Name"]}],
-     "rooms": ["TCC - 04", "TCC - 11"],
-     "faculty_overrides": {"Prof Name": {"availability": ["Monday","Wednesday","Friday"], "teaching_load": 12}},
-     "save_to_db": true/false
+     "save_to_db": true/false (default true)
    }
    confirm: true (ALWAYS confirm before running)
    
    **IMPORTANT**: When user requests schedule generation:
-   - Extract the reference and target semesters/years from context or ask
-   - Populate subjects array from existing schedule data if user says "use same subjects" or "reference semester X"
-   - Use all available rooms from the schedule data unless user specifies specific rooms
-   - Only include faculty_overrides if user mentions specific availability changes
-   - Set save_to_db to true by default
-   - Respond conversationally: "I'll generate schedules for [faculty names] for [semester] [year] based on [reference]. The system will show you a form to confirm the details."
-   - Then output the JSON block with pre-filled parameters
+   - Extract only the reference and target semester/year parameters
+   - DO NOT include subjects, rooms, or faculty_overrides arrays - the backend will load these automatically from the database
+   - Keep the JSON minimal - only the 5 parameters above
+   - Example minimal JSON:
+   ```json
+   {
+     "action": "generate_full_schedule",
+     "params": {
+       "reference_semester": "1",
+       "reference_school_year": "2026-2027",
+       "target_semester": "2",
+       "target_school_year": "2026-2027",
+       "save_to_db": true
+     },
+     "confirm": true
+   }
+   ```
 
 7. `query_schedule` — Fetch schedule info (no action, just display)
    params: { "query_type": "professor|room|conflicts|all", "filter": "value" }
@@ -714,6 +728,21 @@ def chat(
 
         # Check if CHE included a scheduling action
         action = extract_action(reply)
+
+        # Remove the JSON action block from the reply text (so user doesn't see raw JSON)
+        if action:
+            import re
+            # Remove complete ```json {...} ``` blocks from the reply
+            reply = re.sub(r'```json\s*\{.*?\}\s*```',
+                           '', reply, flags=re.DOTALL).strip()
+            # Also remove incomplete JSON blocks (in case response was cut off)
+            reply = re.sub(r'```json\s*\{[^`]*$',
+                           '', reply, flags=re.DOTALL).strip()
+            # Remove trailing "Here's the plan..." or similar phrases that precede JSON
+            reply = re.sub(r"Here's the plan.*$", '', reply,
+                           flags=re.DOTALL | re.IGNORECASE).strip()
+            reply = re.sub(r"Here is the.*$", '', reply,
+                           flags=re.DOTALL | re.IGNORECASE).strip()
 
         result = {"reply": reply, "error": False}
         if action:
