@@ -3007,6 +3007,37 @@ def remove_configured_subject():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/configured-subjects/delete-by-professor', methods=['POST'])
+@login_required
+def delete_configured_subjects_by_professor():
+    """Delete ALL configured subjects for a specific professor, school year, and semester."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        prof = data.get('prof')
+        school_year = data.get('school_year')
+        semester = data.get('semester')
+
+        if not all([prof, school_year, semester]):
+            return jsonify({'error': 'Missing required fields: prof, school_year, semester'}), 400
+
+        logger.info(
+            f"Deleting all configured subjects for prof={prof}, year={school_year}, sem={semester}")
+
+        # Delete all matching configured subjects
+        result = supabase.table('configured_subjects').delete().eq('prof', prof).eq(
+            'school_year', school_year).eq('semester', semester).execute()
+
+        logger.info(
+            f"Deleted {len(result.data) if result.data else 0} configured subjects for prof {prof}")
+        return jsonify({'status': 'ok', 'deleted_count': len(result.data) if result.data else 0})
+    except Exception as e:
+        logger.error(f"Error deleting configured subjects by professor: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/schedule/generate-full', methods=['POST'])
 @login_required
 def api_generate_full_schedule():

@@ -3341,7 +3341,28 @@
 
                 console.log('💾 Saving', subjects.length, 'configured subjects for professor:', selectedProf);
 
-                // Save each subject to database
+                // STEP 1: Delete ALL existing configured subjects for this professor
+                console.log('🗑️ Deleting existing configured subjects for:', selectedProf);
+                try {
+                    var deleteRes = await fetch('/api/configured-subjects/delete-by-professor', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prof: selectedProf,
+                            school_year: currentSchoolYear,
+                            semester: currentSemester
+                        })
+                    });
+                    if (deleteRes.ok) {
+                        console.log('✅ Deleted existing configured subjects');
+                    } else {
+                        console.warn('⚠️ Failed to delete existing subjects');
+                    }
+                } catch (err) {
+                    console.error('❌ Error deleting existing subjects:', err);
+                }
+
+                // STEP 2: Save the newly selected subjects
                 for (var i = 0; i < subjects.length; i++) {
                     var subj = subjects[i];
                     try {
