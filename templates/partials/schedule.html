@@ -9488,8 +9488,7 @@
                     var data = JSON.parse(saved);
                     scheduleChatState.chatHistory = data.history || [];
                     scheduleChatState.lastGenerationParams = data.lastGenerationParams || null;
-                    scheduleChatState.showButtons = data.showButtons || false;
-                    scheduleChatState.scheduleSaved = data.scheduleSaved || false;
+                    // DON'T restore showButtons or scheduleSaved - buttons are ephemeral
 
                     // Restore chat messages in UI
                     var messagesContainer = document.getElementById('schedule-chat-messages');
@@ -9515,10 +9514,7 @@
                         });
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         
-                        // Restore buttons if they were shown before
-                        if (scheduleChatState.showButtons) {
-                            showSaveAndRegenerateButtons(scheduleChatState.scheduleSaved);
-                        }
+                        // DON'T restore buttons - they're ephemeral and would cause issues
                     }
                 }
             } catch (e) {
@@ -9536,8 +9532,7 @@
                 var data = {
                     history: scheduleChatState.chatHistory,
                     lastGenerationParams: scheduleChatState.lastGenerationParams,
-                    showButtons: scheduleChatState.showButtons || false,  // Track if buttons should be shown
-                    scheduleSaved: scheduleChatState.scheduleSaved || false,  // Track if schedule was saved
+                    // DON'T save button state - buttons are ephemeral UI elements
                     timestamp: new Date().toISOString()
                 };
                 localStorage.setItem('schedule_chat_history_' + schoolYear + '_' + semester, JSON.stringify(data));
@@ -9866,9 +9861,7 @@
             // Check if buttons already exist
             if (document.getElementById('schedule-action-buttons')) return;
             
-            // Mark that buttons should be shown
-            scheduleChatState.showButtons = true;
-            saveChatHistory();
+            // DON'T save buttons to chat history - they're ephemeral UI elements
 
             var btnContainer = document.createElement('div');
             btnContainer.id = 'schedule-action-buttons';
@@ -9968,16 +9961,11 @@
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
                     if (data.success) {
-                        // Mark schedule as saved
-                        scheduleChatState.scheduleSaved = true;
-                        saveChatHistory();
-                        
                         showScheduleAIMessage('Schedule saved successfully! The schedule is now visible to all users.', false);
                         
-                        // Update buttons to show disabled state
+                        // Remove action buttons after save
                         var btnContainer = document.getElementById('schedule-action-buttons');
                         if (btnContainer) btnContainer.remove();
-                        showSaveAndRegenerateButtons(true);  // true = disabled
                         
                         // Reload main schedules
                         loadSchedules();
@@ -10443,10 +10431,7 @@
                                 false
                             );
 
-                            // Reset saved flag for new generation
-                            scheduleChatState.scheduleSaved = false;
-                            
-                            // Add Save and Re-generate buttons (not disabled for new generation)
+                            // Add Save and Re-generate buttons (will disappear on page refresh)
                             showSaveAndRegenerateButtons(false);
 
                             // Reload schedules without page refresh (loads into generated_schedules view)
