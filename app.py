@@ -3672,13 +3672,6 @@ def api_generate_full_schedule():
     Full semester schedule generation using enhanced GA with Phase 2 integration.
     Runs in background with real-time progress updates.
     """
-    # Direct file logging for debugging
-    with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
-        f.write("=" * 80 + "\n")
-        f.write(f"ENDPOINT CALLED at {datetime.now()}\n")
-        f.write("=" * 80 + "\n")
-        f.flush()
-    
     print("=" * 80, flush=True)
     print("🎯 /api/schedule/generate-full ENDPOINT CALLED", flush=True)
     print("=" * 80, flush=True)
@@ -3687,10 +3680,6 @@ def api_generate_full_schedule():
         from services.scheduler_service import run_full_ga_v3, FullGAConfig, SubjectInput
 
         data = request.get_json()
-        
-        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
-            f.write(f"Request data: {data}\n")
-            f.flush()
         
         print(f"📦 Request data received: {data}", flush=True)
         logger.info(f"� Request data: {data}")
@@ -3702,11 +3691,6 @@ def api_generate_full_schedule():
         reference_semester = data.get('reference_semester', '1')
         reference_school_year = data.get('reference_school_year', '2026-2027')
         save_to_db = data.get('save_to_db', True)
-        
-        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
-            f.write(f"Target: {target_school_year} Sem {target_semester}\n")
-            f.write(f"Reference: {reference_school_year} Sem {reference_semester}\n")
-            f.flush()
         
         print(f"🎯 Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}", flush=True)
         logger.info(f"Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}")
@@ -3731,21 +3715,15 @@ def api_generate_full_schedule():
 
         def run_ga_background():
             """Run GA with Phase 2 in background thread."""
-            with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                f.write(f"run_ga_background() started at {datetime.now()}\n")
-                f.flush()
+            logger.info(f"run_ga_background() started at {datetime.now()}")
             
             try:
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write("Setting ga_progress running flag\n")
-                    f.flush()
+                logger.info("Setting ga_progress running flag")
                 
                 with ga_progress_lock:
                     ga_progress['running'] = True
 
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write("Updating progress: Loading reference schedules\n")
-                    f.flush()
+                logger.info("Updating progress: Loading reference schedules")
                 
                 update_ga_progress(
                     status='running', message='Loading reference schedules...')
@@ -3753,21 +3731,15 @@ def api_generate_full_schedule():
                 # Load reference semester schedules
                 reference_schedules = []
                 
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write("About to query Supabase for reference schedules\n")
-                    f.flush()
+                logger.info("About to query Supabase for reference schedules")
                 
                 try:
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"Querying: semester={reference_semester}, school_year={reference_school_year}\n")
-                        f.flush()
+                    logger.info(f"Querying: semester={reference_semester}, school_year={reference_school_year}")
                     
                     ref_result = supabase.table('schedules').select('*').eq(
                         'semester', reference_semester).eq('school_year', reference_school_year).execute()
                     
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"Query successful: {len(ref_result.data)} records\n")
-                        f.flush()
+                    logger.info(f"Query successful: {len(ref_result.data)} records")
                     
                     for rd in ref_result.data:
                         reference_schedules.append({
@@ -3782,44 +3754,25 @@ def api_generate_full_schedule():
                             'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
                         })
                     
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"Finished processing {len(reference_schedules)} reference schedules\n")
-                        f.flush()
+                    logger.info(f"Finished processing {len(reference_schedules)} reference schedules")
                         
                 except Exception as e:
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"ERROR loading reference schedules: {e}\n")
-                        import traceback
+                    logger.warning(f"ERROR loading reference schedules: {e}")
+                    import traceback
                         f.write(traceback.format_exc())
                         f.flush()
                     logger.warning(f"Reference semester load error: {e}")
 
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write(f"Calling update_ga_progress with {len(reference_schedules)} schedules\n")
-                    f.flush()
+                logger.info(f"Calling update_ga_progress with {len(reference_schedules)} schedules")
                     
                 update_ga_progress(
                     status='running', message=f'Loaded {len(reference_schedules)} reference schedules')
-
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write("Progress updated successfully\n")
-                    f.flush()
-                    
-                logger.info(f"� Reference schedules loaded: {len(reference_schedules)} from {reference_school_year} Semester {reference_semester}")
-
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write("Loading faculty data from Firestore\n")
-                    f.flush()
-                    
-                # Load faculty data
+logger.info(f"� Reference schedules loaded: {len(reference_schedules)} from {reference_school_year} Semester {reference_semester}")
+# Load faculty data
                 prof_availability = {}
                 teaching_loads_map = {}
                 try:
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write("Querying members collection\n")
-                        f.flush()
-                    
-                    member_docs = db.collection('members').where(
+member_docs = db.collection('members').where(
                         'is_faculty', '==', True).stream()
                     
                     faculty_count = 0
@@ -3837,22 +3790,11 @@ def api_generate_full_schedule():
                         if load:
                             teaching_loads_map[full_name] = int(load)
                     
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"Loaded {faculty_count} faculty members\n")
-                        f.flush()
-                        
                 except Exception as e:
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"ERROR loading faculty: {e}\n")
-                        import traceback
-                        f.write(traceback.format_exc())
-                        f.flush()
-                    logger.warning(f"Faculty load error: {e}")
+                    logger.warning(f"ERROR loading faculty: {e}")
+                    import traceback
+                    logger.warning(traceback.format_exc())
 
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write("Loading faculty course-section assignments\n")
-                    f.flush()
-                    
                 # Load faculty course-section assignments from Supabase
                 # {faculty_full_name: ["COURSE-SECTION", ...]}
                 faculty_course_assignments = {}
@@ -4041,10 +3983,8 @@ def api_generate_full_schedule():
                 update_ga_progress(
                     status='running', message='🚀 Starting Phase 2 GA...')
                 
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write("About to call run_full_ga_v3()\n")
-                    f.write(f"Config: {len(subjects)} subjects, {len(rooms_list)} rooms\n")
-                    f.flush()
+                logger.info("About to call run_full_ga_v3()")
+                logger.info(f"Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
                 
                 logger.info(f"� About to call run_full_ga_v3()")
                 logger.info(f"� Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
@@ -4052,9 +3992,7 @@ def api_generate_full_schedule():
                 result = run_full_ga_v3(
                     config, progress_callback=progress_callback)
                 
-                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                    f.write(f"run_full_ga_v3() returned: success={result.get('success')}\n")
-                    f.flush()
+                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}")
                 
                 logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
 
@@ -4063,13 +4001,11 @@ def api_generate_full_schedule():
                 if result['success']:
                     schedules = result.get('schedules', [])
                     
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"GA returned {len(schedules)} schedules\n")
-                        if schedules:
-                            f.write(f"First 3 schedules:\n")
-                            for i, sched in enumerate(schedules[:3]):
-                                f.write(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}\n")
-                        f.flush()
+                    logger.info(f"GA returned {len(schedules)} schedules")
+                    if schedules:
+                        logger.info(f"First 3 schedules:")
+                        for i, sched in enumerate(schedules[:3]):
+                            logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
                     
                     logger.info(f"GA returned {len(schedules)} schedules")
 
@@ -4093,12 +4029,10 @@ def api_generate_full_schedule():
                             # No pattern or only one day - keep as is
                             expanded_schedules.append(sched)
                     
-                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                        f.write(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns\n")
-                        f.write(f"Sample expanded:\n")
-                        for i, sched in enumerate(expanded_schedules[:5]):
-                            f.write(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}\n")
-                        f.flush()
+                    logger.info(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns")
+                    logger.info(f"Sample expanded:")
+                    for i, sched in enumerate(expanded_schedules[:5]):
+                        logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
                     
                     logger.info(f"Expanded {len(schedules)} schedules to {len(expanded_schedules)} using reference patterns")
                     
@@ -4137,9 +4071,7 @@ def api_generate_full_schedule():
 
                     # Save directly to main schedules table (so users can see and review on timetable)
                     if save_to_db and schedules:
-                        with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                            f.write(f"Starting save: {len(schedules)} schedules to main schedules table\n")
-                            f.flush()
+                        logger.info(f"Starting save: {len(schedules)} schedules to main schedules table")
                         
                         update_ga_progress(
                             status='running', message=f'Saving {len(schedules)} schedules to timetable...')
@@ -4214,12 +4146,7 @@ def api_generate_full_schedule():
                         
                         logger.info(
                             f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
-                        
-                        with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
-                            f.write(f"✅ Save complete: {saved} schedules saved to main schedules table\n")
-                            f.flush()
-                        
-                        if save_errors:
+if save_errors:
                             logger.error(f"{len(save_errors)} schedules failed to save:")
                             for err in save_errors[:5]:  # Log first 5 errors
                                 logger.error(f"  - {err}")
@@ -4250,64 +4177,37 @@ def api_generate_full_schedule():
                     ga_progress['running'] = False
 
         # Start background thread WITH app context
-        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
-            f.write("About to create background thread\n")
-            f.flush()
-        
-        print("=" * 80, flush=True)
+print("=" * 80, flush=True)
         print("🎬 About to create background thread...", flush=True)
         print("=" * 80, flush=True)
         logger.info(f"� About to create background thread...")
         
         def run_with_context():
-            with open('documents/debug_thread.txt', 'a', encoding='utf-8') as f:
-                f.write(f"Thread started at {datetime.now()}\n")
-                f.flush()
+            logger.info(f"Thread started at {datetime.now()}")
             
             print("🚀 Background thread started, acquiring app context...", flush=True)
-            logger.info(f"� Background thread started, acquiring app context...")
+            logger.info(f"🧵 Background thread started, acquiring app context...")
             try:
                 with app.app_context():
-                    with open('documents/debug_thread.txt', 'a', encoding='utf-8') as f:
-                        f.write("App context acquired\n")
-                        f.flush()
-                    
                     print("✅ App context acquired, starting GA...", flush=True)
                     logger.info("App context acquired, starting GA...")
                     run_ga_background()
             except Exception as e:
-                with open('documents/debug_thread.txt', 'a', encoding='utf-8') as f:
-                    f.write(f"ERROR: {e}\n")
-                    import traceback
-                    f.write(traceback.format_exc())
-                    f.flush()
+                logger.error(f"ERROR in thread: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 
                 print(f"❌ Fatal error in background thread: {e}", flush=True)
-                logger.error(f" Fatal error in background thread: {e}")
+                logger.error(f"❌ Fatal error in background thread: {e}")
                 import traceback
                 traceback.print_exc()
-        
-        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
-            f.write("Creating thread object\n")
-            f.flush()
-        
-        print("🔧 Creating thread object...", flush=True)
+print("🔧 Creating thread object...", flush=True)
         logger.info(f"� Creating thread object...")
         thread = threading.Thread(target=run_with_context, daemon=True)
-        
-        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
-            f.write("Starting thread\n")
-            f.flush()
-        
-        print("▶️ Starting thread...", flush=True)
+print("▶️ Starting thread...", flush=True)
         logger.info("Starting thread...")
         thread.start()
-        
-        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
-            f.write("Thread started successfully\n")
-            f.flush()
-        
-        print("📤 Background thread dispatched", flush=True)
+print("📤 Background thread dispatched", flush=True)
         logger.info(f"� Background thread dispatched")
 
         return jsonify({
