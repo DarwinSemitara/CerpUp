@@ -9536,10 +9536,6 @@
                     timestamp: new Date().toISOString()
                 };
                 localStorage.setItem('schedule_chat_history_' + schoolYear + '_' + semester, JSON.stringify(data));
-                    lastGenerationParams: scheduleChatState.lastGenerationParams,
-                    timestamp: new Date().toISOString()
-                };
-                localStorage.setItem('schedule_chat_history_' + schoolYear + '_' + semester, JSON.stringify(data));
             } catch (e) {
                 console.error('Failed to save chat history:', e);
             }
