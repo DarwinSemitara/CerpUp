@@ -3468,10 +3468,17 @@ def get_assigned_course_sections():
         )
 
         # Build list of 'COURSE-SECTION' strings
-        assigned = [f"{item['courses']['course_code']}-{item['section']}"
-                    for item in result.data]
+        # CRITICAL: Normalize course codes to match frontend format (space between letters and numbers)
+        assigned = []
+        for item in result.data:
+            course_code = item['courses']['course_code']
+            # Normalize: CERP101 -> CERP 101
+            import re
+            normalized_code = re.sub(r'([A-Z]+)(\d)', r'\1 \2', course_code)
+            assigned.append(f"{normalized_code}-{item['section']}")
 
         logger.info(f"Found {len(assigned)} assigned course-sections")
+        logger.info(f"Sample assigned (first 3): {assigned[:3] if assigned else []}")
         return jsonify({'assigned': assigned})
     except Exception as e:
         logger.error(f"Error fetching assigned course-sections: {e}")
@@ -4096,6 +4103,37 @@ def api_generate_full_schedule():
                     logger.info(f"Expanded {len(schedules)} schedules to {len(expanded_schedules)} using reference patterns")
                     
                     schedules = expanded_schedules
+
+                    # CRITICAL: Check for conflicts AFTER expansion
+                    # Expansion can create conflicts that didn't exist in the GA output
+                    conflict_check = []
+                    for sched in schedules:
+                        prof = sched.get('prof', '')
+                        day = sched.get('day', '')
+                        start = sched.get('start', '')
+                        end = sched.get('end', '')
+                        
+                        # Check if this prof already has a schedule at this time
+                        for existing in conflict_check:
+                            if (existing['prof'] == prof and 
+                                existing['day'] == day and
+                                existing['start'] == start and
+                                existing['end'] == end):
+                                # CONFLICT FOUND!
+                                error_msg = f"CONFLICT after expansion: {prof} has {sched.get('subjCode')} and {existing['subjCode']} both on {day} at {start}-{end}"
+                                logger.error(error_msg)
+                                
+                                update_ga_progress(status='error', message='Schedule generation failed: Conflicts detected after day pattern expansion')
+                                
+                                with ga_progress_lock:
+                                    ga_progress['running'] = False
+                                
+                                # Return error - do NOT save conflicting schedules
+                                return
+                        
+                        conflict_check.append({'prof': prof, 'day': day, 'start': start, 'end': end, 'subjCode': sched.get('subjCode')})
+                    
+                    logger.info("✅ No conflicts detected after expansion")
 
                     # Save directly to main schedules table (so users can see and review on timetable)
                     if save_to_db and schedules:
