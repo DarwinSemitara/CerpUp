@@ -283,7 +283,8 @@ const FSR_DAY_ABBR = { Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'TH'
 function fsrConsolidateSchedules(schedules) {
     const map = {};
     (schedules || []).forEach(s => {
-        const key = `${s.subjCode}||${s.room}||${s.start}||${s.end}`;
+        // Group by course code + section (not by room/time)
+        const key = `${s.subjCode}||${s.section}`;
         if (!map[key]) map[key] = { ...s, days: [] };
         const abbr = FSR_DAY_ABBR[s.day] || (s.day || '').slice(0, 2).toUpperCase();
         if (abbr && !map[key].days.includes(abbr)) map[key].days.push(abbr);
@@ -380,14 +381,19 @@ function fsrRender(member, research, extensions, schedules, unscheduledSubjects,
     if (teachingRows.length > 0 || unscheduledSubjects.length > 0) {
         // First show scheduled subjects
         teachingRows.forEach(row => {
+            const hoursPerWeek = 3;  // All courses are 3 hours per week
+            const courseCredit = 3;  // All courses have 3 credits
+            
             html += `<tr>
                 <td colspan="2" style="font-weight:600;">${row.subjCode || ''}</td>
-                <td style="text-align:center;color:#6b7280;font-style:italic;">—</td>
+                <td style="text-align:center;">${row.section || '—'}</td>
                 <td style="text-align:center;">${row.room || ''}</td>
                 <td style="text-align:center;">${row.days.join('/')}</td>
                 <td style="text-align:center;">${fsrFmtRange(row.start, row.end)}</td>
-                <td style="text-align:center;">—</td><td style="text-align:center;">—</td>
-                <td style="text-align:center;">—</td><td style="text-align:center;">—</td>
+                <td style="text-align:center;">${hoursPerWeek}</td>
+                <td style="text-align:center;">—</td>
+                <td style="text-align:center;">${courseCredit}</td>
+                <td style="text-align:center;">—</td>
                 <td style="text-align:center;">—</td>
             </tr>`;
         });

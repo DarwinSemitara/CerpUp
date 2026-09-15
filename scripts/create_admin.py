@@ -20,8 +20,8 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 ADMIN_EMAIL = 'admin@cerp.dev'
-ADMIN_PASSWORD = 'admin123'
-ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD = 'CerpAdmin783695!'  # Strong password
+ADMIN_USERNAME = 'cerp_admin'
 
 try:
     user = auth.get_user_by_email(ADMIN_EMAIL)

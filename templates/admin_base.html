@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CERP Admin - {{ page_title }}</title>
+    <title>Admin - {{ page_title }}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/admin.css">
@@ -68,9 +68,9 @@
                     <a href="/schedule/class/" class="sub-nav-item {% if active_page == 'schedule' %}active{% endif %}">
                         Class Schedule
                     </a>
-                    <a href="/schedule/section/"
-                        class="sub-nav-item {% if active_page == 'section' %}active{% endif %}">
-                        Section
+                    <a href="/schedule/courses/"
+                        class="sub-nav-item {% if active_page == 'courses' %}active{% endif %}">
+                        Courses
                     </a>
                     <a href="/schedule/events/" class="sub-nav-item">News and Events</a>
                 </div>
@@ -117,7 +117,9 @@
                 <div class="page-title" id="page-title">{{ page_title }}</div>
                 <div class="user-info">
                     <div class="user-email">{{ email }}</div>
-                    <div class="user-avatar">{{ initial }}</div>
+                    <div class="user-avatar-logo">
+                        <img src="/static/images/uplogo.png" alt="UPLB" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
                 </div>
             </header>
 

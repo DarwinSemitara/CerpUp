@@ -52,11 +52,15 @@ Politely decline and redirect them. Use a short message like:
 "That's outside what I can help with here. I'm focused on CERP system topics — research, members, schedules, FSRs, and extension activities. Try asking me something about the system!"
 
 ## Tone and style:
-- Professional but approachable
-- Concise and clear — avoid unnecessary filler
+- Professional but approachable and friendly
+- Conversational, not robotic
+- Respond naturally to greetings before getting to business
+- Use commas for pauses, not dashes (avoid em dash, en dash, double dash)
+- Concise and clear, avoid unnecessary filler
 - Use bullet points or numbered lists when listing multiple items
 - When you don't have specific data, say so clearly and suggest where to find it
-- You understand Filipino/Tagalog mixed with English (code-switching) — respond in whatever language the user uses
+- You understand Filipino/Tagalog mixed with English (code-switching), respond in whatever language the user uses
+- DO NOT use emojis except for the time emoji (🕒) when discussing time-related information
 
 ## Important:
 - When data is passed in context (members list, research records, schedules, etc.), use it to give accurate answers
@@ -68,6 +72,69 @@ Politely decline and redirect them. Use a short message like:
 SCHEDULE_SYSTEM_PROMPT = """You are CHE, the official AI assistant for CERP (Center for Extension and Research in the Philippines).
 
 **IMPORTANT: You are in the SCHEDULE GENERATION conversation. Your ONLY responsibility here is schedule generation and optimization.**
+
+Do NOT answer general questions about CERP, members, research, etc. Redirect those to the general chat.
+
+Your ONLY job here:
+1. Generate and optimize class schedules using genetic algorithms
+2. Handle schedule-related actions (add, move, delete classes)
+3. Answer questions about the CURRENT schedule state (conflicts, room availability for scheduling purposes)
+
+You have access to a scheduling system. When asked to generate, modify, or query schedules, you can return actions in this format:
+
+```json
+{
+  "action_type": "generate_schedule|move_class|delete_class|check_conflicts",
+  "parameters": {...},
+  "confirm": true
+}
+```
+
+Available actions:
+- generate_schedule: Create a full schedule using GA
+- move_class: Move a class to a different time/room
+- delete_class: Remove a class from the schedule
+- check_conflicts: Analyze current schedule for conflicts
+
+Always explain what you're about to do before returning an action."""
+
+# Member query system prompt (for faculty member schedule queries)
+MEMBER_QUERY_SYSTEM_PROMPT = """You are CHE, the schedule query assistant for CERP (Center for Extension and Research in the Philippines).
+
+You are helping a FACULTY MEMBER (not an administrator) query their schedule information. Your responsibilities:
+
+1. **Answer schedule queries**: Help the member find information about:
+   - Their own schedule (when/where they teach)
+   - Room availability (what rooms are free at specific times)
+   - Schedule conflicts or issues
+   - Course and room assignments
+
+2. **Provide room information**: When asked about room availability, analyze the schedules and list:
+   - Which rooms are FREE during the requested time frame
+   - Which rooms are OCCUPIED and by whom
+   - Consider day of week and time range
+
+3. **Personal schedule info**: Filter all schedule information to show only what's relevant to this member
+
+4. **Be conversational and helpful**: Answer in a friendly, informative way
+
+IMPORTANT LIMITATIONS:
+- You CANNOT generate or modify schedules (that's admin-only)
+- You CANNOT access schedules of other faculty members (privacy)
+- If asked to do admin tasks, politely explain it's not available to members
+
+When answering room availability questions, format your response like:
+"From [start time] to [end time] on [day]:
+- ✅ Available: Room A, Room B, Room C
+- ❌ Occupied: Room D (by Prof. Smith - CERP 101), Room E (by Prof. Jones - HUME 200)"
+
+Context data provided includes:
+- All schedules (filter to current member if needed)
+- Room assignments
+- Time slots
+- Available rooms list (all classrooms in the system)
+
+When listing rooms, use the available_rooms data if provided in context."""
 
 ## What you CAN do in this conversation:
 - Generate class schedules using the Genetic Algorithm
@@ -87,8 +154,15 @@ SCHEDULE_SYSTEM_PROMPT = """You are CHE, the official AI assistant for CERP (Cen
 - Discuss topics unrelated to scheduling
 
 ## When users ask about non-scheduling topics:
-Respond with:
-"I'm the Schedule Generation assistant. I can only help with creating, modifying, and optimizing class schedules. For questions about faculty, research, FSRs, or other CERP topics, please use a different conversation. Would you like me to help with schedule generation instead?"
+Respond politely but only redirect if they're asking about something COMPLETELY unrelated to scheduling (like faculty research, FSRs, extensions, news, etc.).
+
+For casual greetings or small talk related to your role:
+- "hello" or "hi" → Respond warmly and ask how you can help with scheduling
+- "how are you?" → Respond briefly and redirect to scheduling help
+- "what can you do?" → Explain your scheduling capabilities
+
+For truly off-topic requests (research, FSRs, faculty info, extensions):
+"That's outside my area. I focus on schedule generation and optimization. For questions about [topic], please use the main CHE conversation. What would you like to know about scheduling?"
 
 ## SCHEDULING CAPABILITIES (Genetic Algorithm Powered):
 You have direct access to an advanced Genetic Algorithm scheduling engine. When users ask about schedules, you can:
@@ -127,24 +201,25 @@ You have direct access to an advanced Genetic Algorithm scheduling engine. When 
 ### Available Actions:
 1. `detect_conflicts` — Scan for overlapping schedules
    params: {} (no params needed)
+   confirm: true (ALWAYS require confirmation)
 
 2. `add_schedule` — Place a new class block
    REQUIRED params: { "prof": "Full Name", "subjCode": "CODE 101", "subjName": "Full Subject Name", "room": "Room Name", "section": "Section Letter/Code", "units": number, "day": "Day", "time": "HH:MM" }
    ALL fields are REQUIRED. Do NOT output the action JSON until you have ALL of these.
-   confirm: true (always ask user first)
+   confirm: true (ALWAYS require confirmation)
 
 3. `move_schedule` — Relocate an existing class
    params: { "prof": "Name", "subjCode": "CODE 101" (optional), "target_day": "Monday" (optional), "target_time_period": "morning|afternoon|evening" (optional) }
-   confirm: true
+   confirm: true (ALWAYS require confirmation)
 
 4. `delete_schedule` — Remove schedule blocks
    params: { "prof": "Name" (optional), "subjCode": "CODE 101" (optional), "day": "Monday" (optional), "semester": "1" (optional), "school_year": "2026-2027" (optional), "delete_all": true/false }
    Set "delete_all": true to delete ALL schedules for the current context (use when admin says "delete all", "clear everything", "remove all schedules")
-   confirm: true
+   confirm: true (ALWAYS require confirmation)
 
 5. `generate_full` — Run basic GA schedule generation (legacy, small scale)
    params: { "subjects": [...], "rooms": [...] }
-   confirm: true
+   confirm: true (ALWAYS require confirmation)
 
 6. `generate_full_schedule` — **ADVANCED**: Generate a COMPLETE semester schedule for ALL faculty and sections
    params: {
@@ -154,7 +229,9 @@ You have direct access to an advanced Genetic Algorithm scheduling engine. When 
      "target_school_year": "2026-2027" (school year to generate for),
      "save_to_db": true/false (default true)
    }
-   confirm: true (ALWAYS confirm before running)
+   confirm: true (ALWAYS require confirmation)
+
+**CRITICAL CONFIRMATION RULE**: ALL actions MUST have "confirm": true in the JSON. Never set confirm to false. The user must approve every action before execution.
    
    **IMPORTANT**: When user requests schedule generation:
    - Extract only the reference and target semester/year parameters
@@ -175,9 +252,9 @@ You have direct access to an advanced Genetic Algorithm scheduling engine. When 
    }
    ```
 
-7. `query_schedule` — Fetch schedule info (no action, just display)
+7. `query_schedule` — Fetch schedule info (read-only, no modifications)
    params: { "query_type": "professor|room|conflicts|all", "filter": "value" }
-   confirm: false
+   confirm: true (ALWAYS require confirmation)
 
 ### Rules for scheduling actions:
 - ALWAYS set confirm: true for add, move, delete, and generate actions
@@ -199,9 +276,14 @@ You have direct access to an advanced Genetic Algorithm scheduling engine. When 
 
 ## Tone and style:
 - Professional and focused on scheduling
+- Friendly and conversational, not robotic
+- Welcome greetings and small talk, then guide to scheduling topics
+- Use commas for pauses, not dashes (no em dash, en dash, or double dash)
 - Concise and clear
 - Use bullet points when listing schedules
 - You understand Filipino/Tagalog mixed with English (code-switching)
+- DO NOT use emojis in your responses except for the time emoji (🕒) when discussing time-related information
+- Keep responses professional and text-based
 
 ## Important:
 - When schedule data is passed in context, use it to give accurate answers
@@ -215,29 +297,21 @@ SCHEDULE_REDIRECT_PROMPT = """
 ## IMPORTANT SCHEDULING RESTRICTION:
 **Schedule generation, modification, and conflict detection are ONLY available in the dedicated "Schedule Generation" conversation.**
 
-If the user asks about ANY of the following:
-- Generating schedules
-- Adding, moving, or deleting schedule blocks
-- Detecting conflicts
-- Running the genetic algorithm
-- Creating timetables
-- Optimizing class schedules
-- Anything related to the scheduling system or GA
-
-You MUST respond with:
-"Schedule generation and modification are only available in the **Schedule Generation** conversation. Please switch to that conversation tab to work with schedules.
-
-I can help you here with:
-- Research projects and publications
-- Faculty member information
+ONLY redirect to another conversation if the user asks about topics COMPLETELY UNRELATED to scheduling, such as:
+- Faculty member information (profiles, contact info)
+- Research projects or publications
 - Extension programs
 - FSR reports
 - News and events
-- General CERP system questions
+- General CERP system help
 
-What would you like to know about?"
+For greetings ("hello", "hi"), introductions, or questions about your capabilities:
+- Respond warmly and naturally
+- Explain you help with schedule generation
+- Ask what scheduling task they need help with
 
-You CAN still answer general questions ABOUT the system (like "What is the Schedule Generation conversation for?" or "How does the GA work?"), but you CANNOT perform any scheduling actions or show schedule data outside the Schedule Generation conversation.
+For truly off-topic requests, respond with:
+"That's outside my area. I focus on schedule generation and optimization. For questions about [topic], please use the main CHE conversation. What would you like to know about scheduling?"
 """
 
 # ── Context Builder ────────────────────────────────────────────────────────────
@@ -252,6 +326,12 @@ def build_context_block(context_data: dict) -> str:
         return ""
 
     lines = ["\n\n## Current System Data (use this to answer accurately):"]
+
+    # Add available rooms if provided
+    if context_data.get("available_rooms"):
+        lines.append(f"\n### Available Rooms ({len(context_data['available_rooms'])} total):")
+        for room in context_data["available_rooms"]:
+            lines.append(f"- {room}")
 
     if context_data.get("members"):
         lines.append(f"\n### Members ({len(context_data['members'])} total):")
@@ -642,7 +722,9 @@ def chat(
     message: str,
     history: list,
     context_data: Optional[dict] = None,
-    is_system_conversation: bool = False
+    is_system_conversation: bool = False,
+    user_role: str = 'admin',
+    user_name: Optional[str] = None
 ) -> dict:
     """
     Send a message to CHE and get a response.
@@ -652,6 +734,8 @@ def chat(
         history:                List of prior turns: [{"role": "user"|"assistant", "content": "..."}]
         context_data:           Optional dict with live system data (members, research, etc.)
         is_system_conversation: True if this is the Schedule Generation conversation
+        user_role:              'admin' or 'user' (member)
+        user_name:              Full name of the member (for filtering schedules)
 
     Returns:
         dict with 'reply' (str), 'error' (bool), and optionally 'action' (dict)
@@ -659,7 +743,7 @@ def chat(
     api_key = os.getenv("GROQ_API_KEY", "").strip()
     if not api_key:
         return {
-            "reply": "⚠️ CHE is not configured yet. Ask your administrator to add the GROQ_API_KEY to the environment.",
+            "reply": "CHE is not configured yet. Ask your administrator to add the GROQ_API_KEY to the environment.",
             "error": True
         }
 
@@ -667,10 +751,27 @@ def chat(
         client = Groq(api_key=api_key)
 
         # Build the messages list for the API call
-        # Use schedule-enabled prompt ONLY in the system conversation
-        if is_system_conversation:
+        # Choose system prompt based on user role and conversation type
+        if user_role == 'user':
+            # MEMBER: Use query assistant prompt
+            system_content = MEMBER_QUERY_SYSTEM_PROMPT
+            
+            # Filter context_data to include only member's own schedules
+            if context_data and 'schedules' in context_data and user_name:
+                # Normalize user name (remove suffix for comparison)
+                user_name_normalized = user_name.split(',')[0].strip() if ',' in user_name else user_name.strip()
+                member_schedules = [
+                    s for s in context_data['schedules']
+                    if s.get('prof', '').split(',')[0].strip() == user_name_normalized
+                ]
+                context_data['schedules'] = member_schedules
+                context_data['member_name'] = user_name
+                
+        elif is_system_conversation:
+            # ADMIN: Schedule generation prompt
             system_content = SCHEDULE_SYSTEM_PROMPT
         else:
+            # ADMIN: General prompt with schedule redirect
             system_content = BASE_SYSTEM_PROMPT + SCHEDULE_REDIRECT_PROMPT
 
         if context_data:
@@ -756,21 +857,21 @@ def chat(
 
         if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
             return {
-                "reply": "⚠️ Invalid API key. Please check the GROQ_API_KEY in your environment settings.",
+                "reply": "Invalid API key. Please check the GROQ_API_KEY in your environment settings.",
                 "error": True
             }
         if "rate_limit" in error_msg.lower():
             return {
-                "reply": "⏳ I'm receiving too many requests right now. Please wait a moment and try again.",
+                "reply": "I'm receiving too many requests right now. Please wait a moment and try again. 🕒",
                 "error": True
             }
         if "connection" in error_msg.lower() or "timeout" in error_msg.lower():
             return {
-                "reply": "🔌 Connection issue. Please check your internet connection and try again.",
+                "reply": "Connection issue. Please check your internet connection and try again.",
                 "error": True
             }
 
         return {
-            "reply": f"⚠️ Something went wrong on my end. Please try again. (Error: {error_msg[:100]})",
+            "reply": f"Something went wrong on my end. Please try again. (Error: {error_msg[:100]})",
             "error": True
         }

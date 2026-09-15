@@ -70,6 +70,57 @@
         box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
     }
 
+    /* ── Dual-Plot Toggle ── */
+    .dual-plot-toggle {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
+
+    .dual-plot-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .dual-plot-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #d1d5db;
+        transition: 0.3s;
+        border-radius: 24px;
+    }
+
+    .dual-plot-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .dual-plot-toggle input:checked+.dual-plot-slider {
+        background-color: #6b0f1a;
+    }
+
+    .dual-plot-toggle input:checked+.dual-plot-slider:before {
+        transform: translateX(20px);
+    }
+
+    .dual-plot-toggle input:focus+.dual-plot-slider {
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+    }
+
     /* ── Hint ── */
     #manual-hint {
         display: flex;
@@ -235,6 +286,12 @@
         font-size: 0.63rem;
     }
 
+    .sched-block .sb-section {
+        color: #666;
+        font-size: 0.63rem;
+        font-weight: 600;
+    }
+
     .sched-block .sb-resize {
         position: absolute;
         bottom: 0;
@@ -309,6 +366,16 @@
         font-size: 0.7rem;
         color: #6b0f1a;
         font-weight: 600;
+    }
+
+    /* Paired block preview (dual-plot) - same red color, just dimmed */
+    .drop-preview-paired {
+        opacity: 0.6;
+    }
+
+    .drop-preview-paired::before {
+        content: '🔗 ';
+        font-size: 0.8rem;
     }
 
     /* ── New block modal ── */
@@ -988,6 +1055,105 @@
 
     .remove-subject-btn-remove:hover {
         background: #b91c1c;
+    }
+
+    /* ── Discard Changes Confirmation Modal ── */
+    #discard-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1150;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+    }
+
+    #discard-modal.open {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .discard-box {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 480px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        transform: translateY(-10px);
+        transition: transform 0.2s;
+    }
+
+    #discard-modal.open .discard-box {
+        transform: translateY(0);
+    }
+
+    .discard-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #d97706;
+        margin-bottom: 16px;
+    }
+
+    .discard-title svg {
+        flex-shrink: 0;
+        color: #f59e0b;
+    }
+
+    .discard-message {
+        font-size: 0.9rem;
+        color: #374151;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        padding: 14px;
+        background: #fffbeb;
+        border-radius: 6px;
+        border: 1px solid #fef3c7;
+    }
+
+    .discard-message strong {
+        color: #92400e;
+        font-weight: 700;
+    }
+
+    .discard-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .discard-btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+    }
+
+    .discard-btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .discard-btn-cancel:hover {
+        background: #e5e7eb;
+    }
+
+    .discard-btn-discard {
+        background: #d97706;
+        color: white;
+    }
+
+    .discard-btn-discard:hover {
+        background: #b45309;
     }
 
     /* ── Report ── */
@@ -2351,111 +2517,17 @@
             <div class="add-subject-card">
                 <div class="add-subject-header">
                     <h3>Subject Block Selection</h3>
-                    <button class="nbm-btn-primary" onclick="toggleUnitConfig()" id="unit-config-toggle-btn">
-                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                            stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Course
-                    </button>
-                </div>
-
-                <!-- Unit Configuration Form (collapsible) -->
-                <div class="unit-config-form" id="unit-config-form" style="display:none;">
-                    <div style="margin-bottom:16px;">
-                        <p style="font-size:0.85rem;color:#6b7280;margin:0;">
-                            Configure units per section (max 3 units per subject). Select subjects, set units, then
-                            change section to configure another section.
-                        </p>
-                    </div>
-
-                    <!-- Course Category Dropdowns -->
-                    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
-                        <!-- CERP Courses -->
-                        <div class="course-category">
-                            <button type="button" onclick="toggleCourseCategory('cerp')" class="category-toggle-btn">
-                                <svg width="14" height="14" id="cerp-chevron" style="transition:transform 0.2s;">
-                                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" />
-                                </svg>
-                                <span style="font-weight:600;">CERP Courses</span>
-                                <span id="cerp-count" style="margin-left:auto;font-size:0.8rem;color:#6b7280;">(0
-                                    selected)</span>
-                            </button>
-                            <div id="cerp-courses" class="course-list" style="display:none;">
-                                <!-- Will be populated dynamically -->
-                            </div>
-                        </div>
-
-                        <!-- HUME Courses -->
-                        <div class="course-category">
-                            <button type="button" onclick="toggleCourseCategory('hume')" class="category-toggle-btn">
-                                <svg width="14" height="14" id="hume-chevron" style="transition:transform 0.2s;">
-                                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" />
-                                </svg>
-                                <span style="font-weight:600;">HUME Courses</span>
-                                <span id="hume-count" style="margin-left:auto;font-size:0.8rem;color:#6b7280;">(0
-                                    selected)</span>
-                            </button>
-                            <div id="hume-courses" class="course-list" style="display:none;">
-                                <!-- Will be populated dynamically -->
-                            </div>
-                        </div>
-
-                        <!-- NSTP -->
-                        <div class="course-category">
-                            <button type="button" onclick="toggleCourseCategory('nstp')" class="category-toggle-btn">
-                                <svg width="14" height="14" id="nstp-chevron" style="transition:transform 0.2s;">
-                                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" />
-                                </svg>
-                                <span style="font-weight:600;">NSTP</span>
-                                <span id="nstp-count" style="margin-left:auto;font-size:0.8rem;color:#6b7280;">(0
-                                    selected)</span>
-                            </button>
-                            <div id="nstp-courses" class="course-list" style="display:none;">
-                                <!-- Will be populated dynamically -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="asf-actions" style="margin-top:16px;display:flex;align-items:center;gap:12px;">
-                        <div style="flex:0 0 auto;">
-                            <label
-                                style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Section</label>
-                            <select id="config-section-select" onchange="refreshConfigForSection()"
-                                style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.85rem;background:#fff;min-width:120px;">
-                                <option value="A">Section A</option>
-                                <option value="B">Section B</option>
-                                <option value="C">Section C</option>
-                                <option value="D">Section D</option>
-                                <option value="E">Section E</option>
-                                <option value="F">Section F</option>
-                                <option value="G">Section G</option>
-                                <option value="H">Section H</option>
-                                <option value="I">Section I</option>
-                                <option value="J">Section J</option>
-                                <option value="K">Section K</option>
-                                <option value="L">Section L</option>
-                                <option value="M">Section M</option>
-                                <option value="N">Section N</option>
-                                <option value="O">Section O</option>
-                                <option value="P">Section P</option>
-                                <option value="Q">Section Q</option>
-                                <option value="R">Section R</option>
-                                <option value="S">Section S</option>
-                                <option value="T">Section T</option>
-                                <option value="U">Section U</option>
-                                <option value="V">Section V</option>
-                                <option value="W">Section W</option>
-                                <option value="X">Section X</option>
-                                <option value="Y">Section Y</option>
-                                <option value="Z">Section Z</option>
-                            </select>
-                        </div>
-                        <div style="flex:1;"></div>
-                        <button class="nbm-btn-secondary" onclick="toggleUnitConfig()">Cancel</button>
-                        <button class="nbm-btn-primary" onclick="saveUnitConfiguration()">Save</button>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                        <label class="dual-plot-toggle">
+                            <input type="checkbox" id="dual-plot-toggle" onchange="toggleDualPlot()">
+                            <span class="dual-plot-slider"></span>
+                        </label>
+                        <span style="font-size:0.85rem;color:#374151;font-weight:500;">Dual-Plot (MW, WF, TTH)</span>
                     </div>
                 </div>
+
+                <!-- REMOVED: Manual Unit Configuration Form -->
+                <!-- Now using faculty course assignments from Courses page -->
 
                 <!-- Draggable Subject Blocks (Staging Area) -->
                 <div class="staging-area" id="staging-area">
@@ -2469,9 +2541,9 @@
                             <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
-                            <div>Set unit hours first to enable draggable subject blocks</div>
+                            <div>Select a professor from the filter above</div>
                         </div>
                     </div>
                 </div>
@@ -2548,6 +2620,16 @@
                         <option value="F">Section F</option>
                         <option value="G">Section G</option>
                         <option value="H">Section H</option>
+                        <option value="I">Section I</option>
+                        <option value="J">Section J</option>
+                        <option value="K">Section K</option>
+                        <option value="L">Section L</option>
+                        <option value="M">Section M</option>
+                        <option value="N">Section N</option>
+                        <option value="O">Section O</option>
+                        <option value="P">Section P</option>
+                        <option value="Q">Section Q</option>
+                        <option value="R">Section R</option>
                         <option value="S">Section S</option>
                         <option value="T">Section T</option>
                         <option value="U">Section U</option>
@@ -2607,6 +2689,28 @@
                 </button>
                 <button class="remove-subject-btn remove-subject-btn-remove" onclick="confirmRemoveSubject()">
                     Remove
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discard Changes Confirmation Modal -->
+    <div id="discard-modal" onclick="if(event.target===this) closeDiscardModal()">
+        <div class="discard-box">
+            <div class="discard-title">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Discard Changes
+            </div>
+            <div class="discard-message" id="discard-message"></div>
+            <div class="discard-actions">
+                <button class="discard-btn discard-btn-cancel" onclick="closeDiscardModal()">
+                    Cancel
+                </button>
+                <button class="discard-btn discard-btn-discard" onclick="confirmDiscardChanges()">
+                    Discard
                 </button>
             </div>
         </div>
@@ -2984,6 +3088,40 @@
 
                     unitConfigSaved = Object.keys(subjectUnits).length > 0;
                     console.log(`📥 Loaded ${Object.keys(subjectUnits).length} configured subject-sections for ${selectedProf}:`, subjectUnits);
+
+                    // FALLBACK: If no configured subjects, load from faculty_courses
+                    if (!unitConfigSaved) {
+                        console.log('⚠️ No configured subjects found, falling back to faculty_courses...');
+                        try {
+                            var fcRes = await fetch(`/api/faculty/by-name/${encodeURIComponent(selectedProf)}/courses`);
+                            if (fcRes.ok) {
+                                var fcData = await fcRes.json();
+                                var assignments = fcData.courses || [];
+
+                                assignments.forEach(function (assign) {
+                                    // Handle different field names
+                                    var courseCode = assign.course_code || assign.courseCode || assign.subjCode;
+                                    var section = assign.section;
+
+                                    if (courseCode && section) {
+                                        var key = courseCode + '-' + section;
+                                        subjectUnits[key] = {
+                                            configured: 3,  // Default 3 units
+                                            allocated: 0,
+                                            section: section,
+                                            subjCode: courseCode
+                                        };
+                                        console.log(`  ✅ Fallback added: ${key} with 3 units`);
+                                    }
+                                });
+
+                                unitConfigSaved = Object.keys(subjectUnits).length > 0;
+                                console.log(`✅ Loaded ${Object.keys(subjectUnits).length} courses from faculty_courses:`, subjectUnits);
+                            }
+                        } catch (err) {
+                            console.error('Failed to load faculty_courses fallback:', err);
+                        }
+                    }
 
                     // Update button text if config exists
                     var btn = document.getElementById('unit-config-toggle-btn');
@@ -3474,131 +3612,172 @@
                 console.log('📊 Final allocation for', selectedProf, ':', JSON.parse(JSON.stringify(subjectUnits)));
             }
 
-            function renderDraggableBlocks() {
+            async function renderDraggableBlocks() {
                 var container = document.getElementById('staging-blocks');
                 if (!container) {
                     console.error('❌ staging-blocks container not found!');
                     return;
                 }
 
-                console.log('🎨 Rendering draggable blocks...');
-                console.log('Subject units config (subjectUnits):', JSON.parse(JSON.stringify(subjectUnits)));
-                console.log('Keys in subjectUnits:', Object.keys(subjectUnits));
+                console.log('🎨 Rendering draggable blocks from faculty courses...');
 
-                // Check if any subjects are configured
-                var hasAnyConfigured = Object.keys(subjectUnits).length > 0;
+                // Get selected faculty from professor filter dropdown
+                var professorSelect = document.getElementById('sf-professor');
+                var selectedFacultyId = professorSelect ? professorSelect.value : null;
 
-                // Create individual blocks for each section
-                var blocksToRender = [];
-
-                Object.keys(subjectUnits).forEach(function (key) {
-                    // Key format: "SUBJCODE-SECTION"
-                    var parts = key.split('-');
-                    if (parts.length !== 2) return;
-
-                    var subjCode = parts[0];
-                    var section = parts[1];
-                    var unitData = subjectUnits[key];
-
-                    console.log('Checking:', key, 'unitData:', unitData);
-
-                    if (!unitData || unitData.configured === 0) {
-                        console.log('  ❌ No unit data or configured is 0 for', key);
-                        return;
-                    }
-
-                    var remaining = unitData.configured - unitData.allocated;
-                    console.log('  Remaining:', remaining, '=', unitData.configured, '-', unitData.allocated);
-
-                    if (remaining > 0) {
-                        console.log('  ✅', key, 'has', remaining, 'units available');
-
-                        // Find subject name from ALL_SUBJECTS
-                        var subject = ALL_SUBJECTS.find(function (s) { return s.code === subjCode; });
-                        var subjName = subject ? subject.name : subjCode;
-
-                        blocksToRender.push({
-                            key: key,
-                            subjCode: subjCode,
-                            subjName: subjName,
-                            section: section,
-                            remaining: remaining,
-                            hasAllocation: unitData.allocated > 0
-                        });
-                    } else {
-                        console.log('  ❌', key, 'fully allocated');
-                    }
-                });
-
-                console.log('Blocks to render:', blocksToRender.length);
-
-                if (blocksToRender.length === 0) {
-                    if (!hasAnyConfigured) {
-                        // No subjects configured yet - prompt admin to configure
-                        container.innerHTML = `
+                if (!selectedFacultyId || selectedFacultyId === '') {
+                    container.innerHTML = `
                         <div style="text-align:center;padding:30px;color:#6b7280;font-size:0.85rem;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
                             <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
-                            <div style="font-weight:600;margin-bottom:4px;">No subjects configured yet</div>
-                            <div style="font-size:0.78rem;color:#9ca3af;">Click the "Course Config" button above to set up subjects for this semester</div>
+                            <div style="font-weight:600;margin-bottom:4px;">Select a professor first</div>
+                            <div style="font-size:0.78rem;color:#9ca3af;">Choose a faculty member from the dropdown above to see their assigned courses</div>
                         </div>
                     `;
-                    } else {
-                        // All configured subjects are fully allocated
-                        container.innerHTML = `
-                        <div style="text-align:center;padding:30px;color:#9ca3af;font-size:0.85rem;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-                            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <div>All sections fully allocated!</div>
-                        </div>
-                    `;
-                    }
-                    updateUnitProgress();
                     return;
                 }
 
-                // Render individual blocks for each section
-                var html = '';
-                blocksToRender.forEach(function (block) {
-                    // Apply incomplete class only if no allocation yet
-                    var classNames = block.hasAllocation ? '' : 'incomplete';
-                    var color = colorFor(block.subjCode, currentSchoolYear, currentSemester);
+                try {
+                    // Fetch faculty course assignments by professor name
+                    var response = await fetch(`/api/faculty/by-name/${encodeURIComponent(selectedFacultyId)}/courses`);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch faculty courses');
+                    }
 
-                    console.log('Creating block for:', block.subjCode, 'Section', block.section, '- Remaining:', block.remaining, '- Color:', color);
+                    var data = await response.json();
+                    var assignments = data.courses || [];
 
-                    html += `
-                    <div class="draggable-subject ${classNames}" 
-                        draggable="true"
-                        data-subject-code="${block.subjCode}"
-                        data-subject-name="${block.subjName}"
-                        data-section="${block.section}"
-                        style="background-color: ${color};"
-                        ondragstart="handleDragStart(event)"
-                        ondragend="handleDragEnd(event)">
-                        <span class="subj-code">${block.subjCode} - ${block.section}</span>
-                        <span class="subj-units">${block.remaining.toFixed(1)}h</span>
-                    </div>
-                `;
-                });
+                    console.log('📚 Faculty assignments:', assignments);
 
-                container.innerHTML = html;
+                    if (assignments.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align:center;padding:30px;color:#6b7280;font-size:0.85rem;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <div style="font-weight:600;margin-bottom:4px;">No courses assigned</div>
+                                <div style="font-size:0.78rem;color:#9ca3af;">Assign courses to this faculty in the Courses page</div>
+                            </div>
+                        `;
+                        return;
+                    }
 
-                // Add right-click event listeners to all draggable subjects
-                container.querySelectorAll('.draggable-subject').forEach(function (block) {
-                    block.addEventListener('contextmenu', function (event) {
-                        event.preventDefault();
-                        showRemoveSubjectModal(
-                            event.currentTarget.dataset.subjectCode,
-                            event.currentTarget.dataset.subjectName
-                        );
+                    // Filter blocks to only show unscheduled units
+                    var blocksToRender = [];
+
+                    assignments.forEach(function (assignment) {
+                        var subjCode = assignment.course_code;
+                        var section = assignment.section;
+                        var key = subjCode + '-' + section;
+
+                        // Calculate how many units are already scheduled for this course-section
+                        var allocatedUnits = 0;
+
+                        // Debug: log what we're looking for
+                        if (pendingSchedules.length > 0) {
+                            console.log('  🔍 Looking for:', { course: subjCode, section: section, prof: selectedFacultyId });
+                            console.log('  📋 Sample schedule:', pendingSchedules[0]);
+                        }
+
+                        pendingSchedules.forEach(function (sch) {
+                            var matchesSemester = ((sch.school_year || sch.schoolYear) === currentSchoolYear) && sch.semester === currentSemester;
+
+                            // Normalize professor names for comparison (remove suffix like ", EnP.")
+                            var schedProf = (sch.prof || '').split(',')[0].trim();
+                            var selectedProf = (selectedFacultyId || '').split(',')[0].trim();
+                            var matchesProf = schedProf === selectedProf;
+
+                            if (matchesSemester && sch.subjCode === subjCode && sch.section === section && matchesProf) {
+                                var startIdx = slotIdx(sch.start);
+                                var endIdx = slotIdx(sch.end);
+                                if (startIdx >= 0 && endIdx > startIdx) {
+                                    var duration = (endIdx - startIdx) / 2;
+                                    allocatedUnits += duration;
+                                    console.log('    ✓ Allocated:', subjCode, section, duration, 'hours');
+                                }
+                            }
+                        });
+
+                        // Default: 3 units per course-section
+                        var totalUnits = 3;
+                        var remaining = totalUnits - allocatedUnits;
+
+                        console.log('  ', key, '- Total:', totalUnits, 'Allocated:', allocatedUnits, 'Remaining:', remaining);
+
+                        if (remaining > 0) {
+                            // Find subject name from ALL_SUBJECTS
+                            var subject = ALL_SUBJECTS.find(function (s) { return s.code === subjCode; });
+                            var subjName = subject ? subject.name : subjCode;
+
+                            blocksToRender.push({
+                                key: key,
+                                subjCode: subjCode,
+                                subjName: subjName,
+                                section: section,
+                                remaining: remaining,
+                                hasAllocation: allocatedUnits > 0
+                            });
+                        }
                     });
-                });
 
-                console.log('✅ Blocks rendered successfully!');
-                updateUnitProgress();
+                    console.log('Blocks to render:', blocksToRender.length);
+
+                    if (blocksToRender.length === 0) {
+                        // All assigned courses fully scheduled
+                        container.innerHTML = `
+                            <div style="text-align:center;padding:30px;color:#9ca3af;font-size:0.85rem;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;opacity:0.5;display:block;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>All sections fully scheduled!</div>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Render blocks
+                    var html = '';
+                    blocksToRender.forEach(function (block) {
+                        var classNames = block.hasAllocation ? '' : 'incomplete';
+                        var color = colorFor(block.subjCode, currentSchoolYear, currentSemester);
+
+                        html += `
+                            <div class="draggable-subject ${classNames}" 
+                                draggable="true"
+                                data-subject-code="${block.subjCode}"
+                                data-subject-name="${block.subjName}"
+                                data-section="${block.section}"
+                                style="background-color: ${color};">
+                                <span class="subj-code">${block.subjCode} - ${block.section}</span>
+                                <span class="subj-units">${block.remaining.toFixed(1)}h</span>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = html;
+
+                    // Add drag event listeners
+                    container.querySelectorAll('.draggable-subject').forEach(function (block) {
+                        block.addEventListener('dragstart', handleDragStart);
+                        block.addEventListener('dragend', handleDragEnd);
+
+                        // Right-click to remove
+                        block.addEventListener('contextmenu', function (event) {
+                            event.preventDefault();
+                            // Future: allow manual removal if needed
+                        });
+                    });
+
+                } catch (error) {
+                    console.error('❌ Error loading faculty courses:', error);
+                    container.innerHTML = `
+                        <div style="text-align:center;padding:30px;color:#ef4444;font-size:0.85rem;">
+                            <div>Error loading courses</div>
+                            <div style="font-size:0.75rem;margin-top:4px;">${error.message}</div>
+                        </div>
+                    `;
+                }
             }
 
             function updateUnitProgress() {
@@ -3626,7 +3805,7 @@
                 if (totalConfigured === 0) {
                     indicator.textContent = '';
                 } else {
-                    indicator.textContent = `${fullyAllocated}/${subjects.filter(function (s) { return subjectUnits[s.code] && subjectUnits[s.code].configured > 0; }).length} subjects fully allocated • ${totalAllocated.toFixed(1)}/${totalConfigured} hours`;
+                    indicator.textContent = `${fullyAllocated} /${subjects.filter(function (s) { return subjectUnits[s.code] && subjectUnits[s.code].configured > 0; }).length} subjects fully allocated • ${totalAllocated.toFixed(1)}/${totalConfigured} hours`;
                 }
             }
 
@@ -3688,6 +3867,46 @@
                 if (!cell.querySelector('.sched-block')) {
                     cell.style.background = '#fef2f2';
                     cell.style.border = '2px dashed #6b0f1a';
+
+                    // Check if dual-plot is enabled
+                    var dualPlotToggle = document.getElementById('dual-plot-toggle');
+                    var dualPlotEnabled = dualPlotToggle ? dualPlotToggle.checked : false;
+
+                    if (dualPlotEnabled) {
+                        // Get current cell info
+                        var day = cell.dataset.day;
+                        var slot = cell.dataset.slot;
+
+                        // Determine paired day
+                        var dayPairs = {
+                            'Monday': 'Wednesday',
+                            'Wednesday': 'Friday',
+                            'Friday': 'Wednesday',
+                            'Tuesday': 'Thursday',
+                            'Thursday': 'Tuesday'
+                        };
+
+                        var pairedDay = dayPairs[day];
+
+                        if (pairedDay && slot) {
+                            // Find the paired cell (same row, different day column)
+                            var row = cell.parentElement;
+                            var cells = Array.from(row.querySelectorAll('td'));
+                            var pairedCell = cells.find(function (c) {
+                                return c.dataset.day === pairedDay && c.dataset.slot === slot;
+                            });
+
+                            if (pairedCell && !pairedCell.querySelector('.sched-block')) {
+                                // Highlight paired cell with same style but dimmed
+                                pairedCell.style.background = '#fef2f2';
+                                pairedCell.style.border = '2px dashed #6b0f1a';
+                                pairedCell.style.opacity = '0.6';
+                                pairedCell.dataset.pairedHighlight = 'true'; // Mark for cleanup
+
+                                console.log('✅ Highlighted paired cell on', pairedDay, 'slot', slot);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -3695,6 +3914,15 @@
                 var cell = event.currentTarget;
                 cell.style.background = '';
                 cell.style.border = '';
+
+                // Also clear any paired cell highlights
+                var allCells = document.querySelectorAll('td[data-paired-highlight="true"]');
+                allCells.forEach(function (c) {
+                    c.style.background = '';
+                    c.style.border = '';
+                    c.style.opacity = '';
+                    c.removeAttribute('data-paired-highlight');
+                });
             }
 
             function handleCellDrop(event) {
@@ -3703,6 +3931,15 @@
                 var cell = event.currentTarget;
                 cell.style.background = '';
                 cell.style.border = '';
+
+                // Clear any paired cell highlights
+                var allCells = document.querySelectorAll('td[data-paired-highlight="true"]');
+                allCells.forEach(function (c) {
+                    c.style.background = '';
+                    c.style.border = '';
+                    c.style.opacity = '';
+                    c.removeAttribute('data-paired-highlight');
+                });
 
                 if (!draggedSubject) {
                     console.log('⚠️ draggedSubject is null in handleCellDrop');
@@ -3772,7 +4009,18 @@
 
                 if (codeSelect && nameInput) {
                     // Set the subject code dropdown
+                    console.log('🔍 Trying to set code dropdown to:', code);
+                    console.log('🔍 Available options:', Array.from(codeSelect.options).map(o => o.value).slice(0, 10));
+
                     codeSelect.value = code;
+
+                    if (codeSelect.value !== code) {
+                        console.warn('⚠️ Code not found in dropdown:', code);
+                        console.warn('   Dropdown has', codeSelect.options.length - 1, 'options');
+                    } else {
+                        console.log('✅ Code dropdown set to:', code);
+                    }
+
                     nameInput.value = name;
 
                     // Trigger professor population
@@ -3874,11 +4122,26 @@
 
                 if (saveBtn) {
                     if (hasUnsavedScheduleChanges && pendingSchedules.length > 0) {
+                        // Filter count by currently selected professor only
+                        var profEl = document.getElementById('sf-professor');
+                        var selectedProf = profEl ? profEl.value : '';
+
+                        var filteredCount = pendingSchedules;
+                        if (selectedProf) {
+                            // Normalize professor names for comparison
+                            var selectedProfNorm = selectedProf.split(',')[0].trim();
+                            filteredCount = pendingSchedules.filter(function (s) {
+                                var schedProfNorm = (s.prof || '').split(',')[0].trim();
+                                return schedProfNorm === selectedProfNorm;
+                            });
+                        }
+
+                        var changeCount = filteredCount.length;
+
                         // Has unsaved changes - show save icon
                         saveBtn.disabled = false;
                         saveBtn.style.opacity = '1';
-                        var changeCount = pendingSchedules.length;
-                        saveBtn.title = changeCount + ' schedule(s) to save';
+                        saveBtn.title = changeCount + ' schedule(s) to save for ' + (selectedProf || 'all professors');
                         saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg><span id="unsaved-count-badge" style="display:block;position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border-radius:10px;padding:2px 6px;font-size:0.7rem;font-weight:600;min-width:18px;text-align:center;">' + changeCount + '</span>';
 
                         // Enable discard button
@@ -3973,6 +4236,10 @@
                         // Always remove ID - batch save creates new entries
                         delete copy.id;
 
+                        // pairedWith is a frontend-only link (not a DB column).
+                        // It is rebuilt by relinkPairedBlocks() after every load.
+                        delete copy.pairedWith;
+
                         // Normalize field names to snake_case for database
                         if (copy.subjCode) {
                             copy.subj_code = copy.subjCode;
@@ -4054,11 +4321,30 @@
                     return;
                 }
 
-                // Confirm before discarding
+                // Show custom confirmation modal instead of browser confirm
                 var changeCount = pendingSchedules.length;
-                if (!confirm('Discard all ' + changeCount + ' unsaved schedule(s)?\n\nThis will revert to the last saved state and cannot be undone.')) {
-                    return;
-                }
+                showDiscardModal(changeCount);
+            };
+
+            // Show discard confirmation modal
+            function showDiscardModal(changeCount) {
+                var modal = document.getElementById('discard-modal');
+                var message = document.getElementById('discard-message');
+                
+                message.innerHTML = 'Are you sure you want to discard <strong>' + changeCount + ' unsaved schedule(s)</strong>?<br><br>This will revert to the last saved state and cannot be undone.';
+                
+                modal.classList.add('open');
+            }
+
+            // Close discard modal
+            window.closeDiscardModal = function () {
+                var modal = document.getElementById('discard-modal');
+                modal.classList.remove('open');
+            };
+
+            // Confirm and execute discard
+            window.confirmDiscardChanges = function () {
+                closeDiscardModal();
 
                 console.log('🔄 Discarding all schedule changes...');
 
@@ -4066,6 +4352,10 @@
                 pendingSchedules = JSON.parse(JSON.stringify(savedSchedules));
                 schedules = pendingSchedules; // Update alias
                 window.schedules = schedules; // Update global reference
+
+                // Re-establish pairedWith links lost by JSON round-trip
+                relinkPairedBlocks(pendingSchedules);
+                schedules = pendingSchedules;
 
                 // Reset unsaved changes flag
                 hasUnsavedScheduleChanges = false;
@@ -4094,12 +4384,32 @@
             });
 
             var currentMode = 'manual';
+
+            // ═══ DUAL-PLOT TOGGLE FUNCTION ═══
+            window.toggleDualPlot = function () {
+                var isEnabled = document.getElementById('dual-plot-toggle').checked;
+                console.log('🔗 Dual-Plot mode:', isEnabled ? 'ENABLED' : 'DISABLED');
+
+                if (isEnabled) {
+                    showToast('Dual-Plot enabled: MW, WF, TTH pairings active', 'success');
+                } else {
+                    showToast('Dual-Plot disabled', 'info');
+                }
+            };
+
             // School year & semester: persist admin's choice via localStorage
             // Default: current year to next year, 1st semester
             var _defaultSY = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
-            var currentSchoolYear = localStorage.getItem('cerp_schoolYear') || _defaultSY;
-            var currentSemester = localStorage.getItem('cerp_semester') || '1';
-            var currentSection = localStorage.getItem('cerp_section') || ''; // Empty means show all sections
+            
+            // Store in window object for global access
+            window.currentSchoolYear = localStorage.getItem('cerp_schoolYear') || _defaultSY;
+            window.currentSemester = localStorage.getItem('cerp_semester') || '1';
+            window.currentSection = localStorage.getItem('cerp_section') || ''; // Empty means show all sections
+            
+            // Also create local references for backward compatibility
+            var currentSchoolYear = window.currentSchoolYear;
+            var currentSemester = window.currentSemester;
+            var currentSection = window.currentSection;
 
             // Populate school year dropdown dynamically
             function populateSchoolYears() {
@@ -4133,6 +4443,52 @@
             var secSelect = document.getElementById('section-select');
             if (secSelect && currentSection) secSelect.value = currentSection;
 
+            // ── Re-link paired blocks after loading from DB ─────────────────────────
+            // pairedWith is not persisted in the database. After every load we
+            // reconstruct it in memory by matching blocks that share the same
+            // prof + subjCode + section and sit on partner days (MW, WF, TTh)
+            // at the same start time. Bidirectional links are set on both blocks.
+            function relinkPairedBlocks(arr) {
+                var DAY_PARTNERS = {
+                    'Monday':    'Wednesday',
+                    'Wednesday': 'Friday',
+                    'Friday':    'Wednesday',
+                    'Tuesday':   'Thursday',
+                    'Thursday':  'Tuesday'
+                };
+
+                // Clear any stale pairedWith first
+                arr.forEach(function (s) { delete s.pairedWith; });
+
+                // Build a lookup: key = "prof|subjCode|section|start|day" → block
+                // This lets us quickly find a block at a specific day/time
+                var lookup = {};
+                arr.forEach(function (s) {
+                    var key = [s.prof, s.subjCode, s.section, s.start, s.day].join('|');
+                    lookup[key] = s;
+                });
+
+                // For each block on a paired day, find the block on its partner day
+                arr.forEach(function (s) {
+                    if (s.pairedWith) return; // already linked this pass
+                    var partnerDay = DAY_PARTNERS[s.day];
+                    if (!partnerDay) return; // Saturday etc.
+
+                    var partnerKey = [s.prof, s.subjCode, s.section, s.start, partnerDay].join('|');
+                    var partner = lookup[partnerKey];
+
+                    if (partner && !partner.pairedWith) {
+                        s.pairedWith = partner.id;
+                        partner.pairedWith = s.id;
+                        console.log('🔗 Re-linked pair:', s.subjCode, s.section, s.day, '↔', partner.day);
+                    }
+                });
+
+                var linked = arr.filter(function (s) { return s.pairedWith; }).length;
+                console.log('🔗 relinkPairedBlocks: linked', linked, 'blocks into', (linked / 2), 'pairs');
+            }
+            // ────────────────────────────────────────────────────────────────────
+
             async function loadSchedules() {
                 try {
                     var res = await fetch('/api/schedules');
@@ -4161,6 +4517,11 @@
                     savedSchedules = JSON.parse(JSON.stringify(loadedSchedules)); // Deep copy
                     pendingSchedules = JSON.parse(JSON.stringify(loadedSchedules)); // Deep copy
                     schedules = pendingSchedules; // Legacy alias
+
+                    // Re-establish pairedWith links (not stored in DB, rebuilt from matching fields)
+                    relinkPairedBlocks(pendingSchedules);
+                    savedSchedules = JSON.parse(JSON.stringify(pendingSchedules)); // Re-copy with links
+                    schedules = pendingSchedules;
 
                     window.schedules = schedules; // Update global reference
                     hasUnsavedScheduleChanges = false; // Just loaded from DB, no unsaved changes
@@ -4355,9 +4716,18 @@
                 var semesterSelect = document.getElementById('semester-select');
                 var sectionSelect = document.getElementById('section-select');
 
-                if (schoolYearSelect) currentSchoolYear = schoolYearSelect.value;
-                if (semesterSelect) currentSemester = semesterSelect.value;
-                if (sectionSelect) currentSection = sectionSelect.value;
+                if (schoolYearSelect) {
+                    currentSchoolYear = schoolYearSelect.value;
+                    window.currentSchoolYear = schoolYearSelect.value;
+                }
+                if (semesterSelect) {
+                    currentSemester = semesterSelect.value;
+                    window.currentSemester = semesterSelect.value;
+                }
+                if (sectionSelect) {
+                    currentSection = sectionSelect.value;
+                    window.currentSection = sectionSelect.value;
+                }
 
                 // Persist selections
                 localStorage.setItem('cerp_schoolYear', currentSchoolYear);
@@ -5216,9 +5586,9 @@
                             if (displayRow && fn.subject && fn.faculty_name) {
                                 var typeText = fn.footnote_type === 'relay' ? 'Relay' : 'Team';
                                 var symbol = ['¹', '²', '³'][num - 1] || num;
-                                displayRow.innerHTML = `<strong>${symbol}</strong> ${typeText} teaching with <strong>${fn.faculty_name}</strong> (${fn.subject})`;
+                                displayRow.innerHTML = `< strong > ${symbol}</strong > ${typeText} teaching with <strong>${fn.faculty_name}</strong> (${fn.subject})`;
                                 displayRow.style.color = '#374151';
-                                console.log(`  ✓ Loaded footnote ${num}: ${fn.subject} - ${fn.faculty_name}`);
+                                console.log(`  ✓ Loaded footnote ${num}: ${fn.subject} - ${fn.faculty_name} `);
                             }
                         });
                     }
@@ -5288,30 +5658,69 @@
 
                 console.log('Filters enabled:', filtersEnabled);
 
-                // Professor filter - no "All" option, first item selected by default
+                // Professor filter - auto-set for members, dropdown for admins
                 var profSel = document.getElementById('sf-professor');
                 if (profSel) {
+                    // Check if user is a faculty member (not admin)
+                    var currentUserRole = window.currentUser ? window.currentUser.role : null;
+                    var currentUserName = window.currentUser ? window.currentUser.full_name : null;
+                    
+                    // Normalize current user name (remove suffix for comparison)
+                    var currentUserNameNormalized = currentUserName;
+                    if (currentUserNameNormalized && currentUserNameNormalized.indexOf(',') > -1) {
+                        currentUserNameNormalized = currentUserNameNormalized.split(',')[0].trim();
+                    }
+                    
+                    console.log('👤 Populating professor dropdown:');
+                    console.log('   - Current user role:', currentUserRole);
+                    console.log('   - Current user name (full):', currentUserName);
+                    console.log('   - Current user name (normalized):', currentUserNameNormalized);
+                    console.log('   - Available professors:', profs.length);
+                    console.log('   - User in prof list?', profs.includes(currentUserNameNormalized));
+                    
                     var curProf = profSel.value;
                     profSel.innerHTML = '';
 
                     if (profs.length === 0) {
                         // No professors found
                         profSel.innerHTML = '<option value="">No faculty found</option>';
+                        console.log('❌ No professors found in staff data');
                     } else {
-                        profs.forEach(function (o) {
+                        if (currentUserRole === 'user' && currentUserNameNormalized && profs.includes(currentUserNameNormalized)) {
+                            // MEMBER: Only show their own name, hide dropdown
+                            console.log('✅ Member restriction applied: showing only', currentUserNameNormalized);
                             var el = document.createElement('option');
-                            el.value = o; el.textContent = o; profSel.appendChild(el);
-                        });
-                        if (curProf && profs.indexOf(curProf) > -1) {
-                            profSel.value = curProf;
-                        } else if (profs.length > 0) {
-                            profSel.selectedIndex = 0;
+                            el.value = currentUserNameNormalized;
+                            el.textContent = currentUserNameNormalized;
+                            profSel.appendChild(el);
+                            profSel.value = currentUserNameNormalized;
+                            profSel.disabled = true; // Disable dropdown for members
+                            profSel.style.opacity = '0.7';
+                            profSel.style.cursor = 'not-allowed';
+                            console.log('🔒 Dropdown disabled for member');
+                        } else {
+                            // ADMIN: Show all faculty members
+                            console.log('✅ Admin view: showing all', profs.length, 'professors');
+                            profs.forEach(function (o) {
+                                var el = document.createElement('option');
+                                el.value = o; el.textContent = o; profSel.appendChild(el);
+                            });
+                            if (curProf && profs.indexOf(curProf) > -1) {
+                                profSel.value = curProf;
+                            } else if (profs.length > 0) {
+                                profSel.selectedIndex = 0;
+                            }
+                            profSel.disabled = false;
+                            profSel.style.opacity = '1';
+                            profSel.style.cursor = 'pointer';
                         }
                     }
 
                     // Update FIC status to match the selected professor (only if filters enabled)
                     if (filtersEnabled && profSel.value && profs.length > 0) {
                         updateFICStatus(profSel.value);
+                        // Trigger filter to show only this professor's schedules
+                        applySchedFilter();
                     } else {
                         clearFICStatus();
                     }
@@ -5400,7 +5809,7 @@
                 // Reload unit configuration for the selected professor
                 await loadSavedUnitConfig();
 
-                // Re-render draggable blocks for this professor
+                // Update unit tracking and draggable blocks when filter changes
                 calculateAllocatedUnits();
                 renderDraggableBlocks();
             };
@@ -5487,7 +5896,7 @@
 
                     saveBtn.innerHTML = `
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         Edit Schedule
                     `;
@@ -5502,7 +5911,7 @@
                     // UNLOCKED STATE (Save mode)
                     saveBtn.innerHTML = `
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                         </svg>
                         Save Schedule
                     `;
@@ -5571,6 +5980,13 @@
 
                 // Enable timetable drop zones
                 enableTimetableDropZones();
+
+                // Enable schedule blocks to be draggable
+                var scheduleBlocks = document.querySelectorAll('.sched-block');
+                scheduleBlocks.forEach(function (block) {
+                    block.style.cursor = 'grab';
+                    block.style.pointerEvents = 'auto';
+                });
 
                 // Show delete buttons on schedule blocks
                 var deleteButtons = document.querySelectorAll('.sb-del');
@@ -5677,9 +6093,12 @@
                                     if (profName.indexOf(',') > -1) {
                                         profName = profName.split(',')[0].trim();
                                     }
-                                    return profName.split(' ').slice(-1)[0];
+                                    // Get last 2 words for surnames like "De Mesa", "De La Cruz"
+                                    var nameParts = profName.split(' ');
+                                    return nameParts.slice(-2).join(' ');
                                 })() + '</span>'
                                 + '<span class="sb-room">' + entry.room + '</span>'
+                                + '<span class="sb-section">' + (entry.section || '') + '</span>'
                                 + '<div class="sb-resize" data-id="' + entry.id + '"></div>'
                                 + '</div></td>';
                         } else {
@@ -5934,13 +6353,29 @@
                 try {
                     // ═══ FRONTEND-FIRST: Remove from pendingSchedules array instead of API call ═══
                     var beforeLength = pendingSchedules.length;
+
+                    // Find the block being deleted to check if it has a paired block
+                    var blockToDelete = pendingSchedules.find(function (s) {
+                        return String(s.id) === String(id);
+                    });
+
+                    var pairedBlockId = blockToDelete ? blockToDelete.pairedWith : null;
+
                     pendingSchedules = pendingSchedules.filter(function (s) {
-                        var keep = String(s.id) !== String(id);
-                        if (!keep) {
+                        var isTarget = String(s.id) === String(id);
+                        var isPaired = pairedBlockId && String(s.id) === String(pairedBlockId);
+                        var keep = !isTarget && !isPaired;
+
+                        if (isTarget) {
                             console.log('  ✂️ Removing:', s.subjCode, 'ID:', s.id);
                         }
-                        return keep;  // Use string comparison for UUIDs
+                        if (isPaired) {
+                            console.log('  🔗 Removing paired block:', s.subjCode, 'on', s.day, 'ID:', s.id);
+                        }
+
+                        return keep;
                     });
+
                     var afterLength = pendingSchedules.length;
 
                     console.log('  pendingSchedules after delete:', afterLength, '(removed:', beforeLength - afterLength, ')');
@@ -6125,6 +6560,7 @@
                     while (td && td.tagName !== 'TD') td = td.parentElement;
 
                     if (td && td.dataset && td.dataset.day && !td.dataset.id && td !== currentDropTarget) {
+                        console.log('🎯 Throttled: Mouse over cell:', td.dataset.day, 'slot', td.dataset.slot);
                         var entry = null;
                         if (dragEl) {
                             // Use dragId directly (can be UUID string or number)
@@ -6132,6 +6568,7 @@
                             console.log('🎨 Drop preview - Looking for ID:', dragId, 'Found:', entry ? entry.subjCode : 'NOT FOUND');
                         } else if (stagingDragEl) {
                             entry = unscheduledSubjects.find(function (s) { return s.id === stagingDragId; });
+                            console.log('🎨 Staging drop preview - Looking for ID:', stagingDragId, 'Found:', entry ? entry.subjCode : 'NOT FOUND');
                         }
                         if (entry) {
                             showDropPreview(td, entry);
@@ -6144,6 +6581,11 @@
 
             document.addEventListener('mousemove', function (e) {
                 if (!dragEl && !stagingDragEl) return;
+
+                if (stagingDragEl) {
+                    console.log('👆 Mousemove fired during staging drag');
+                }
+
                 var ghost = document.getElementById('drag-ghost');
                 if (ghost) {
                     ghost.style.left = (e.clientX + 12) + 'px';
@@ -6181,30 +6623,78 @@
                         var ns = parseInt(td.dataset.slot);
                         var ne = ns + dur;
                         if (ne <= TOTAL_SLOTS) {
-                            // Validate before moving
+                            // Determine if day changed and calculate new paired day
+                            var newDay = td.dataset.day;
+                            var dayChanged = newDay !== entry.day;
+                            var pairedBlockId = entry.pairedWith;
+                            var newPairedDay = null;
+
+                            if (dayChanged && pairedBlockId) {
+                                // Calculate new paired day based on new day
+                                var dayPairs = {
+                                    'Monday': 'Wednesday',
+                                    'Wednesday': 'Friday',
+                                    'Friday': 'Wednesday',
+                                    'Tuesday': 'Thursday',
+                                    'Thursday': 'Tuesday'
+                                };
+                                newPairedDay = dayPairs[newDay];
+                            }
+
+                            // Validate before moving (check both blocks if paired)
                             var validation = validateSchedule(
                                 entry.prof,
-                                td.dataset.day,
+                                newDay,
                                 slots[ns],
                                 slots[ne],
                                 dragId
                             );
 
                             if (!validation.valid) {
-                                showToast(validation.message, 'error');
+                                showConflictModal(validation.message);
                                 dragEl.classList.remove('dragging');
                                 dragEl = null;
                                 dragId = null;
                                 return;
                             }
 
+                            // If paired block exists and day changed, validate new paired day
+                            if (pairedBlockId && newPairedDay) {
+                                var pairedValidation = validateSchedule(
+                                    entry.prof,
+                                    newPairedDay,
+                                    slots[ns],
+                                    slots[ne],
+                                    pairedBlockId
+                                );
+
+                                if (!pairedValidation.valid) {
+                                    showConflictModal('Paired block conflict on ' + newPairedDay + ':\n\n' + pairedValidation.message);
+                                    dragEl.classList.remove('dragging');
+                                    dragEl = null;
+                                    dragId = null;
+                                    return;
+                                }
+                            }
+
                             // ═══ FRONTEND-FIRST: Use updateEntry instead of direct DB save ═══
                             console.log('✅ Moving block via updateEntry');
-                            updateEntry(dragId, {
-                                day: td.dataset.day,
+
+                            var changes = {
                                 start: slots[ns],
                                 end: slots[ne]
-                            });
+                            };
+
+                            // Only update day if it changed
+                            if (dayChanged) {
+                                changes.day = newDay;
+                            }
+
+                            // Update the main block — updateEntry handles the paired block internally
+                            // (do NOT call updateEntry(pairedBlockId) again here; doing so causes
+                            //  a double-validation loop that triggers a false conflict and reverts
+                            //  the paired block silently)
+                            updateEntry(dragId, changes);
                         }
                     }
                 }
@@ -6229,7 +6719,7 @@
                     handle._resizeBound = true;
                     console.log('  ✅ Binding resize handler to:', handle.dataset.id);
                     handle.addEventListener('mousedown', function (e) {
-                        console.log('🖱️ Mousedown on resize handle, currentMode:', currentMode);
+                        console.log('🖱️ Mousedown on resize handle, currentMode:', currentMode, 'ID:', handle.dataset.id);
                         if (currentMode !== 'manual') {
                             console.log('  ❌ Not in manual mode, skipping');
                             return;
@@ -6245,6 +6735,8 @@
                         }
                         var startSlot = slotIdx(entry.start);
                         var curEnd = slotIdx(entry.end);
+                        var pairedBlockId = entry.pairedWith;
+
                         function onMove(ev) {
                             var rows = document.querySelectorAll('#timetable-body tr');
                             for (var i = 0; i < rows.length; i++) {
@@ -6261,6 +6753,15 @@
                                             blk.style.height = newHeight + 'px';
                                             console.log('📏 Resizing to slot', slot, '- Height:', newHeight + 'px');
                                         }
+
+                                        // Also resize paired block in real-time
+                                        if (pairedBlockId) {
+                                            var pairedBlk = document.getElementById('blk-' + pairedBlockId);
+                                            if (pairedBlk) {
+                                                pairedBlk.style.height = newHeight + 'px';
+                                                console.log('🔗 Real-time resize paired block:', pairedBlockId);
+                                            }
+                                        }
                                     }
                                     break;
                                 }
@@ -6275,45 +6776,80 @@
                                 var newUnits = Math.round(hours * 10) / 10; // Round to 1 decimal
 
                                 // FIX #4: UNIT QUOTA VALIDATION - prevent resizing beyond configured quota
-                                if (unitConfigSaved && entry.subjCode && subjectUnits[entry.subjCode]) {
-                                    var unitData = subjectUnits[entry.subjCode];
-                                    var configured = unitData.configured || 0;
-                                    var currentAllocated = unitData.allocated || 0;
-                                    var oldUnits = entry.units || 0;
+                                console.log('🔍 Checking unit quota... unitConfigSaved:', unitConfigSaved, 'subjCode:', entry.subjCode, 'section:', entry.section);
+                                if (unitConfigSaved && entry.subjCode && entry.section) {
+                                    var key = entry.subjCode + '-' + entry.section;
+                                    var unitData = subjectUnits[key];
+                                    console.log('📊 Unit data for', key, ':', unitData);
 
-                                    // Calculate what the new total would be
-                                    var newTotal = currentAllocated - oldUnits + newUnits;
+                                    if (unitData) {
+                                        var configured = unitData.configured || 0;
 
-                                    console.log('Resize Unit Quota Check:', {
-                                        subject: entry.subjCode,
-                                        configured: configured,
-                                        currentAllocated: currentAllocated,
-                                        oldUnits: oldUnits,
-                                        newUnits: newUnits,
-                                        newTotal: newTotal
-                                    });
+                                        // Calculate current allocated units EXCLUDING this block
+                                        var currentAllocated = 0;
+                                        pendingSchedules.forEach(function (sch) {
+                                            // Skip the block being resized
+                                            if (String(sch.id) === String(id)) return;
 
-                                    if (newTotal > configured) {
-                                        var excess = newTotal - configured;
-                                        showConflictModal(
-                                            '⚠️ UNIT QUOTA EXCEEDED\n\n' +
-                                            'Subject: ' + entry.subjCode + '\n' +
-                                            'Configured: ' + configured + ' hours/week\n' +
-                                            'Currently Allocated: ' + currentAllocated + ' hours\n' +
-                                            'This Block (old): ' + oldUnits + ' hours\n' +
-                                            'This Block (new): ' + newUnits + ' hours\n' +
-                                            'New Total Would Be: ' + newTotal + ' hours\n\n' +
-                                            'This would exceed the configured quota by ' + excess + ' hours.\n\n' +
-                                            'Please resize to a smaller duration.'
-                                        );
+                                            var matchesSemester = ((sch.school_year || sch.schoolYear) === currentSchoolYear) && sch.semester === currentSemester;
+                                            if (matchesSemester && sch.subjCode === entry.subjCode && sch.section === entry.section) {
+                                                var startIdx = slotIdx(sch.start);
+                                                var endIdx = slotIdx(sch.end);
+                                                if (startIdx >= 0 && endIdx > startIdx) {
+                                                    currentAllocated += (endIdx - startIdx) / 2;
+                                                }
+                                            }
+                                        });
 
-                                        // Revert visual changes
-                                        var blk = document.getElementById('blk-' + id);
-                                        if (blk) {
-                                            var originalEnd = slotIdx(entry.end);
-                                            blk.style.height = ((originalEnd - startSlot) * SLOT_H - 3) + 'px';
+                                        var oldUnits = entry.units || 0;
+
+                                        // Calculate what the new total would be
+                                        var newTotal = currentAllocated + newUnits;
+
+                                        console.log('Resize Unit Quota Check:', {
+                                            key: key,
+                                            configured: configured,
+                                            currentAllocated: currentAllocated,
+                                            oldUnits: oldUnits,
+                                            newUnits: newUnits,
+                                            newTotal: newTotal
+                                        });
+
+                                        if (newTotal > configured) {
+                                            var excess = newTotal - configured;
+                                            showConflictModal(
+                                                '⚠️ UNIT QUOTA EXCEEDED\n\n' +
+                                                'Subject: ' + entry.subjCode + ' Section ' + entry.section + '\n' +
+                                                'Configured: ' + configured + ' hours/week\n' +
+                                                'Currently Allocated: ' + currentAllocated + ' hours\n' +
+                                                'This Block (old): ' + oldUnits + ' hours\n' +
+                                                'This Block (new): ' + newUnits + ' hours\n' +
+                                                'New Total Would Be: ' + newTotal + ' hours\n\n' +
+                                                'This would exceed the configured quota by ' + excess.toFixed(1) + ' hours.\n\n' +
+                                                'Please resize to a smaller duration.'
+                                            );
+
+                                            // Revert visual changes
+                                            var blk = document.getElementById('blk-' + id);
+                                            if (blk) {
+                                                var originalEnd = slotIdx(entry.end);
+                                                blk.style.height = ((originalEnd - startSlot) * SLOT_H - 3) + 'px';
+                                            }
+
+                                            // Also revert paired block
+                                            if (pairedBlockId) {
+                                                var pairedEntry = schedules.find(function (s) { return String(s.id) === String(pairedBlockId); });
+                                                if (pairedEntry) {
+                                                    var pairedBlk = document.getElementById('blk-' + pairedBlockId);
+                                                    if (pairedBlk) {
+                                                        var pairedOriginalEnd = slotIdx(pairedEntry.end);
+                                                        var pairedStartSlot = slotIdx(pairedEntry.start);
+                                                        pairedBlk.style.height = ((pairedOriginalEnd - pairedStartSlot) * SLOT_H - 3) + 'px';
+                                                    }
+                                                }
+                                            }
+                                            return;
                                         }
-                                        return;
                                     }
                                 }
 
@@ -6351,6 +6887,9 @@
 
                 var updated = Object.assign({}, schedules[idx], changes);
 
+                // Check if this block has a paired block
+                var pairedBlockId = schedules[idx].pairedWith;
+
                 // Validate before updating
                 var validation = validateSchedule(
                     updated.prof,
@@ -6361,12 +6900,48 @@
                 );
 
                 if (!validation.valid) {
-                    showToast(validation.message, 'error');
-                    // Revert visual changes
-                    filtered = schedules.slice();
-                    renderTimetable();
-                    renderReport();
+                    showConflictModal(validation.message);
+                    // Don't render or mark as changed - validation failed, no changes should persist
                     return;
+                }
+
+                // If paired block exists, validate it too
+                if (pairedBlockId) {
+                    var pairedIdx = schedules.findIndex(function (s) { return String(s.id) === String(pairedBlockId); });
+                    if (pairedIdx >= 0) {
+                        var pairedBlock = schedules[pairedIdx];
+
+                        // Compute what the paired block's day will actually become
+                        var pairedValidationChanges = {
+                            start: changes.start,
+                            end: changes.end
+                        };
+                        if (changes.day) {
+                            var _dayPairsMap = {
+                                'Monday': 'Wednesday',
+                                'Wednesday': 'Friday',
+                                'Friday': 'Wednesday',
+                                'Tuesday': 'Thursday',
+                                'Thursday': 'Tuesday'
+                            };
+                            pairedValidationChanges.day = _dayPairsMap[changes.day] || pairedBlock.day;
+                        }
+                        var pairedUpdated = Object.assign({}, pairedBlock, pairedValidationChanges);
+
+                        var pairedValidation = validateSchedule(
+                            pairedUpdated.prof,
+                            pairedUpdated.day,
+                            pairedUpdated.start,
+                            pairedUpdated.end,
+                            pairedBlockId
+                        );
+
+                        if (!pairedValidation.valid) {
+                            showConflictModal('Paired block conflict on ' + pairedUpdated.day + ':\n\n' + pairedValidation.message);
+                            // Don't render or mark as changed - validation failed
+                            return;
+                        }
+                    }
                 }
 
                 // Remove warning confirmation for resizing blocks
@@ -6388,6 +6963,38 @@
                     if (pendingIdx >= 0) {
                         // Update the schedule in pendingSchedules
                         pendingSchedules[pendingIdx] = updated;
+
+                        // Update paired block if it exists
+                        if (pairedBlockId) {
+                            var pairedPendingIdx = pendingSchedules.findIndex(function (s) { return String(s.id) === String(pairedBlockId); });
+                            if (pairedPendingIdx >= 0) {
+                                var pairedOriginal = pendingSchedules[pairedPendingIdx];
+
+                                // Build paired block changes: always copy time changes
+                                var pairedBlockChanges = {
+                                    start: changes.start,
+                                    end: changes.end
+                                };
+
+                                // If day changed, compute the correct paired day (don't blindly copy changes.day)
+                                if (changes.day) {
+                                    var dayPairsMap = {
+                                        'Monday': 'Wednesday',
+                                        'Wednesday': 'Friday',
+                                        'Friday': 'Wednesday',
+                                        'Tuesday': 'Thursday',
+                                        'Thursday': 'Tuesday'
+                                    };
+                                    var correctPairedDay = dayPairsMap[changes.day];
+                                    pairedBlockChanges.day = correctPairedDay || pairedOriginal.day;
+                                    console.log('🔗 Paired block day: drag→', changes.day, 'paired→', pairedBlockChanges.day);
+                                }
+
+                                var pairedUpdated = Object.assign({}, pairedOriginal, pairedBlockChanges);
+                                pendingSchedules[pairedPendingIdx] = pairedUpdated;
+                                console.log('🔗 Also updated paired block:', pairedBlockId, 'on', pairedOriginal.day, '→', pairedUpdated.day);
+                            }
+                        }
 
                         // Mark as changed and enable save button
                         markScheduleChanged();
@@ -6578,6 +7185,33 @@
                 }
                 var endSlot = Math.min(pendingEnd, TOTAL_SLOTS);
 
+                // Get dual-plot setting
+                var dualPlotToggle = document.getElementById('dual-plot-toggle');
+                var dualPlotEnabled = dualPlotToggle ? dualPlotToggle.checked : false;
+                var pairedDay = null;
+
+                console.log('🔍 Dual-Plot Toggle Element:', dualPlotToggle);
+                console.log('🔍 Dual-Plot Enabled:', dualPlotEnabled);
+
+                if (dualPlotEnabled) {
+                    // Determine paired day based on rules: MW, WF, TTH
+                    var dayPairs = {
+                        'Monday': 'Wednesday',
+                        'Wednesday': 'Friday',
+                        'Friday': 'Wednesday',
+                        'Tuesday': 'Thursday',
+                        'Thursday': 'Tuesday'
+                    };
+
+                    pairedDay = dayPairs[pendingDay];
+
+                    if (pairedDay) {
+                        console.log('🔗 Dual-Plot: Creating paired block for', pendingDay, '→', pairedDay);
+                    } else {
+                        console.warn('⚠️ No pairing rule for', pendingDay);
+                    }
+                }
+
                 // Validate schedule before saving
                 var validation = validateSchedule(prof, pendingDay, slots[pendingStart], slots[endSlot], null);
                 if (!validation.valid) {
@@ -6591,42 +7225,63 @@
                     }
                 }
 
+                // If dual-plot is enabled, also validate the paired day
+                if (dualPlotEnabled && pairedDay) {
+                    var pairedValidation = validateSchedule(prof, pairedDay, slots[pendingStart], slots[endSlot], null);
+                    if (!pairedValidation.valid) {
+                        closeNewBlockModal();
+                        showConflictModal('Dual-Plot Conflict on ' + pairedDay + ':\n\n' + pairedValidation.message);
+                        return;
+                    }
+                    if (pairedValidation.warning) {
+                        if (!confirm('Dual-Plot Warning on ' + pairedDay + ':\n\n' + pairedValidation.warning + '\n\nDo you want to continue?')) {
+                            return;
+                        }
+                    }
+                }
+
                 // Calculate units based on duration (1 unit = 1 hour)
                 var duration = endSlot - pendingStart;
                 var hours = duration * 0.5; // Each slot is 0.5 hours
                 var units = Math.round(hours * 10) / 10; // Round to 1 decimal
 
-                // ═══ CHECK FOR TIME CONFLICTS ═══
-                var hasConflict = pendingSchedules.some(function (existing) {
-                    if (existing.day !== pendingDay) return false; // Different day, no conflict
-                    if (existing.prof !== prof) return false; // Different professor, no conflict
+                // ═══ CHECK FOR TIME CONFLICTS (both days if dual-plot) ═══
+                var daysToCheck = [pendingDay];
+                if (dualPlotEnabled && pairedDay) {
+                    daysToCheck.push(pairedDay);
+                }
 
-                    var existingStart = slotIdx(existing.start);
-                    var existingEnd = slotIdx(existing.end);
-                    var newStart = pendingStart;
-                    var newEnd = endSlot;
+                for (var checkDay of daysToCheck) {
+                    var hasConflict = pendingSchedules.some(function (existing) {
+                        if (existing.day !== checkDay) return false;
+                        if (existing.prof !== prof) return false;
 
-                    // Check for overlap: blocks overlap if one starts before the other ends
-                    var overlaps = (newStart < existingEnd && newEnd > existingStart);
+                        var existingStart = slotIdx(existing.start);
+                        var existingEnd = slotIdx(existing.end);
+                        var newStart = pendingStart;
+                        var newEnd = endSlot;
 
-                    if (overlaps) {
-                        console.warn('⚠️ Time conflict detected:', {
-                            existing: existing.subjCode + ' ' + existing.start + '-' + existing.end,
-                            new: code + ' ' + slots[newStart] + '-' + slots[newEnd]
-                        });
+                        var overlaps = (newStart < existingEnd && newEnd > existingStart);
+
+                        if (overlaps) {
+                            console.warn('⚠️ Time conflict detected on ' + checkDay + ':', {
+                                existing: existing.subjCode + ' ' + existing.start + '-' + existing.end,
+                                new: code + ' ' + slots[newStart] + '-' + slots[newEnd]
+                            });
+                        }
+
+                        return overlaps;
+                    });
+
+                    if (hasConflict) {
+                        closeNewBlockModal();
+                        showConflictModal(
+                            '⚠️ TIME CONFLICT\n\n' +
+                            'This professor already has a class scheduled at this time on ' + checkDay + '.\n\n' +
+                            'Please choose a different time slot or day.'
+                        );
+                        return;
                     }
-
-                    return overlaps;
-                });
-
-                if (hasConflict) {
-                    closeNewBlockModal();
-                    showConflictModal(
-                        '⚠️ TIME CONFLICT\n\n' +
-                        'This professor already has a class scheduled at this time on ' + pendingDay + '.\n\n' +
-                        'Please choose a different time slot or day.'
-                    );
-                    return;
                 }
 
                 // ═══ UNIT QUOTA VALIDATION BY SECTION ═══
@@ -6689,7 +7344,7 @@
 
                     var newSchedule = {
                         id: tempId,
-                        prof: prof,
+                        prof: prof.split(',')[0].trim(),
                         subjCode: code,
                         subjName: name,
                         type: type,
@@ -6713,6 +7368,33 @@
                     // ADD TO PENDING SCHEDULES ARRAY
                     pendingSchedules.push(newSchedule);
                     console.log('📌 Added to pendingSchedules. Total:', pendingSchedules.length);
+
+                    // If dual-plot is enabled, create the paired block
+                    if (dualPlotEnabled && pairedDay) {
+                        var pairedTempId = -(Date.now() + 1);
+                        var pairedSchedule = {
+                            id: pairedTempId,
+                            prof: prof.split(',')[0].trim(),
+                            subjCode: code,
+                            subjName: name,
+                            type: type,
+                            day: pairedDay,
+                            start: slots[pendingStart],
+                            end: slots[endSlot],
+                            room: room,
+                            units: units,
+                            section: section,
+                            schoolYear: currentSchoolYear,
+                            semester: currentSemester,
+                            pairedWith: tempId // Link to original block
+                        };
+
+                        // Link original to paired
+                        newSchedule.pairedWith = pairedTempId;
+
+                        pendingSchedules.push(pairedSchedule);
+                        console.log('🔗 Dual-Plot: Created paired block on', pairedDay);
+                    }
 
                     // Mark as changed and enable save button
                     markScheduleChanged();
@@ -6899,21 +7581,106 @@
                 }
             }
 
+            // Store current user info globally
+            window.currentUser = null;
+            
+            async function loadCurrentUser() {
+                try {
+                    console.log('🔄 Fetching current user from /api/current-member...');
+                    var res = await fetch('/api/current-member');
+                    console.log('📡 Response status:', res.status, res.statusText);
+                    
+                    if (res.ok) {
+                        var userData = await res.json();
+                        console.log('📦 User data received:', userData);
+                        console.log('📋 Available fields:', Object.keys(userData).join(', '));
+                        
+                        // Try ALL possible name field variations
+                        var firstName = userData.firstName || userData.first_name || userData.firstname || '';
+                        var lastName = userData.lastName || userData.last_name || userData.lastname || '';
+                        var fullName = userData.fullName || userData.full_name || userData.fullname || userData.name || '';
+                        var suffix = userData.suffix || '';
+                        
+                        console.log('   - firstName:', firstName || '(empty)');
+                        console.log('   - lastName:', lastName || '(empty)');
+                        console.log('   - fullName:', fullName || '(empty)');
+                        console.log('   - suffix:', suffix || '(empty)');
+                        console.log('   - role:', userData.role);
+                        
+                        // Strategy: Try fullName first, then build from firstName+lastName
+                        var finalName = '';
+                        if (fullName) {
+                            // Use fullName field directly
+                            finalName = fullName;
+                            console.log('✅ Using fullName field:', finalName);
+                        } else if (firstName || lastName) {
+                            // Build from firstName + lastName
+                            finalName = (firstName + ' ' + lastName).trim();
+                            if (suffix && finalName) {
+                                finalName += ', ' + suffix;
+                            }
+                            console.log('✅ Built name from firstName+lastName:', finalName);
+                        } else {
+                            // Last resort: use email or id
+                            finalName = userData.email || userData.uid || 'Unknown User';
+                            console.log('⚠️ No name fields found, using fallback:', finalName);
+                        }
+                        
+                        window.currentUser = {
+                            id: userData.id,
+                            role: userData.role,
+                            full_name: finalName,
+                            firstName: firstName || finalName.split(' ')[0] || '',
+                            lastName: lastName || finalName.split(' ').slice(1).join(' ') || ''
+                        };
+                        console.log('✅ Current user loaded:', window.currentUser.role, '-', window.currentUser.full_name);
+                        return true;
+                    } else {
+                        var errorText = await res.text();
+                        console.error('❌ Failed to load current user. Status:', res.status, 'Response:', errorText);
+                        
+                        // If 401, user is not logged in - redirect to login
+                        if (res.status === 401) {
+                            console.warn('🚪 User not authenticated, redirecting to login...');
+                            window.location.href = '/login';
+                        }
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('❌ Error loading current user:', e);
+                    return false;
+                }
+            }
+
             // Initialize: Load staff data first, then schedules
             (async function initializeSchedulePage() {
                 console.log('🚀 Initializing schedule page...');
 
-                // Step 1: Load staff data first
+                // Step 0: Load current user info FIRST (before anything else)
+                await loadCurrentUser();
+
+                // Step 1: Load staff data
                 await loadStaffData();
                 populateSubjectDropdowns();
 
-                // Step 2: Then load schedules and render
+                // Step 2: Then load schedules and render (this will populate dropdowns)
                 await loadSchedules();
 
                 // Step 3: Load configured subjects for current school year/semester
                 await loadConfiguredSubjects();
 
                 console.log('✅ Schedule page initialization complete');
+                
+                // Step 4: Force refresh filter options now that user is loaded
+                // This ensures the dropdown is set correctly for members
+                refreshFilterOptions();
+                
+                // Step 5: Apply the filter to show only member's schedule
+                // This triggers rendering with the correct professor filter
+                if (window.currentUser && window.currentUser.role === 'user') {
+                    console.log('👤 Member detected, applying schedule filter for:', window.currentUser.full_name);
+                    applySchedFilter();
+                }
             })();
 
             // ═══ Add Subject & Staging Area ═══
@@ -6973,7 +7740,7 @@
                     id: 'unsched-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
                     subjCode: code,
                     subjName: name,
-                    prof: prof,
+                    prof: prof.split(',')[0].trim(),
                     type: type,
                     room: room,
                     units: 1.5, // Default 1.5 units (will be recalculated on placement)
@@ -6987,7 +7754,7 @@
                     id: subject.id,
                     subjCode: code,
                     subjName: name,
-                    prof: prof,
+                    prof: prof.split(',')[0].trim(),
                     section: section,
                     units: subject.units,
                     school_year: currentSchoolYear,
@@ -7002,7 +7769,7 @@
                             id: subject.id,
                             subjCode: code,
                             subjName: name,
-                            prof: prof,
+                            prof: prof.split(',')[0].trim(),
                             section: section,
                             units: subject.units,
                             school_year: currentSchoolYear,
@@ -7118,7 +7885,7 @@
 
                 if (!startTd) return;
 
-                // Create preview element
+                // Create preview element for primary block
                 dropPreviewEl = document.createElement('div');
                 dropPreviewEl.className = 'drop-preview';
                 dropPreviewEl.style.height = (duration * SLOT_H - 3) + 'px';
@@ -7129,6 +7896,53 @@
                 startTd.style.position = 'relative';
                 startTd.appendChild(dropPreviewEl);
                 currentDropTarget = startTd;
+
+                // Check if dual-plot is enabled
+                var dualPlotToggle = document.getElementById('dual-plot-toggle');
+                var dualPlotEnabled = dualPlotToggle ? dualPlotToggle.checked : false;
+
+                console.log('🔍 Drop preview - Day:', day, 'Dual-plot enabled:', dualPlotEnabled);
+
+                if (dualPlotEnabled) {
+                    // Determine paired day
+                    var dayPairs = {
+                        'Monday': 'Wednesday',
+                        'Wednesday': 'Friday',
+                        'Friday': 'Wednesday',
+                        'Tuesday': 'Thursday',
+                        'Thursday': 'Tuesday'
+                    };
+
+                    var pairedDay = dayPairs[day];
+
+                    console.log('🔍 Paired day for', day, '→', pairedDay);
+
+                    if (pairedDay) {
+                        // Find the cell for paired day at same time slot
+                        var pairedTd = Array.from(startRow.querySelectorAll('td')).find(function (c) {
+                            return c.dataset.day === pairedDay && !c.dataset.id;
+                        });
+
+                        console.log('🔍 Found paired cell?', !!pairedTd);
+
+                        if (pairedTd) {
+                            // Create preview element for paired block
+                            var pairedPreviewEl = document.createElement('div');
+                            pairedPreviewEl.className = 'drop-preview drop-preview-paired';
+                            pairedPreviewEl.style.height = (duration * SLOT_H - 3) + 'px';
+                            pairedPreviewEl.textContent = '🔗 Paired block';
+                            pairedPreviewEl.style.pointerEvents = 'none';
+
+                            // Position it
+                            pairedTd.style.position = 'relative';
+                            pairedTd.appendChild(pairedPreviewEl);
+
+                            console.log('✅ Showing paired drop preview on', pairedDay, 'at slot', slot);
+                        } else {
+                            console.warn('❌ No empty cell on', pairedDay, 'at slot', slot);
+                        }
+                    }
+                }
             }
 
             function removeDropPreview() {
@@ -7146,31 +7960,6 @@
                 }
                 currentDropTarget = null;
             }
-
-            // Extend existing mousemove handler to support staging blocks
-            document.addEventListener('mousemove', function (e) {
-                if (!stagingDragEl && !dragEl) return;
-                var ghost = document.getElementById('drag-ghost');
-                if (ghost) {
-                    ghost.style.left = (e.clientX + 12) + 'px';
-                    ghost.style.top = (e.clientY + 4) + 'px';
-                }
-
-                // Show drop preview for staging blocks
-                if (stagingDragEl) {
-                    var td = document.elementFromPoint(e.clientX, e.clientY);
-                    while (td && td.tagName !== 'TD') td = td.parentElement;
-
-                    if (td && td.dataset && td.dataset.day && !td.dataset.id && td !== currentDropTarget) {
-                        var subject = unscheduledSubjects.find(function (s) { return s.id === stagingDragId; });
-                        if (subject) {
-                            showDropPreview(td, subject);
-                        }
-                    } else if (!td || !td.dataset || !td.dataset.day || td.dataset.id) {
-                        removeDropPreview();
-                    }
-                }
-            });
 
             // Extend existing mouseup handler to support staging blocks
             var stagingMouseUpHandler = async function (e) {
@@ -7423,6 +8212,7 @@
                 { code: 'HUME 199', name: 'Seminar in Human Ecology', units: 3 },
                 { code: 'HUME 200a', name: 'Supervised Field Experience', units: 3 },
                 // NSTP
+                { code: 'NSTP 1', name: 'National Service Training Program 1', units: 3 },
                 { code: 'NSTP 2', name: 'National Service Training Program 2', units: 3 }
             ];
 
@@ -8119,13 +8909,31 @@
             var roomFilter = document.getElementById('room-filter');
             var selectedRoom = roomFilter ? roomFilter.value : '';
 
-            // Room timetable shows ALL schedules regardless of section/professor filters
-            // Always use window.schedules (not window.filtered)
+            // Room timetable should only show schedules for current year/semester
             var schedulesToUse = [];
 
+            // Get current school year and semester from window object (globally accessible)
+            var roomSchoolYear = window.currentSchoolYear || null;
+            var roomSemester = window.currentSemester || null;
+
+            console.log('🔍 Room filter - School Year:', roomSchoolYear, '| Semester:', roomSemester);
+
             if (typeof window.schedules !== 'undefined' && window.schedules && window.schedules.length > 0) {
-                schedulesToUse = window.schedules;
-                console.log('Using window.schedules (all schedules, ignoring filters)');
+                // Filter by current school year and semester if available
+                if (roomSchoolYear && roomSemester) {
+                    schedulesToUse = window.schedules.filter(function (s) {
+                        var sYear = s.school_year || s.schoolYear;
+                        var sSemester = typeof s.semester === 'string' ? s.semester : String(s.semester);
+                        var currentSem = typeof roomSemester === 'string' ? roomSemester : String(roomSemester);
+                        return sYear === roomSchoolYear && sSemester === currentSem;
+                    });
+                    console.log('✅ Filtered by Year:', roomSchoolYear, '| Semester:', roomSemester);
+                    console.log('✅ Filtered schedules:', schedulesToUse.length, 'out of', window.schedules.length, 'total');
+                } else {
+                    // If year/semester not available yet, use all schedules (rare case)
+                    console.warn('⚠️ Year/Semester not set, showing all schedules');
+                    schedulesToUse = window.schedules;
+                }
             }
 
             if (schedulesToUse.length === 0) {
@@ -8183,16 +8991,26 @@
                 var block = document.createElement('div');
                 block.className = 'room-block';
 
-                // Use room-based color (all blocks in same room have same color)
-                var bgColor = window.colorForRoom(sched.room);
+                // Check if this schedule belongs to current user (member)
+                var isCurrentUserSchedule = false;
+                if (window.currentUser && window.currentUser.role === 'user') {
+                    var schedProf = (sched.prof || '').split(',')[0].trim();
+                    var currentUserNameNormalized = window.currentUser.full_name.split(',')[0].trim();
+                    isCurrentUserSchedule = schedProf === currentUserNameNormalized;
+                }
+
+                // Use maroon for current user's schedules, room color for others
+                var bgColor = isCurrentUserSchedule ? '#800000' : window.colorForRoom(sched.room);
+                var textColor = isCurrentUserSchedule ? '#ffffff' : '#1a1a1a';
+                var secondaryTextColor = isCurrentUserSchedule ? 'rgba(255,255,255,0.85)' : '#555';
 
                 // Non-editable styling (no cursor pointer, no hover effects)
                 block.style.cssText = 'position:absolute;left:2px;right:2px;top:1px;height:' + (duration * 28 - 2) + 'px;background:' + bgColor + ';border-radius:5px;padding:4px 6px;font-size:0.67rem;line-height:1.3;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.12);z-index:2;pointer-events:none;';
 
                 // Display: Course + FIC (surname only)
                 var surname = window.extractSurname(sched.prof);
-                var html = '<div style="font-weight:700;color:#1a1a1a;">' + sched.subjCode + '</div>';
-                html += '<div style="color:#555;font-size:0.63rem;">FIC: ' + surname + '</div>';
+                var html = '<div style="font-weight:700;color:' + textColor + ';">' + sched.subjCode + '</div>';
+                html += '<div style="color:' + secondaryTextColor + ';font-size:0.63rem;">FIC: ' + surname + '</div>';
 
                 block.innerHTML = html;
                 cell.appendChild(block);
@@ -8585,11 +9403,19 @@
                     </svg>
                 </div>
                 <div>
-                    <div style="font-size:0.9rem;font-weight:700;color:#111827;">Schedule Generator</div>
+                    <div id="schedule-chat-title" style="font-size:0.9rem;font-weight:700;color:#111827;">Schedule Assistant</div>
                     <div style="font-size:0.72rem;color:#6b7280;">CHE AI Assistant</div>
                 </div>
             </div>
             <div style="display:flex;gap:8px;">
+                <button onclick="clearChatHistory()" title="Clear chat history"
+                    style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
+                    onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
                 <button onclick="minimizeScheduleChat()"
                     style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
                     onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'">
@@ -8617,15 +9443,14 @@
                     AI</div>
                 <div
                     style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;">
-                    Hi! I'm CHE, your schedule generation assistant. I can help you generate optimized schedules using
-                    genetic algorithms. Ask me to generate a schedule or answer questions about the scheduling process.
+                    Hi! I'm CHE, your schedule assistant. I can help you with schedule-related questions.
                 </div>
             </div>
         </div>
 
         <!-- Chat Input -->
         <div style="padding:12px 14px;border-top:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-end;">
-            <textarea id="schedule-chat-input" placeholder="Ask about schedule generation..."
+            <textarea id="schedule-chat-input" placeholder="Ask about schedules or room availability..."
                 style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.82rem;font-family:inherit;color:#374151;outline:none;resize:none;max-height:100px;line-height:1.4;"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendScheduleChatMessage();}"></textarea>
             <button onclick="sendScheduleChatMessage()"
@@ -8642,8 +9467,110 @@
         // ═══ Schedule GA Chat Widget Functions ═══
         var scheduleChatState = {
             isOpen: false,
-            chatHistory: []
+            chatHistory: [],
+            lastGenerationParams: null  // Store last generation params for re-generate
         };
+
+        // Load chat history from localStorage on page load
+        function loadChatHistory() {
+            try {
+                // Get current semester/year from filters or localStorage
+                var schoolYear = document.getElementById('school-year-filter')?.value || localStorage.getItem('cerp_schoolYear') || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+                var semester = document.getElementById('semester-filter')?.value || localStorage.getItem('cerp_semester') || '1';
+
+                var saved = localStorage.getItem('schedule_chat_history_' + schoolYear + '_' + semester);
+                if (saved) {
+                    var data = JSON.parse(saved);
+                    scheduleChatState.chatHistory = data.history || [];
+                    scheduleChatState.lastGenerationParams = data.lastGenerationParams || null;
+
+                    // Restore chat messages in UI
+                    var messagesContainer = document.getElementById('schedule-chat-messages');
+                    if (messagesContainer && scheduleChatState.chatHistory.length > 0) {
+                        scheduleChatState.chatHistory.forEach(function (msg) {
+                            if (msg.role === 'user') {
+                                var userMsg = document.createElement('div');
+                                userMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;flex-direction:row-reverse;';
+                                userMsg.innerHTML =
+                                    '<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">U</div>' +
+                                    '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-right-radius:4px;font-size:0.8rem;line-height:1.55;color:white;background:#6b0f1a;">' +
+                                    escapeHtml(msg.content) + '</div>';
+                                messagesContainer.appendChild(userMsg);
+                            } else if (msg.role === 'assistant') {
+                                var aiMsg = document.createElement('div');
+                                aiMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+                                aiMsg.innerHTML =
+                                    '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">CHE</div>' +
+                                    '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;white-space:pre-wrap;">' +
+                                    escapeHtml(msg.content) + '</div>';
+                                messagesContainer.appendChild(aiMsg);
+                            }
+                        });
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load chat history:', e);
+            }
+        }
+
+        // Save chat history to localStorage
+        function saveChatHistory() {
+            try {
+                // Get current semester/year from filters or localStorage
+                var schoolYear = document.getElementById('school-year-filter')?.value || localStorage.getItem('cerp_schoolYear') || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+                var semester = document.getElementById('semester-filter')?.value || localStorage.getItem('cerp_semester') || '1';
+
+                var data = {
+                    history: scheduleChatState.chatHistory,
+                    lastGenerationParams: scheduleChatState.lastGenerationParams,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('schedule_chat_history_' + schoolYear + '_' + semester, JSON.stringify(data));
+            } catch (e) {
+                console.error('Failed to save chat history:', e);
+            }
+        }
+
+        // Clear chat history
+        function clearChatHistory() {
+            scheduleChatState.chatHistory = [];
+            scheduleChatState.lastGenerationParams = null;
+            saveChatHistory();
+            var messagesContainer = document.getElementById('schedule-chat-messages');
+            if (messagesContainer) {
+                messagesContainer.innerHTML = '';
+                
+                // Set chat title based on role
+                var chatTitle = document.getElementById('schedule-chat-title');
+                if (chatTitle) {
+                    if (window.currentUser && window.currentUser.role === 'user') {
+                        chatTitle.textContent = 'Schedule Query Assistant';
+                    } else {
+                        chatTitle.textContent = 'Schedule Generator';
+                    }
+                }
+                
+                // Add welcome message (role-specific)
+                var welcomeMsg = document.createElement('div');
+                welcomeMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+                
+                // Different welcome message for admin vs member
+                var welcomeText = '';
+                if (window.currentUser && window.currentUser.role === 'user') {
+                    // MEMBER: Query assistant
+                    welcomeText = 'Hi! I\'m CHE, your schedule query assistant. I can help you find information about schedules and rooms.\n\nTry asking:\n• "What rooms are available from 10:00 to 12:00 on Monday?"\n• "Show me my schedule for today"\n• "Which room am I assigned to for CERP 122?"\n• "Are there any scheduling conflicts?"';
+                } else {
+                    // ADMIN: Generation assistant
+                    welcomeText = 'Hi! I\'m CHE, your schedule generation assistant. I can help you generate optimized schedules using genetic algorithms. Ask me to generate a schedule or answer questions about the scheduling process.';
+                }
+                
+                welcomeMsg.innerHTML =
+                    '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">CHE</div>' +
+                    '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;white-space:pre-line;">' + welcomeText + '</div>';
+                messagesContainer.appendChild(welcomeMsg);
+            }
+        }
 
         window.openScheduleChat = function () {
             var bubble = document.getElementById('schedule-chat-bubble');
@@ -8694,13 +9621,14 @@
 
             // Add to history
             scheduleChatState.chatHistory.push({ role: 'user', content: message });
+            saveChatHistory();
 
             // Show typing indicator
             var typingMsg = document.createElement('div');
             typingMsg.id = 'schedule-typing-indicator';
             typingMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
             typingMsg.innerHTML =
-                '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+                '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">CHE</div>' +
                 '<div style="padding:10px 14px;border-radius:14px;border-bottom-left-radius:4px;background:#f3f4f6;display:flex;align-items:center;gap:4px;">' +
                 '<div style="width:6px;height:6px;border-radius:50%;background:#9ca3af;animation:typingBounce 1.2s infinite ease-in-out;"></div>' +
                 '<div style="width:6px;height:6px;border-radius:50%;background:#9ca3af;animation:typingBounce 1.2s infinite ease-in-out 0.2s;"></div>' +
@@ -8719,7 +9647,9 @@
                     message: message,
                     history: scheduleChatState.chatHistory,
                     include_context: true,
-                    is_schedule_page: true  // Flag to indicate this is the schedule page chat
+                    is_schedule_page: true,  // Flag to indicate this is the schedule page chat
+                    user_role: window.currentUser ? window.currentUser.role : 'admin',  // Send user role
+                    user_name: window.currentUser ? window.currentUser.full_name : null  // Send user name for member queries
                 })
             })
                 .then(function (res) { return res.json(); })
@@ -8730,14 +9660,15 @@
 
                     // Get reply and strip JSON code blocks
                     var reply = data.reply || 'Sorry, I encountered an error.';
-                    var cleanReply = reply.replace(/```json[\s\S]*?```/g, '').trim();
+                    var cleanReply = reply.replace(/```json[\s\S]*? ```/g, '').trim();
 
                     scheduleChatState.chatHistory.push({ role: 'assistant', content: reply });
+                    saveChatHistory();
 
                     var aiMsg = document.createElement('div');
                     aiMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
                     aiMsg.innerHTML =
-                        '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+                        '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">CHE</div>' +
                         '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;white-space:pre-wrap;">' +
                         escapeHtml(cleanReply) + '</div>';
                     messagesContainer.appendChild(aiMsg);
@@ -8759,7 +9690,7 @@
                     var errorMsg = document.createElement('div');
                     errorMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
                     errorMsg.innerHTML =
-                        '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+                        '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">CHE</div>' +
                         '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#dc2626;background:#fee2e2;">Error: Could not reach CHE assistant.</div>';
                     messagesContainer.appendChild(errorMsg);
 
@@ -8789,6 +9720,7 @@
 
             // Add to history
             scheduleChatState.chatHistory.push({ role: 'user', content: text });
+            saveChatHistory();
 
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -8804,13 +9736,14 @@
             var bgColor = isError ? '#fee2e2' : '#f3f4f6';
             var textColor = isError ? '#dc2626' : '#111827';
             aiMsg.innerHTML =
-                '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">AI</div>' +
+                '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">CHE</div>' +
                 '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:' + textColor + ';background:' + bgColor + ';white-space:pre-wrap;">' +
                 escapeHtml(text) + '</div>';
             messagesContainer.appendChild(aiMsg);
 
             // Add to history
             scheduleChatState.chatHistory.push({ role: 'assistant', content: text });
+            saveChatHistory();
 
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -8907,6 +9840,353 @@
             container.innerHTML += formHtml;
         }
 
+        // Show save and re-generate buttons after successful generation
+        function showSaveAndRegenerateButtons() {
+            var messagesContainer = document.getElementById('schedule-chat-messages');
+            if (!messagesContainer) return;
+
+            // Check if buttons already exist
+            if (document.getElementById('schedule-action-buttons')) return;
+
+            var btnContainer = document.createElement('div');
+            btnContainer.id = 'schedule-action-buttons';
+            btnContainer.style.cssText = 'margin:10px 0 10px 34px;max-width:82%;display:flex;flex-direction:column;gap:8px;';
+
+            // Save button
+            var saveBtn = document.createElement('button');
+            saveBtn.onclick = function () { confirmSaveGeneratedSchedule(); };
+            saveBtn.style.cssText = 'width:100%;padding:10px 16px;background:#10b981;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;';
+            saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg> Save Schedule';
+            saveBtn.onmouseover = function () { this.style.background = '#059669'; };
+            saveBtn.onmouseout = function () { this.style.background = '#10b981'; };
+
+            // Re-generate button
+            var regenBtn = document.createElement('button');
+            regenBtn.onclick = function () { triggerRegenerate(); };
+            regenBtn.style.cssText = 'width:100%;padding:10px 16px;background:#6b0f1a;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;';
+            regenBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Re-Generate Schedule';
+            regenBtn.onmouseover = function () { this.style.background = '#8b1424'; };
+            regenBtn.onmouseout = function () { this.style.background = '#6b0f1a'; };
+
+            // Refresh/Show Schedule button (in case auto-load failed)
+            var refreshBtn = document.createElement('button');
+            refreshBtn.onclick = function () {
+                console.log('🔄 Manual refresh requested');
+                loadGeneratedSchedules();
+                showToast('Loading generated schedules...', 'info', 2000);
+            };
+            refreshBtn.style.cssText = 'width:100%;padding:10px 16px;background:#3b82f6;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;';
+            refreshBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Refresh & Show Schedule';
+            refreshBtn.onmouseover = function () { this.style.background = '#2563eb'; };
+            refreshBtn.onmouseout = function () { this.style.background = '#3b82f6'; };
+
+            btnContainer.appendChild(saveBtn);
+            btnContainer.appendChild(refreshBtn);
+            btnContainer.appendChild(regenBtn);
+            messagesContainer.appendChild(btnContainer);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Confirm save generated schedule
+        function confirmSaveGeneratedSchedule() {
+            var messagesContainer = document.getElementById('schedule-chat-messages');
+            if (!messagesContainer) return;
+
+            // Remove action buttons
+            var btnContainer = document.getElementById('schedule-action-buttons');
+            if (btnContainer) btnContainer.remove();
+
+            // Show confirmation
+            sendScheduleMessage('Save this schedule');
+
+            var formCard = document.createElement('div');
+            formCard.style.cssText = 'margin:10px 0 10px 34px;background:white;border:1px solid #e5e7eb;border-radius:10px;padding:16px;max-width:82%;box-shadow:0 2px 4px rgba(0,0,0,0.08);';
+
+            var formTitle = document.createElement('div');
+            formTitle.style.cssText = 'font-size:0.85rem;font-weight:700;color:#10b981;margin-bottom:12px;';
+            formTitle.textContent = 'Confirm Save Schedule';
+            formCard.appendChild(formTitle);
+
+            var formHtml = '<div style="display:flex;flex-direction:column;gap:10px;">';
+            formHtml += '<div style="font-size:0.8rem;color:#374151;padding:10px;background:#f0fdf4;border:1px solid #10b981;border-radius:6px;">';
+            formHtml += 'This will save the generated schedule to the main schedules table. The schedule will be visible to all users.';
+            formHtml += '</div>';
+            formHtml += '<div style="display:flex;gap:8px;margin-top:6px;">';
+            formHtml += '<button onclick="executeSaveSchedule()" style="flex:1;padding:9px;background:#10b981;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Confirm Save</button>';
+            formHtml += '<button onclick="cancelSaveAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
+            formHtml += '</div></div>';
+
+            formCard.innerHTML += formHtml;
+            messagesContainer.appendChild(formCard);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Execute save schedule
+        window.executeSaveSchedule = function () {
+            var formCard = event.target.closest('div[style*="border:1px solid #e5e7eb"]');
+            if (formCard) {
+                formCard.style.opacity = '0';
+                formCard.style.transform = 'scale(0.95)';
+                formCard.style.transition = 'all 0.15s';
+                setTimeout(function () { formCard.remove(); }, 150);
+            }
+
+            // Call API to move generated schedules to main table
+            fetch('/api/schedule/save-generated', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    school_year: scheduleChatState.lastGenerationParams.target_school_year,
+                    semester: scheduleChatState.lastGenerationParams.target_semester
+                })
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        showScheduleAIMessage('Schedule saved successfully! The schedule is now visible to all users.', false);
+                        // Reload main schedules
+                        loadSchedules();
+                    } else {
+                        showScheduleAIMessage('Failed to save schedule: ' + (data.message || 'Unknown error'), true);
+                        // Restore action buttons
+                        showSaveAndRegenerateButtons();
+                    }
+                })
+                .catch(function (err) {
+                    showScheduleAIMessage('Error saving schedule: ' + err.message, true);
+                    // Restore action buttons
+                    showSaveAndRegenerateButtons();
+                });
+        };
+
+        // Cancel save action
+        window.cancelSaveAction = function (btn) {
+            var formCard = btn.closest('div[style*="border:1px solid #e5e7eb"]');
+            if (formCard) {
+                formCard.style.opacity = '0';
+                formCard.style.transform = 'scale(0.95)';
+                formCard.style.transition = 'all 0.15s';
+                setTimeout(function () { formCard.remove(); }, 150);
+            }
+            showScheduleAIMessage('Save cancelled. You can review the schedule or re-generate.', false);
+            // Restore action buttons
+            showSaveAndRegenerateButtons();
+        };
+
+        // Load generated schedules (from generated_schedules table)
+        function loadGeneratedSchedules() {
+            console.log('🔍 loadGeneratedSchedules() called');
+            console.log('📊 scheduleChatState:', scheduleChatState);
+            
+            // Load from generated_schedules table instead of schedules table
+            // CRITICAL FIX: Use lastGenerationParams to ensure we load the correct target semester
+            var schoolYear, semester;
+            
+            if (scheduleChatState && scheduleChatState.lastGenerationParams) {
+                // Use the target semester/year from the generation request
+                schoolYear = scheduleChatState.lastGenerationParams.target_school_year;
+                semester = scheduleChatState.lastGenerationParams.target_semester;
+                console.log('📋 Loading generated schedules for TARGET:', schoolYear, 'Semester', semester);
+            } else {
+                // Fallback to filter values
+                var yearFilter = document.getElementById('school-year-filter');
+                var semesterFilter = document.getElementById('semester-filter');
+
+                if (!yearFilter || !semesterFilter) {
+                    loadSchedules(); // Fallback
+                    return;
+                }
+
+                schoolYear = yearFilter.value;
+                semester = semesterFilter.value;
+                console.log('📋 Loading generated schedules from FILTERS:', schoolYear, 'Semester', semester);
+            }
+
+            fetch('/api/schedules/generated?school_year=' + schoolYear + '&semester=' + semester)
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    console.log('📥 API Response:', data);
+                    
+                    if (data.schedules && data.schedules.length > 0) {
+                        console.log('✅ Found', data.schedules.length, 'generated schedules');
+                        
+                        // Replace pendingSchedules with generated schedules
+                        pendingSchedules = data.schedules.map(function (s) {
+                            return {
+                                id: s.id,
+                                prof: s.prof,
+                                subjCode: s.subj_code || s.subjCode,
+                                subjName: s.subj_name || s.subjName,
+                                type: s.type,
+                                day: s.day,
+                                start: s.start_time || s.start,
+                                end: s.end_time || s.end,
+                                room: s.room,
+                                units: s.units,
+                                section: s.section,
+                                schoolYear: s.school_year || s.schoolYear,
+                                semester: s.semester,
+                                isGenerated: true  // Flag to indicate this is from generated_schedules
+                            };
+                        });
+
+                        console.log('📦 Mapped pendingSchedules:', pendingSchedules.length, 'items');
+
+                        // Update filter dropdowns AND clear prof/section filters to show ALL generated schedules
+                        var yearFilter = document.getElementById('school-year-filter');
+                        var semesterFilter = document.getElementById('semester-filter');
+                        var profFilter = document.getElementById('professor-filter');
+                        var sectionFilter = document.getElementById('section-filter');
+                        
+                        if (yearFilter && semesterFilter) {
+                            console.log('🔄 Updating filters to:', schoolYear, 'Semester', semester);
+                            yearFilter.value = schoolYear;
+                            semesterFilter.value = semester;
+                            
+                            // CRITICAL: Clear professor and section filters to show ALL schedules
+                            if (profFilter) profFilter.value = '';
+                            if (sectionFilter) sectionFilter.value = '';
+                        }
+
+                        // Update savedSchedules reference (for discard functionality)
+                        savedSchedules = JSON.parse(JSON.stringify(pendingSchedules));
+                        schedules = pendingSchedules;
+                        window.schedules = schedules;
+
+                        console.log('🎨 Starting render pipeline...');
+                        
+                        // Render timetable with generated schedules
+                        applyFilters();
+                        renderTimetable();
+                        renderReport();
+                        calculateAllocatedUnits();
+                        renderDraggableBlocks();
+                        
+                        console.log('✅ Loaded', pendingSchedules.length, 'generated schedules for', schoolYear, 'Semester', semester);
+                    } else {
+                        console.warn('⚠️ No generated schedules found for', schoolYear, 'Semester', semester);
+                        console.warn('⚠️ API returned:', data);
+                        loadSchedules(); // Fallback to regular schedules
+                    }
+                })
+                .catch(function (err) {
+                    console.error('Error loading generated schedules:', err);
+                    loadSchedules(); // Fallback
+                });
+        }
+
+        // Show re-generate button after successful generation
+        function showRegenerateButton() {
+            var messagesContainer = document.getElementById('schedule-chat-messages');
+            if (!messagesContainer) return;
+
+            // Check if re-generate button already exists
+            if (document.getElementById('regenerate-btn-container')) return;
+
+            var btnContainer = document.createElement('div');
+            btnContainer.id = 'regenerate-btn-container';
+            btnContainer.style.cssText = 'margin:10px 0 10px 34px;max-width:82%;';
+
+            var btn = document.createElement('button');
+            btn.onclick = function () { triggerRegenerate(); };
+            btn.style.cssText = 'width:100%;padding:10px 16px;background:#6b0f1a;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;';
+            btn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Re-Generate Schedule';
+            btn.onmouseover = function () { this.style.background = '#8b1424'; };
+            btn.onmouseout = function () { this.style.background = '#6b0f1a'; };
+
+            btnContainer.appendChild(btn);
+            messagesContainer.appendChild(btnContainer);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Trigger re-generation with confirmation
+        function triggerRegenerate() {
+            if (!scheduleChatState.lastGenerationParams) {
+                showScheduleAIMessage('No previous generation parameters found. Please start a new generation.', true);
+                return;
+            }
+
+            // Remove existing button
+            var btnContainer = document.getElementById('regenerate-btn-container');
+            if (btnContainer) btnContainer.remove();
+
+            // Show confirmation message
+            sendScheduleMessage('Re-generate schedule with the same parameters');
+
+            // Show confirmation form
+            var messagesContainer = document.getElementById('schedule-chat-messages');
+            if (!messagesContainer) return;
+
+            var formCard = document.createElement('div');
+            formCard.style.cssText = 'margin:10px 0 10px 34px;background:white;border:1px solid #e5e7eb;border-radius:10px;padding:16px;max-width:82%;box-shadow:0 2px 4px rgba(0,0,0,0.08);';
+
+            var formTitle = document.createElement('div');
+            formTitle.style.cssText = 'font-size:0.85rem;font-weight:700;color:#6b0f1a;margin-bottom:12px;';
+            formTitle.textContent = 'Confirm Re-Generation';
+            formCard.appendChild(formTitle);
+
+            var params = scheduleChatState.lastGenerationParams;
+            var formHtml = '<div style="display:flex;flex-direction:column;gap:10px;">';
+            formHtml += '<div style="font-size:0.8rem;color:#374151;padding:10px;background:#f9fafb;border-radius:6px;">';
+            formHtml += '<strong>Reference:</strong> Semester ' + params.reference_semester + ', ' + params.reference_school_year + '<br>';
+            formHtml += '<strong>Target:</strong> Semester ' + params.target_semester + ', ' + params.target_school_year;
+            formHtml += '</div>';
+            formHtml += '<div style="font-size:0.75rem;color:#6b7280;padding:8px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;">This will clear the current schedule and generate a new one. This action cannot be undone.</div>';
+            formHtml += '<div style="display:flex;gap:8px;margin-top:6px;">';
+            formHtml += '<button onclick="executeRegenerate()" style="flex:1;padding:9px;background:#6b0f1a;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Confirm Re-Generate</button>';
+            formHtml += '<button onclick="cancelAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
+            formHtml += '</div></div>';
+
+            formCard.innerHTML += formHtml;
+            messagesContainer.appendChild(formCard);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Execute re-generation
+        window.executeRegenerate = function () {
+            var formCard = event.target.closest('div[style*="border:1px solid #e5e7eb"]');
+            if (formCard) {
+                formCard.style.opacity = '0';
+                formCard.style.transform = 'scale(0.95)';
+                formCard.style.transition = 'all 0.15s';
+                setTimeout(function () { formCard.remove(); }, 150);
+            }
+
+            var params = scheduleChatState.lastGenerationParams;
+
+            // Switch to target semester view
+            var yearFilter = document.getElementById('school-year-filter');
+            var semesterFilter = document.getElementById('semester-filter');
+            if (yearFilter && semesterFilter) {
+                yearFilter.value = params.target_school_year;
+                semesterFilter.value = params.target_semester;
+                applyFilters();
+            }
+
+            // Show progress
+            showGenerationProgress();
+
+            // Start generation
+            fetch('/api/schedule/generate-full', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        pollGenerationProgress();
+                    } else {
+                        hideGenerationProgress();
+                        showScheduleAIMessage('Failed to start re-generation: ' + (data.message || 'Unknown error'), true);
+                    }
+                })
+                .catch(function (err) {
+                    hideGenerationProgress();
+                    showScheduleAIMessage('Error starting re-generation: ' + err.message, true);
+                });
+        };
+
         // Confirm generate schedule action
         window.confirmGenerateSchedule = function () {
             var refSemester = document.getElementById('ref-semester').value;
@@ -8914,6 +10194,16 @@
             var targetSemester = document.getElementById('target-semester').value;
             var targetYear = document.getElementById('target-year').value;
             var saveToDb = document.getElementById('save-to-db').checked;
+
+            // Store generation params for re-generate
+            scheduleChatState.lastGenerationParams = {
+                reference_semester: refSemester,
+                reference_school_year: refYear,
+                target_semester: targetSemester,
+                target_school_year: targetYear,
+                save_to_db: saveToDb
+            };
+            saveChatHistory();
 
             // Remove the form
             var formCard = document.getElementById('ref-semester').closest('div[style*="border:1px solid #e5e7eb"]');
@@ -8955,12 +10245,12 @@
                         pollGenerationProgress();
                     } else {
                         hideGenerationProgress();
-                        showScheduleAIMessage('❌ ' + (data.message || 'Failed to start generation'), true);
+                        showScheduleAIMessage('Failed to start generation: ' + (data.message || 'Unknown error'), true);
                     }
                 })
                 .catch(function (err) {
                     hideGenerationProgress();
-                    showScheduleAIMessage('❌ Error: ' + err.message, true);
+                    showScheduleAIMessage('Error: ' + err.message, true);
                     console.error(err);
                 });
         };
@@ -8982,7 +10272,7 @@
                 border: 2px solid #6b0f1a;
                 border-radius: 12px;
                 padding: 16px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
                 z-index: 10000;
                 cursor: move;
                 font-family: system-ui, -apple-system, sans-serif;
@@ -9069,6 +10359,12 @@
         }
 
         function pollGenerationProgress() {
+            // IMMEDIATE TEST: Try loading schedules once at start (for debugging)
+            setTimeout(function() {
+                console.log('🧪 TEST: Calling loadGeneratedSchedules 5 seconds after poll start');
+                loadGeneratedSchedules();
+            }, 5000);
+            
             progressPollInterval = setInterval(function () {
                 fetch('/api/schedule/generate-progress')
                     .then(function (res) { return res.json(); })
@@ -9079,20 +10375,44 @@
                             clearInterval(progressPollInterval);
                             setTimeout(function () {
                                 hideGenerationProgress();
-                                showScheduleAIMessage('✅ ' + (progress.message || 'Generation completed!'), false);
-                                // Reload schedules without page refresh
-                                loadSchedules();
+
+                                // Ask CHE if user is satisfied with the generated schedule
+                                showScheduleAIMessage(
+                                    'Schedule generation completed successfully!\n\n' +
+                                    'Review the generated schedule below. Are you satisfied with this schedule?\n\n' +
+                                    'If yes, click "Save Schedule" to commit it to the database.\n' +
+                                    'If not, you can click "Re-Generate" to try again with different parameters.',
+                                    false
+                                );
+
+                                // Add Save and Re-generate buttons
+                                showSaveAndRegenerateButtons();
+
+                                // Reload schedules without page refresh (loads into generated_schedules view)
+                                loadGeneratedSchedules();
                             }, 2000);
                         } else if (progress.status === 'failed') {
                             clearInterval(progressPollInterval);
                             hideGenerationProgress();
-                            showScheduleAIMessage('❌ ' + (progress.message || 'Generation failed'), true);
+                            showScheduleAIMessage('Generation failed: ' + (progress.message || 'Unknown error'), true);
                         }
                     })
                     .catch(function (err) {
-                        console.error('Progress poll error:', err);
+                        console.error('❌ Progress poll error:', err);
+                        // Don't stop polling on fetch errors, the server might be busy
                     });
             }, 500);  // Poll every 500ms
+            
+            // FALLBACK: After 90 seconds, try loading schedules even if we didn't detect completion
+            // This handles cases where the polling misses the completion status
+            setTimeout(function() {
+                if (progressPollInterval) {
+                    console.log('⏰ 90s timeout reached, attempting to load generated schedules as fallback');
+                    clearInterval(progressPollInterval);
+                    hideGenerationProgress();
+                    loadGeneratedSchedules();
+                }
+            }, 90000);  // 90 second fallback
         }
 
         function displayGeneratedSchedules(schedules) {
@@ -9178,6 +10498,9 @@
                 openScheduleChat();
             }
         });
+
+        // Load chat history when page loads
+        loadChatHistory();
     </script>
 
 

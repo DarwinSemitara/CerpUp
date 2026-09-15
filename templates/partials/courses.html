@@ -1,0 +1,1868 @@
+<!-- Courses Partial -->
+<div class="courses-page">
+    <!-- Course Configuration Section (Collapsible) -->
+    <div class="config-section">
+        <div class="config-header" onclick="toggleConfigSection()">
+            <h3 class="config-title">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Course Section Configuration
+            </h3>
+            <span class="config-toggle" id="config-toggle">▼</span>
+        </div>
+        <div class="config-content" id="config-content" style="display: none;">
+            <p class="config-subtitle">Configure which sections each course is offered for</p>
+            <div id="course-config-list" class="course-config-list">
+                <!-- Course configuration items will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="courses-grid">
+        <!-- Left Container: Courses Checklist -->
+        <div class="courses-container">
+            <div class="container-header">
+                <h2 class="container-title">Course Assignment</h2>
+                <p class="container-subtitle">Select courses to assign</p>
+            </div>
+
+            <div id="courses-checklist" class="courses-checklist">
+                <!-- CERP Courses Section -->
+                <div class="course-category-section">
+                    <h3 class="category-title">CERP Courses</h3>
+                    <div class="course-items" id="cerp-courses">
+                        <!-- CERP courses will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- HUME Courses Section -->
+                <div class="course-category-section">
+                    <h3 class="category-title">HUME Courses</h3>
+                    <div class="course-items" id="hume-courses">
+                        <!-- HUME courses will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- NSTP Courses Section -->
+                <div class="course-category-section">
+                    <h3 class="category-title">NSTP Courses</h3>
+                    <div class="course-items" id="nstp-courses">
+                        <!-- NSTP courses will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignment Actions -->
+            <div class="assignment-actions" id="assignment-actions" style="display: none;">
+                <div class="selected-faculty-info">
+                    <span class="info-label">Assigning to:</span>
+                    <span class="faculty-name-display" id="selected-faculty-name">No faculty selected</span>
+                </div>
+                <button class="btn-assign-courses" onclick="assignSelectedCourses()">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Assign Selected Courses
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Container: Faculty -->
+        <div class="faculty-container">
+            <div class="container-header">
+                <h2 class="container-title">Faculty Members</h2>
+                <p class="container-subtitle">Click a card to select and assign courses</p>
+            </div>
+            <div id="faculty-grid" class="faculty-grid">
+                <!-- Faculty cards will be loaded here -->
+                <div class="empty-state">
+                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                    <p>Loading faculty...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Faculty Detail Modal -->
+    <div class="faculty-modal" id="faculty-modal" onclick="closeFacultyModal(event)">
+        <div class="faculty-modal-content" onclick="event.stopPropagation()">
+            <div class="faculty-modal-header">
+                <div id="faculty-modal-photo-container"></div>
+                <div class="faculty-modal-info">
+                    <h3 id="faculty-modal-name">Faculty Name</h3>
+                    <p id="faculty-modal-id">ID: </p>
+                </div>
+            </div>
+            <div class="faculty-modal-body">
+                <div class="faculty-modal-section">
+                    <div class="faculty-modal-section-title">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Teaching Load
+                    </div>
+                    <div class="faculty-modal-stat">
+                        <span class="faculty-modal-stat-label">Total Units</span>
+                        <span class="faculty-modal-stat-value" id="faculty-modal-total-units">0</span>
+                    </div>
+                    <div class="faculty-modal-stat">
+                        <span class="faculty-modal-stat-label">Courses Assigned</span>
+                        <span class="faculty-modal-stat-value" id="faculty-modal-course-count">0</span>
+                    </div>
+                </div>
+                <div class="faculty-modal-section">
+                    <div class="faculty-modal-section-title">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        Assigned Courses
+                    </div>
+                    <div class="faculty-modal-course-list" id="faculty-modal-course-list">
+                        <div class="faculty-modal-empty">
+                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                            <p>No courses assigned</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="faculty-modal-close" onclick="closeFacultyModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .courses-page {
+        padding: 24px;
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    /* Course Configuration Section */
+    .config-section {
+        background: white;
+        border-radius: 12px;
+        border: 2px solid #6b0f1a;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+
+    .config-header {
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #6b0f1a 0%, #8b1424 100%);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+    }
+
+    .config-header:hover {
+        background: linear-gradient(135deg, #8b1424 0%, #6b0f1a 100%);
+    }
+
+    .config-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: white;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .config-toggle {
+        color: white;
+        font-size: 1.2rem;
+        transition: transform 0.3s;
+    }
+
+    .config-toggle.open {
+        transform: rotate(180deg);
+    }
+
+    .config-content {
+        padding: 20px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .config-subtitle {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin: 0 0 16px 0;
+    }
+
+    .course-config-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .course-config-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: all 0.3s;
+    }
+
+    .course-config-item.config-saved {
+        background: #f3f4f6;
+        opacity: 0.7;
+    }
+
+    .course-config-item.config-saved .section-checkbox-item input:disabled+label {
+        color: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    .course-config-item.config-saved .section-checkbox-item input:disabled {
+        cursor: not-allowed;
+    }
+
+    .course-config-info {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .course-config-code {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6b0f1a;
+        margin-bottom: 4px;
+    }
+
+    .course-config-name {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .section-checkboxes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        flex: 2;
+    }
+
+    .section-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .section-checkbox-item input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #6b0f1a;
+    }
+
+    .section-checkbox-item label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #374151;
+        cursor: pointer;
+    }
+
+    .config-save-btn {
+        padding: 8px 16px;
+        background: #6b0f1a;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .config-save-btn:hover {
+        background: #8b1424;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(107, 15, 26, 0.3);
+    }
+
+    .config-save-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .courses-grid {
+        display: grid;
+        grid-template-columns: 35fr 65fr;
+        gap: 20px;
+        height: calc(100vh - 280px);
+    }
+
+    /* Containers */
+    .courses-container,
+    .faculty-container {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .container-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .container-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+    }
+
+    .container-subtitle {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    /* Courses Checklist Styles */
+    .courses-checklist {
+        padding: 20px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .course-category-section {
+        margin-bottom: 24px;
+    }
+
+    .course-category-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .category-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #6b0f1a;
+        margin: 0 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #6b0f1a;
+    }
+
+    .course-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .course-checkbox-item {
+        display: flex;
+        flex-direction: column;
+        padding: 10px 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+    /* Grey out fully assigned courses */
+    .course-checkbox-item.config-saved {
+        background: #f3f4f6;
+        opacity: 0.75;
+        pointer-events: auto;
+    }
+
+    .course-checkbox-item.config-saved .course-checkbox-label {
+        color: #9ca3af;
+    }
+
+    .course-checkbox-item.config-saved input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+    }
+
+    .course-checkbox-item.config-saved:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+
+    .course-checkbox-item:hover {
+        background: #fef2f2;
+        border-color: #6b0f1a;
+    }
+
+    .course-checkbox-row {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .course-checkbox-item input[type="checkbox"] {
+        margin-right: 10px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #6b0f1a;
+    }
+
+    .course-checkbox-label {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        cursor: pointer;
+    }
+
+    .course-code-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    /* Section selector styling */
+    .section-selector {
+        margin-top: 10px;
+        margin-left: 26px;
+        padding: 12px;
+        background: #fefce8;
+        border: 1px dashed #d97706;
+        border-radius: 6px;
+    }
+
+    .section-buttons-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .section-btn {
+        padding: 8px 12px;
+        background: white;
+        color: #374151;
+        border: 2px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+
+    .section-btn:hover {
+        border-color: #6b0f1a;
+        background: #fef2f2;
+    }
+
+    .section-btn.selected {
+        background: #6b0f1a;
+        color: white;
+        border-color: #6b0f1a;
+    }
+
+    .no-sections-msg {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        font-style: italic;
+        margin: 0;
+        text-align: center;
+    }
+
+    /* Section chips */
+    .selected-sections {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .section-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: #6b0f1a;
+        color: white;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .chip-remove {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+        margin-left: 2px;
+        opacity: 0.8;
+    }
+
+    .chip-remove:hover {
+        opacity: 1;
+    }
+
+    /* Assignment Actions */
+    .assignment-actions {
+        padding: 16px 20px;
+        background: #f9fafb;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    .selected-faculty-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .faculty-name-display {
+        font-size: 0.85rem;
+        color: #111827;
+        font-weight: 600;
+    }
+
+    .btn-assign-courses {
+        padding: 8px 16px;
+        background: #6b0f1a;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+
+    .btn-assign-courses:hover {
+        background: #8b1424;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(107, 15, 26, 0.3);
+    }
+
+    .btn-assign-courses:active {
+        transform: translateY(0);
+    }
+
+    /* Faculty Grid */
+    .faculty-grid {
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .faculty-card {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        min-height: 140px;
+        position: relative;
+    }
+
+    .faculty-card:hover {
+        border-color: #6b0f1a;
+        box-shadow: 0 4px 12px rgba(107, 15, 26, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .faculty-card.selected {
+        border-color: #6b0f1a;
+        border-width: 3px;
+        background: #fef2f2;
+    }
+
+    .faculty-photo {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 3px solid #6b0f1a;
+        object-fit: cover;
+        background: white;
+        margin-bottom: 10px;
+    }
+
+    .faculty-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6b0f1a 0%, #a41623 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.3rem;
+        margin-bottom: 10px;
+        border: 3px solid #6b0f1a;
+    }
+
+    .faculty-info {
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 0;
+    }
+
+    .faculty-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #111827;
+        line-height: 1.3;
+        margin-bottom: 4px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+
+    .faculty-units {
+        font-size: 0.75rem;
+        color: #6b0f1a;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+
+    .faculty-courses-tags {
+        display: none;
+    }
+
+    .course-tag {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fdd8d8;
+        color: #6b0f1a;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 4px 6px;
+        border-radius: 12px;
+        text-align: center;
+        word-break: break-word;
+        line-height: 1.2;
+    }
+
+    .description-placeholder {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin: 8px 0 0 0;
+        font-style: italic;
+        text-align: center;
+    }
+
+    /* Assigned Sections View */
+    .assigned-sections-view {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .assigned-section-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+    }
+
+    .assigned-section-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .assigned-faculty-name {
+        font-size: 0.75rem;
+        color: #6b0f1a;
+        font-weight: 500;
+    }
+
+    /* Faculty Modal */
+    .faculty-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .faculty-modal.active {
+        display: flex;
+    }
+
+    .faculty-modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 0;
+        max-width: 550px;
+        width: 90%;
+        max-height: 85vh;
+        overflow: hidden;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+        animation: slideUp 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(30px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .faculty-modal-header {
+        background: linear-gradient(135deg, #6b0f1a 0%, #8b1424 100%);
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .faculty-modal-photo {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid white;
+        object-fit: cover;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .faculty-modal-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 2rem;
+        border: 3px solid white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .faculty-modal-info {
+        flex: 1;
+    }
+
+    .faculty-modal-info h3 {
+        margin: 0 0 6px 0;
+        font-size: 1.4rem;
+        color: white;
+        font-weight: 700;
+    }
+
+    .faculty-modal-info p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+    }
+
+    .faculty-modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .faculty-modal-section {
+        margin-bottom: 24px;
+    }
+
+    .faculty-modal-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .faculty-modal-section-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .faculty-modal-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: #f9fafb;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+
+    .faculty-modal-stat-label {
+        font-size: 0.9rem;
+        color: #374151;
+        font-weight: 500;
+    }
+
+    .faculty-modal-stat-value {
+        font-size: 1.1rem;
+        color: #6b0f1a;
+        font-weight: 700;
+    }
+
+    .faculty-modal-courses-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+    }
+
+    .faculty-modal-course-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .faculty-modal-course-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        transition: all 0.2s;
+    }
+
+    .faculty-modal-course-item:hover {
+        border-color: #6b0f1a;
+        background: #fef2f2;
+        transform: translateX(4px);
+    }
+
+    .faculty-modal-course-info {
+        flex: 1;
+    }
+
+    .faculty-modal-course-name {
+        font-size: 0.9rem;
+        color: #111827;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+
+    .faculty-modal-course-units {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .faculty-modal-delete-btn {
+        background: white;
+        color: #dc2626;
+        border: 2px solid #dc2626;
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .faculty-modal-delete-btn:hover {
+        background: #dc2626;
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .faculty-modal-close {
+        margin: 0 24px 24px;
+        width: calc(100% - 48px);
+        padding: 12px;
+        background: #6b0f1a;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .faculty-modal-close:hover {
+        background: #8b1528;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(107, 15, 26, 0.3);
+    }
+
+    .faculty-modal-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: #9ca3af;
+        font-style: italic;
+    }
+
+    .faculty-modal-empty svg {
+        margin-bottom: 12px;
+        opacity: 0.5;
+    }
+
+    /* Empty State */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        color: #9ca3af;
+        text-align: center;
+        grid-column: 1/-1;
+    }
+
+    .empty-state svg {
+        margin-bottom: 10px;
+        opacity: 0.5;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    /* Toast Animations */
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .courses-grid {
+            grid-template-columns: 1fr;
+            height: auto;
+        }
+
+        .courses-container,
+        .faculty-container {
+            min-height: 400px;
+        }
+
+        .faculty-grid {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        }
+    }
+</style>
+
+<script>
+    let selectedFacultyId = null;
+    let selectedFacultyName = null;
+    let coursesData = []; // Store full course data with available_sections
+    let courseSectionAssignments = {}; // { 'CERP 101': ['T', 'U'], ... }
+    let assignedCourseSections = new Set(); // Set of 'COURSE-SECTION' strings already assigned
+    let facultyData = []; // Store faculty members with their courses
+    let courseConfigs = {}; // Store course configurations { course_id: { selected_sections: ['T', 'U'] } }
+
+    // All possible sections
+    const ALL_SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+    // Load courses and faculty on page load
+    (function () {
+        loadAllCourses();
+        loadFaculty();
+        loadAssignedCourseSections();
+    })();
+
+    function toggleConfigSection() {
+        const content = document.getElementById('config-content');
+        const toggle = document.getElementById('config-toggle');
+
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            toggle.classList.add('open');
+            // Load course configs when opened
+            loadCourseConfigurations();
+        } else {
+            content.style.display = 'none';
+            toggle.classList.remove('open');
+        }
+    }
+
+    async function loadCourseConfigurations() {
+        const container = document.getElementById('course-config-list');
+
+        if (coursesData.length === 0) {
+            await loadAllCourses();
+        }
+
+        container.innerHTML = coursesData.map(course => {
+            const availableSections = course.available_sections || [];
+            const isSaved = availableSections.length > 0;
+
+            return `
+                <div class="course-config-item ${isSaved ? 'config-saved' : ''}" data-course-id="${course.id}">
+                    <div class="course-config-info">
+                        <div class="course-config-code">${course.course_code}</div>
+                        <div class="course-config-name">${course.course_name}</div>
+                    </div>
+                    <div class="section-checkboxes" id="checkboxes-${course.id}">
+                        ${ALL_SECTIONS.map(section => `
+                            <div class="section-checkbox-item">
+                                <input type="checkbox" 
+                                       id="config-${course.course_code.replace(/\s/g, '-')}-${section}"
+                                       value="${section}"
+                                       data-course-id="${course.id}"
+                                       data-course-code="${course.course_code}"
+                                       ${availableSections.includes(section) ? 'checked' : ''}
+                                       ${isSaved ? 'disabled' : ''}
+                                       onchange="updateCourseConfig('${course.id}', '${course.course_code}')">
+                                <label for="config-${course.course_code.replace(/\s/g, '-')}-${section}">
+                                    ${section}
+                                </label>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="config-save-btn" 
+                            id="save-btn-${course.id}"
+                            onclick="${isSaved ? 'editCourseConfig' : 'saveCourseConfig'}('${course.id}', '${course.course_code}')">
+                        ${isSaved ? 'Edit' : 'Save'}
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function editCourseConfig(courseId, courseCode) {
+        // Enable checkboxes
+        const checkboxes = document.querySelectorAll(`input[data-course-id="${courseId}"]`);
+        checkboxes.forEach(cb => cb.disabled = false);
+
+        // Change button to Save
+        const btn = document.getElementById(`save-btn-${courseId}`);
+        btn.textContent = 'Save';
+        btn.onclick = () => saveCourseConfig(courseId, courseCode);
+
+        // Remove grey styling
+        const item = document.querySelector(`.course-config-item[data-course-id="${courseId}"]`);
+        item.classList.remove('config-saved');
+    }
+
+    function updateCourseConfig(courseId, courseCode) {
+        // Track which sections are selected for this course
+        const checkboxes = document.querySelectorAll(`input[data-course-id="${courseId}"]:checked`);
+        const selectedSections = Array.from(checkboxes).map(cb => cb.value);
+
+        courseConfigs[courseId] = {
+            course_code: courseCode,
+            selected_sections: selectedSections
+        };
+    }
+
+    async function saveCourseConfig(courseId, courseCode) {
+        const checkboxes = document.querySelectorAll(`input[data-course-id="${courseId}"]:checked`);
+        const selectedSections = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selectedSections.length === 0) {
+            showToast('Please select at least one section', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/courses/${courseId}/sections`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ available_sections: selectedSections })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to save configuration');
+            }
+
+            // Update local data
+            const course = coursesData.find(c => c.id === courseId);
+            if (course) {
+                course.available_sections = selectedSections;
+            }
+
+            // Disable checkboxes
+            checkboxes.forEach(cb => {
+                const checkbox = document.getElementById(cb.id);
+                if (checkbox) checkbox.disabled = true;
+            });
+            document.querySelectorAll(`input[data-course-id="${courseId}"]:not(:checked)`).forEach(cb => {
+                cb.disabled = true;
+            });
+
+            // Change button to Edit
+            const btn = document.getElementById(`save-btn-${courseId}`);
+            btn.textContent = 'Edit';
+            btn.onclick = () => editCourseConfig(courseId, courseCode);
+
+            // Add grey styling
+            const item = document.querySelector(`.course-config-item[data-course-id="${courseId}"]`);
+            item.classList.add('config-saved');
+
+            // Reload course checklist to reflect new sections
+            const cerpCourses = coursesData.filter(c => c.course_code.startsWith('CERP'));
+            const humeCourses = coursesData.filter(c => c.course_code.startsWith('HUME'));
+            const nstpCourses = coursesData.filter(c => c.course_code.startsWith('NSTP'));
+
+            renderCourseCategory('cerp-courses', cerpCourses);
+            renderCourseCategory('hume-courses', humeCourses);
+            renderCourseCategory('nstp-courses', nstpCourses);
+
+            showToast(`${courseCode} sections updated successfully`, 'success');
+        } catch (error) {
+            console.error('Error saving course config:', error);
+            showToast(error.message || 'Failed to save configuration', 'error');
+        }
+    }
+
+    async function loadAllCourses() {
+        try {
+            const response = await fetch('/api/courses');
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch courses');
+            }
+
+            const data = await response.json();
+
+            if (!data || !data.courses || data.courses.length === 0) {
+                console.error('No courses available');
+                return;
+            }
+
+            coursesData = data.courses;
+
+            // Separate courses by category
+            const cerpCourses = coursesData.filter(c => c.course_code.startsWith('CERP'));
+            const humeCourses = coursesData.filter(c => c.course_code.startsWith('HUME'));
+            const nstpCourses = coursesData.filter(c => c.course_code.startsWith('NSTP'));
+
+            // Render CERP courses
+            renderCourseCategory('cerp-courses', cerpCourses);
+            // Render HUME courses
+            renderCourseCategory('hume-courses', humeCourses);
+            // Render NSTP courses
+            renderCourseCategory('nstp-courses', nstpCourses);
+
+        } catch (error) {
+            console.error('Error loading courses:', error);
+        }
+    }
+
+    async function loadAssignedCourseSections() {
+        try {
+            const response = await fetch('/api/assigned-course-sections');
+            const data = await response.json();
+
+            console.log('🔍 Assigned course-sections API response:', data);
+            console.log('🔍 Number of assigned:', data.assigned?.length || 0);
+
+            if (data.assigned) {
+                assignedCourseSections = new Set(data.assigned);
+                console.log('✅ Assigned course-sections loaded:', assignedCourseSections.size, 'total');
+                console.log('📋 Sample assigned:', Array.from(assignedCourseSections).slice(0, 5));
+            }
+        } catch (error) {
+            console.error('Error loading assigned course-sections:', error);
+        }
+    }
+
+    function renderCourseCategory(containerId, courses) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (courses.length === 0) {
+            container.innerHTML = '<p style="color: #9ca3af; font-size: 0.75rem; margin: 8px 0;">No courses available</p>';
+            return;
+        }
+
+        container.innerHTML = courses.map(course => {
+            const courseId = course.course_code.replace(/\s/g, '-');
+            const availableSections = course.available_sections || [];
+
+            // Filter out sections that are already assigned to any faculty
+            const unassignedSections = availableSections.filter(section => {
+                // Normalize course code: ensure space between letters and numbers
+                const normalizedCode = course.course_code.replace(/([A-Z]+)(\d)/, '$1 $2');
+                const key = `${normalizedCode}-${section}`;
+                const isAssigned = assignedCourseSections.has(key);
+                return !isAssigned;
+            });
+
+            // Check if all sections are assigned (course fully assigned)
+            const isFullyAssigned = availableSections.length > 0 && unassignedSections.length === 0;
+
+            // Debug logging for first few courses
+            if (container.children.length < 3) {
+                const normalizedCode = course.course_code.replace(/([A-Z]+)(\d)/, '$1 $2');
+                console.log(`📚 Course: ${course.course_code} (normalized: ${normalizedCode})`);
+                console.log(`   Available sections:`, availableSections);
+                console.log(`   Unassigned sections:`, unassignedSections);
+                console.log(`   Is fully assigned?`, isFullyAssigned);
+                console.log(`   Sample key:`, `${normalizedCode}-${availableSections[0]}`);
+            }
+
+            return `
+                <div class="course-checkbox-item ${isFullyAssigned ? 'config-saved' : ''}" data-course-code="${course.course_code}">
+                    <!-- Main checkbox -->
+                    <div class="course-checkbox-row">
+                        <input type="checkbox" 
+                               id="course-${courseId}" 
+                               value="${course.course_code}"
+                               ${isFullyAssigned ? 'disabled' : ''}
+                               onchange="${isFullyAssigned ? 'toggleFullyAssignedView' : 'toggleCourseSelection'}(this)">
+                        <label class="course-checkbox-label" for="course-${courseId}" onclick="${isFullyAssigned ? 'toggleFullyAssignedView(document.getElementById(\'course-' + courseId + '\'))' : ''}" style="${isFullyAssigned ? 'cursor: pointer;' : ''}">
+                            <span class="course-code-label">${course.course_code}</span>
+                            ${isFullyAssigned ? '<span style="font-size: 0.65rem; color: #9ca3af; margin-left: 6px;">(Fully assigned - click to view)</span>' : ''}
+                        </label>
+                    </div>
+                    
+                    <!-- Section buttons (hidden until checked) -->
+                    <div class="section-selector" id="section-selector-${courseId}" style="display: none;">
+                        ${isFullyAssigned ?
+                    '<div class="assigned-sections-view">' +
+                    availableSections.map(section => {
+                        const key = course.course_code + '-' + section;
+                        return '<div class="assigned-section-item" data-course-section="' + key + '">' +
+                            '<span class="assigned-section-name">Section ' + section + '</span>' +
+                            '<span class="assigned-faculty-name" id="assigned-' + courseId + '-' + section + '">Loading...</span>' +
+                            '</div>';
+                    }).join('') +
+                    '</div>'
+                    : unassignedSections.length > 0 ? `
+                            <div class="section-buttons-grid">
+                                ${unassignedSections.map(section => `
+                                    <button class="section-btn" 
+                                            data-course-code="${course.course_code}"
+                                            data-section="${section}"
+                                            onclick="toggleSectionSelection('${course.course_code}', '${section}', this)">
+                                        ${section}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        ` : availableSections.length === 0 ? `
+                            <p class="no-sections-msg">No sections configured. Please configure sections in the panel above.</p>
+                        ` : `
+                            <p class="no-sections-msg">All sections have been assigned.</p>
+                        `}
+                        
+                        <!-- Selected sections chips -->
+                        <div class="selected-sections" id="selected-sections-${courseId}"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadFaculty() {
+        const container = document.getElementById('faculty-grid');
+        if (!container) return;
+
+        try {
+            const response = await fetch('/api/members?faculty=true');
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch faculty');
+            }
+
+            const faculty = await response.json();
+
+            // Store faculty data globally with fullName property
+            facultyData = faculty.map(member => ({
+                ...member,
+                fullName: `${member.first || ''} ${member.last || ''}`.trim()
+            }));
+
+            if (!Array.isArray(faculty)) {
+                console.error('Invalid data structure:', faculty);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                        <p>Error loading faculty data</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (faculty.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                        <p>No faculty members found</p>
+                        <p style="font-size: 0.75rem; margin-top: 6px;">Mark members as Teaching Personnel in Manage page</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = faculty.map(member => {
+                const fullName = `${member.first || ''} ${member.last || ''}`.trim();
+                const initials = `${member.first?.[0] || ''}${member.last?.[0] || ''}`;
+                const photoUrl = member.photo_url || '';
+
+                return `
+                    <div class="faculty-card"
+                        data-faculty-id="${member.id}"
+                        data-faculty-name="${fullName}"
+                        onclick="selectFaculty('${member.id}', '${fullName}', event)"
+                        oncontextmenu="openFacultyModal('${member.id}', '${fullName}', event)">
+                        ${photoUrl ?
+                        `<img src="${photoUrl}" alt="${fullName}" class="faculty-photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="faculty-avatar" style="display: none;">${initials}</div>` :
+                        `<div class="faculty-avatar">${initials}</div>`
+                    }
+                        <div class="faculty-info">
+                            <div class="faculty-name">${fullName}</div>
+                            <div class="faculty-units" id="faculty-units-${member.id}">0 units</div>
+                        </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Load faculty courses and store them
+            for (const member of faculty) {
+                await loadFacultyCourses(member.id);
+            }
+
+        } catch (error) {
+            console.error('Error loading faculty:', error);
+            container.innerHTML = '<div class="empty-state"><p>Error loading faculty</p></div>';
+        }
+    }
+
+    async function loadFacultyCourses(facultyId) {
+        try {
+            const response = await fetch(`/api/faculty/${facultyId}/courses`);
+            const data = await response.json();
+
+            // Store courses in faculty data
+            const facultyMember = facultyData.find(f => f.id === facultyId);
+            if (facultyMember) {
+                facultyMember.courses = data.courses || [];
+            }
+
+            const unitsElement = document.getElementById(`faculty-units-${facultyId}`);
+            if (!unitsElement) return;
+
+            if (data.courses && data.courses.length > 0) {
+                const totalUnits = data.courses.length * 3; // Each course-section = 3 units
+                unitsElement.textContent = `${totalUnits} units`;
+            } else {
+                unitsElement.textContent = '0 units';
+            }
+        } catch (error) {
+            console.error('Error loading faculty courses:', error);
+        }
+    }
+
+    function selectFaculty(facultyId, facultyName, event) {
+        // Prevent right-click from triggering this
+        if (event.button === 2) return;
+
+        // Remove selection from all cards
+        document.querySelectorAll('.faculty-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+
+        // Select current card
+        event.currentTarget.classList.add('selected');
+
+        // Update selected faculty
+        selectedFacultyId = facultyId;
+        selectedFacultyName = facultyName;
+
+        // Show assignment actions
+        const actionsEl = document.getElementById('assignment-actions');
+        const nameDisplay = document.getElementById('selected-faculty-name');
+
+        if (actionsEl && nameDisplay) {
+            actionsEl.style.display = 'flex';
+            nameDisplay.textContent = facultyName;
+        }
+
+        // Uncheck all course checkboxes
+        document.querySelectorAll('.course-checkbox-item input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
+
+    async function openFacultyModal(facultyId, facultyName, event) {
+        event.preventDefault(); // Prevent context menu
+        event.stopPropagation(); // Stop left-click from firing
+
+        const modal = document.getElementById('faculty-modal');
+        const nameEl = document.getElementById('faculty-modal-name');
+        const idEl = document.getElementById('faculty-modal-id');
+        const photoContainer = document.getElementById('faculty-modal-photo-container');
+        const courseListEl = document.getElementById('faculty-modal-course-list');
+
+        // Set faculty info
+        nameEl.textContent = facultyName;
+        idEl.textContent = `ID: ${facultyId.substring(0, 8)}...`;
+
+        // Get photo from card
+        const card = event.currentTarget;
+        const photo = card.querySelector('.faculty-photo');
+        const avatar = card.querySelector('.faculty-avatar');
+
+        if (photo && photo.style.display !== 'none') {
+            photoContainer.innerHTML = `<img src="${photo.src}" alt="${facultyName}" class="faculty-modal-photo">`;
+        } else if (avatar) {
+            photoContainer.innerHTML = `<div class="faculty-modal-avatar">${avatar.textContent}</div>`;
+        }
+
+        // Load courses
+        try {
+            const response = await fetch(`/api/faculty/${facultyId}/courses`);
+            const data = await response.json();
+
+            const totalUnitsEl = document.getElementById('faculty-modal-total-units');
+            const courseCountEl = document.getElementById('faculty-modal-course-count');
+
+            if (data.courses && data.courses.length > 0) {
+                const totalUnits = data.courses.length * 3;
+                totalUnitsEl.textContent = totalUnits;
+                courseCountEl.textContent = data.courses.length;
+
+                courseListEl.innerHTML = data.courses.map(course =>
+                    '<div class="faculty-modal-course-item">' +
+                    '<div class="faculty-modal-course-info">' +
+                    '<div class="faculty-modal-course-name">' + course.course_code + ' - Section ' + course.section + '</div>' +
+                    '<div class="faculty-modal-course-units">3 units</div>' +
+                    '</div>' +
+                    '<button class="faculty-modal-delete-btn" onclick="deleteFacultyCourse(\'' + facultyId + '\', \'' + course.course_code + '\', \'' + course.section + '\')">' +
+                    'Remove' +
+                    '</button>' +
+                    '</div>'
+                ).join('');
+            } else {
+                totalUnitsEl.textContent = '0';
+                courseCountEl.textContent = '0';
+                courseListEl.innerHTML = '<div class="faculty-modal-empty"><svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg><p>No courses assigned</p></div>';
+            }
+        } catch (error) {
+            console.error('Error loading faculty courses:', error);
+            courseListEl.innerHTML = '<div class="faculty-modal-empty"><p>Error loading courses</p></div>';
+        }
+
+        // Show modal
+        modal.classList.add('active');
+    }
+
+    function closeFacultyModal(event) {
+        if (event && event.target.id !== 'faculty-modal') return;
+        document.getElementById('faculty-modal').classList.remove('active');
+    }
+
+    async function deleteFacultyCourse(facultyId, courseCode, section) {
+        if (!confirm(`Remove ${courseCode}-${section} from this faculty member?`)) {
+            return;
+        }
+
+        try {
+            // Get current assignments
+            const response = await fetch(`/api/faculty/${facultyId}/courses`);
+            const data = await response.json();
+
+            // Filter out the course to delete
+            const remainingCourses = data.courses.filter(c =>
+                !(c.course_code === courseCode && c.section === section)
+            );
+
+            // Build assignments array (can be empty - backend handles it)
+            const assignments = remainingCourses.map(c => ({
+                course_code: c.course_code,
+                section: c.section
+            }));
+
+            // Update assignments (empty array is now allowed)
+            const updateResponse = await fetch(`/api/faculty/${facultyId}/courses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assignments: assignments })
+            });
+
+            const result = await updateResponse.json();
+
+            if (!updateResponse.ok) {
+                throw new Error(result.error || 'Failed to update assignments');
+            }
+
+            showToast(`Removed ${courseCode}-${section}`, 'success');
+
+            // Remove from assignedCourseSections set
+            const key = `${courseCode}-${section}`;
+            assignedCourseSections.delete(key);
+
+            // Reload course lists to show the section as available again
+            await loadAllCourses();
+
+            // Update the faculty card units
+            await loadFacultyCourses(facultyId);
+
+            // Refresh modal
+            const modal = document.getElementById('faculty-modal');
+            const totalUnitsEl = document.getElementById('faculty-modal-total-units');
+            const courseCountEl = document.getElementById('faculty-modal-course-count');
+            const courseListEl = document.getElementById('faculty-modal-course-list');
+
+            if (remainingCourses.length > 0) {
+                const totalUnits = remainingCourses.length * 3;
+                totalUnitsEl.textContent = totalUnits;
+                courseCountEl.textContent = remainingCourses.length;
+
+                courseListEl.innerHTML = remainingCourses.map(course =>
+                    '<div class="faculty-modal-course-item">' +
+                    '<div class="faculty-modal-course-info">' +
+                    '<div class="faculty-modal-course-name">' + course.course_code + ' - Section ' + course.section + '</div>' +
+                    '<div class="faculty-modal-course-units">3 units</div>' +
+                    '</div>' +
+                    '<button class="faculty-modal-delete-btn" onclick="deleteFacultyCourse(\'' + facultyId + '\', \'' + course.course_code + '\', \'' + course.section + '\')">' +
+                    'Remove' +
+                    '</button>' +
+                    '</div>'
+                ).join('');
+            } else {
+                totalUnitsEl.textContent = '0';
+                courseCountEl.textContent = '0';
+                courseListEl.innerHTML = '<div class="faculty-modal-empty"><svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg><p>No courses assigned</p></div>';
+            }
+
+        } catch (error) {
+            console.error('Error deleting course:', error);
+            showToast(error.message || 'Failed to remove course', 'error');
+        }
+    }
+
+    function toggleFullyAssignedView(checkbox) {
+        const courseCode = checkbox.value;
+        const courseId = courseCode.replace(/\s/g, '-');
+        const selector = document.getElementById(`section-selector-${courseId}`);
+
+        if (!selector) return;
+
+        // Toggle visibility
+        if (selector.style.display === 'none') {
+            selector.style.display = 'block';
+
+            // Load faculty names for each section
+            const course = coursesData.find(c => c.course_code === courseCode);
+            if (!course) return;
+
+            const availableSections = course.available_sections || [];
+
+            availableSections.forEach(section => {
+                const key = `${courseCode}-${section}`;
+                const spanEl = document.getElementById(`assigned-${courseId}-${section}`);
+
+                if (spanEl) {
+                    // Check if this course-section is in the assignedCourseSections Set
+                    if (assignedCourseSections.has(key)) {
+                        // Find which faculty has this course-section from faculty data
+                        const facultyMember = facultyData.find(faculty => {
+                            // Check if faculty has this specific course-section
+                            return faculty.courses && faculty.courses.some(c => 
+                                `${c.course_code}-${c.section}` === key
+                            );
+                        });
+
+                        if (facultyMember) {
+                            spanEl.textContent = facultyMember.fullName || facultyMember.name || 'Unknown';
+                            spanEl.style.color = '#6b0f1a';
+                        } else {
+                            spanEl.textContent = 'Assigned (loading...)';
+                            spanEl.style.color = '#9ca3af';
+                        }
+                    } else {
+                        spanEl.textContent = 'Not assigned';
+                        spanEl.style.color = '#9ca3af';
+                    }
+                }
+            });
+        } else {
+            selector.style.display = 'none';
+        }
+    }
+
+    async function assignSelectedCourses() {
+        if (!selectedFacultyId) {
+            showToast('Please select a faculty member first', 'warning');
+            return;
+        }
+
+        // Build array of course-section assignments
+        const assignments = [];
+
+        for (const [courseCode, sections] of Object.entries(courseSectionAssignments)) {
+            if (sections.length === 0) {
+                showToast(`Please add at least one section for ${courseCode}`, 'warning');
+                return;
+            }
+
+            sections.forEach(section => {
+                assignments.push({
+                    course_code: courseCode,
+                    section: section
+                });
+            });
+        }
+
+        if (assignments.length === 0) {
+            showToast('Please select courses and add sections', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/faculty/${selectedFacultyId}/courses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assignments: assignments })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to assign courses');
+            }
+
+            // Reload assigned course-sections list
+            await loadAssignedCourseSections();
+
+            // Reload course lists to update available sections
+            await loadAllCourses();
+
+            // Reload faculty courses display
+            await loadFacultyCourses(selectedFacultyId);
+
+            showToast(`${result.assigned_count} course-section(s) assigned to ${selectedFacultyName}`, 'success');
+
+            // Clear selections
+            courseSectionAssignments = {};
+            document.querySelectorAll('.course-checkbox-item input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+                toggleCourseSelection(checkbox);
+            });
+
+        } catch (error) {
+            console.error('Error assigning courses:', error);
+            showToast(error.message || 'Failed to assign courses', 'error');
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: ${type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : '#3b82f6'};
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+        `;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    function toggleCourseSelection(checkbox) {
+        const courseCode = checkbox.value;
+        const courseId = courseCode.replace(/\s/g, '-');
+        const selector = document.getElementById(`section-selector-${courseId}`);
+
+        if (checkbox.checked) {
+            // Show section selector
+            selector.style.display = 'block';
+            // Initialize empty array for this course
+            if (!courseSectionAssignments[courseCode]) {
+                courseSectionAssignments[courseCode] = [];
+            }
+        } else {
+            // Hide section selector and clear selections
+            selector.style.display = 'none';
+            delete courseSectionAssignments[courseCode];
+            clearSectionChips(courseCode);
+        }
+    }
+
+    function toggleSectionSelection(courseCode, section, buttonEl) {
+        // Check if already assigned to another faculty
+        const courseSectionKey = `${courseCode}-${section}`;
+        if (assignedCourseSections.has(courseSectionKey)) {
+            showToast(`${courseCode} Section ${section} is already assigned to another faculty`, 'error');
+            return;
+        }
+
+        // Initialize array if needed
+        if (!courseSectionAssignments[courseCode]) {
+            courseSectionAssignments[courseCode] = [];
+        }
+
+        // Toggle selection
+        if (courseSectionAssignments[courseCode].includes(section)) {
+            // Remove section
+            courseSectionAssignments[courseCode] = courseSectionAssignments[courseCode].filter(s => s !== section);
+            buttonEl.classList.remove('selected');
+        } else {
+            // Add section
+            courseSectionAssignments[courseCode].push(section);
+            buttonEl.classList.add('selected');
+        }
+
+        // Update chips display
+        renderSectionChips(courseCode);
+    }
+
+    function getAvailableSections(courseCode) {
+        const course = coursesData.find(c => c.course_code === courseCode);
+        return course ? course.available_sections : [];
+    }
+
+    function renderSectionChips(courseCode) {
+        const courseId = courseCode.replace(/\s/g, '-');
+        const container = document.getElementById(`selected-sections-${courseId}`);
+
+        const sections = courseSectionAssignments[courseCode] || [];
+
+        container.innerHTML = sections.map(section => `
+<span class="section-chip">
+    ${section}
+    <button class="chip-remove" onclick="removeSectionFromCourse('${courseCode}', '${section}')">
+        ×
+    </button>
+</span>
+`).join('');
+    }
+
+    function removeSectionFromCourse(courseCode, section) {
+        if (courseSectionAssignments[courseCode]) {
+            courseSectionAssignments[courseCode] =
+                courseSectionAssignments[courseCode].filter(s => s !== section);
+
+            renderSectionChips(courseCode);
+        }
+    }
+
+    function clearSectionChips(courseCode) {
+        const courseId = courseCode.replace(/\s/g, '-');
+        const container = document.getElementById(`selected-sections-${courseId}`);
+        if (container) {
+            container.innerHTML = '';
+        }
+    }
+
+</script>

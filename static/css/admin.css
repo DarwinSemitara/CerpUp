@@ -211,6 +211,18 @@ body {
     font-weight: 700;
 }
 
+.user-avatar-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 /* ── Loading spinner ────────────────────────────────────────── */
 .content-spinner {
     display: flex;
@@ -796,4 +808,457 @@ body {
     color: #6b7280;
     max-width: 600px;
     margin: 0 auto;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Courses Page Styles - Redesigned
+   ══════════════════════════════════════════════════════════════ */
+
+.courses-page {
+    padding: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    height: calc(100vh - 160px);
+}
+
+/* ── Containers ── */
+.courses-container,
+.faculty-container {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Left container: Split into top and bottom */
+.courses-container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Staging Area (Top Half) ── */
+.staging-area-section {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 2px solid #e5e7eb;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+.staging-area-section .container-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-shrink: 0;
+}
+
+.container-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 12px 0;
+}
+
+.container-subtitle {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Course Category Slider */
+.course-category-slider {
+    display: flex;
+    gap: 6px;
+    background: white;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+}
+
+.category-btn {
+    flex: 1;
+    padding: 8px 14px;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.category-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.category-btn.active {
+    background: #6b0f1a;
+    color: white;
+    box-shadow: 0 2px 4px rgba(107, 15, 26, 0.2);
+}
+
+/* ── Courses List (Staging Area) - Now Checklist Style ── */
+.courses-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.course-checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    transition: all 0.2s;
+    cursor: pointer;
+    user-select: none;
+}
+
+.course-checklist-item:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.course-checklist-item.checked {
+    background: #fdf2f3;
+    border-color: #6b0f1a;
+}
+
+.course-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.course-checklist-item.checked .course-checkbox {
+    background: #6b0f1a;
+    border-color: #6b0f1a;
+}
+
+.course-checkbox svg {
+    display: none;
+    width: 12px;
+    height: 12px;
+    color: white;
+}
+
+.course-checklist-item.checked .course-checkbox svg {
+    display: block;
+}
+
+.course-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.course-code-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 2px;
+}
+
+.course-name-label {
+    font-size: 0.72rem;
+    color: #6b7280;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.course-units-label {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+/* Remove old course block styles */
+.course-block {
+    display: none;
+}
+
+/* ── Assignment Area (Bottom Half) ── */
+.assignment-area-section {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fafafa;
+    height: 250px;
+    flex-shrink: 0;
+}
+
+.assignment-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #9ca3af;
+    text-align: center;
+    padding: 32px 20px;
+}
+
+.assignment-placeholder svg {
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.assignment-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.assignment-header {
+    padding: 14px 20px;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.assignment-header h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.btn-close-assignment {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: #f3f4f6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.btn-close-assignment:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.assignment-courses {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.empty-courses-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #9ca3af;
+    text-align: center;
+}
+
+.empty-courses-state p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.empty-courses-state .hint-text {
+    font-size: 0.75rem;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+/* ── Faculty Container ── */
+.faculty-container .container-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-shrink: 0;
+}
+
+/* Faculty Grid */
+.faculty-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    align-content: start;
+}
+
+/* Faculty Cards - Redesigned */
+.faculty-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
+    position: relative;
+}
+
+.faculty-card:hover {
+    border-color: #6b0f1a;
+    box-shadow: 0 4px 12px rgba(107, 15, 26, 0.1);
+    transform: translateY(-2px);
+}
+
+.faculty-card.selected {
+    border-color: #6b0f1a;
+    background: #fdf2f3;
+    box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.1);
+}
+
+/* Faculty Photo/Avatar - Top Left Corner */
+.faculty-photo,
+.faculty-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+}
+
+.faculty-photo {
+    object-fit: cover;
+    background: white;
+}
+
+.faculty-avatar {
+    background: linear-gradient(135deg, #6b0f1a 0%, #8b1f2f 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* Faculty Info - Right Side of Circle */
+.faculty-info {
+    margin-left: 68px;
+    margin-top: 0;
+    padding-top: 18px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 60px;
+}
+
+.faculty-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.35;
+    margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Faculty Description Box */
+.faculty-description-box {
+    margin-top: auto;
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.description-placeholder {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin: 0;
+    font-style: italic;
+    text-align: center;
+}
+
+/* ── Empty State ── */
+.empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+    text-align: center;
+}
+
+.empty-state svg {
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+    .courses-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .courses-container {
+        min-height: 600px;
+    }
+
+    .staging-area-section {
+        min-height: 350px;
+    }
+
+    .faculty-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
 }

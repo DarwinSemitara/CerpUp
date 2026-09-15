@@ -19,8 +19,55 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # ══════════════════════════════════════════════════════════════════════════════
+# SUPABASE RETRY HELPER
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def retry_supabase_query(query_func, max_retries=3, initial_delay=0.5):
+    """
+    Retry a Supabase query with exponential backoff on network errors.
+
+    Args:
+        query_func: A function that returns a Supabase query (before .execute())
+        max_retries: Maximum number of retry attempts
+        initial_delay: Initial delay in seconds before first retry
+
+    Returns:
+        Query result
+    """
+    last_error = None
+    delay = initial_delay
+
+    for attempt in range(max_retries):
+        try:
+            return query_func().execute()
+        except Exception as e:
+            last_error = e
+            error_msg = str(e)
+
+            # Check if it's a retryable error (network/timeout/connection errors)
+            if ('WinError 10035' in error_msg or 'ReadError' in error_msg or 
+                'timeout' in error_msg.lower() or 'ConnectionTerminated' in error_msg or
+                'RemoteProtocolError' in error_msg or 'connection' in error_msg.lower()):
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"Supabase query failed (attempt {attempt + 1}/{max_retries}): {type(e).__name__}. Retrying in {delay}s...")
+                    time.sleep(delay)
+                    delay *= 2  # Exponential backoff
+                    continue
+
+            # Non-retryable error, raise immediately
+            raise
+
+    # All retries failed
+    logger.error(
+        f"Supabase query failed after {max_retries} attempts: {last_error}")
+    raise last_error
+
+# ══════════════════════════════════════════════════════════════════════════════
 # GA PROGRESS TRACKING (PHASE 1 FIX #3)
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 ga_progress = {
     'running': False,
@@ -161,7 +208,7 @@ def login_required(f):
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        logger.info(f"🔐 LOGIN_REQUIRED CHECK - Path: {request.path}")
+        logger.info(f"� LOGIN_REQUIRED CHECK - Path: {request.path}")
         logger.info(f"   Session exists: {bool(session)}")
         logger.info(f"   Session keys: {list(session.keys())}")
         logger.info(f"   Has 'uid': {'uid' in session}")
@@ -185,7 +232,7 @@ def login_required(f):
         uid = session.get('uid')
         role = session.get('role')
 
-        logger.info(f"✅ AUTHENTICATION SUCCESS - UID: {uid} | Role: {role}")
+        logger.info(f"AUTHENTICATION SUCCESS - UID: {uid} | Role: {role}")
 
         if not uid or not role:
             logger.error(
@@ -267,14 +314,18 @@ def api_login():
 
     if username and password:
         # Direct username/password login (for admin)
-        if username == 'admin' and password == 'admin123':
+        # Get credentials from environment variables for security
+        ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'cerp_admin')
+        ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'CerpAdmin783695!')
+        
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             session.permanent = True  # Make session persistent
             session['uid'] = 'admin-hardcoded'
             session['email'] = 'admin'
             session['role'] = 'admin'
 
             logger.info("=" * 80)
-            logger.info(f"🔑 SESSION CREATED (ADMIN)")
+            logger.info(f"� SESSION CREATED (ADMIN)")
             logger.info(f"   UID: admin-hardcoded")
             logger.info(f"   Email: admin")
             logger.info(f"   Role: admin")
@@ -324,7 +375,7 @@ def api_login():
     session['role'] = role
 
     logger.info("=" * 80)
-    logger.info(f"🔑 SESSION CREATED")
+    logger.info(f"� SESSION CREATED")
     logger.info(f"   UID: {uid}")
     logger.info(f"   Email: {email}")
     logger.info(f"   Role: {role}")
@@ -404,15 +455,15 @@ def get_current_member():
     try:
         uid = session.get('uid')
         role = session.get('role')
-        logger.info(f"📋 GET_CURRENT_MEMBER - UID: {uid} | Role: {role}")
+        logger.info(f"GET_CURRENT_MEMBER - UID: {uid} | Role: {role}")
 
         if not uid:
-            logger.error("❌ GET_CURRENT_MEMBER - No UID in session!")
+            logger.error(f" GET_CURRENT_MEMBER - No UID in session!")
             return jsonify({'error': 'Not authenticated', 'debug': 'No uid in session'}), 401
 
         # Handle admin hardcoded user
         if uid == 'admin-hardcoded' and role == 'admin':
-            logger.info(f"✅ GET_CURRENT_MEMBER - Admin hardcoded user")
+            logger.info(f"GET_CURRENT_MEMBER - Admin hardcoded user")
             return jsonify({
                 'id': 'admin-hardcoded',
                 'uid': 'admin-hardcoded',
@@ -428,15 +479,33 @@ def get_current_member():
         member_list = [{'id': d.id, **d.to_dict()} for d in members]
 
         if member_list:
-            logger.info(
-                f"✅ GET_CURRENT_MEMBER - Found member: {member_list[0].get('firstName', 'Unknown')}")
-            return jsonify(member_list[0])
+            member_data = member_list[0]
+            
+            # Build fullName from 'first' and 'last' fields (same as staff endpoint does)
+            first = member_data.get('first', '')
+            last = member_data.get('last', '')
+            suffix = member_data.get('suffix', '')
+            
+            full_name = f"{first} {last}".strip()
+            if suffix and full_name:
+                full_name += f", {suffix}"
+            
+            # Add standardized name fields to response
+            member_data['firstName'] = first
+            member_data['lastName'] = last
+            member_data['fullName'] = full_name if full_name else member_data.get('email', 'Unknown User')
+            
+            # Override 'role' field with session role (admin/user), not job title
+            member_data['role'] = role  # Use session role, not database role field
+            
+            logger.info(f"✅ GET_CURRENT_MEMBER - Found member: {full_name or member_data.get('email', 'Unknown')}")
+            return jsonify(member_data)
         else:
             logger.warning(
                 f"⚠️ GET_CURRENT_MEMBER - Member not found for UID: {uid}")
             return jsonify({'error': 'Member not found'}), 404
     except Exception as e:
-        logger.error(f"💥 GET_CURRENT_MEMBER - Exception: {e}")
+        logger.error(f"� GET_CURRENT_MEMBER - Exception: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -458,7 +527,7 @@ def session_debug():
         'request_path': request.path,
         'request_method': request.method
     }
-    logger.info(f"🔍 SESSION DEBUG ENDPOINT CALLED: {debug_info}")
+    logger.info(f"SESSION DEBUG ENDPOINT CALLED: {debug_info}")
     return jsonify(debug_info)
 
 
@@ -631,15 +700,23 @@ def section_class_schedule():
 @app.route('/schedule/section/')
 @login_required
 def section_schedule_section():
+    """Section schedule view (DEPRECATED - redirects to Courses)."""
+    return redirect(url_for('schedule_courses'))
+
+
+@app.route('/schedule/courses/')
+@login_required
+def schedule_courses():
+    """Courses and Faculty management page."""
     if is_partial():
-        return render_template('partials/placeholder.html', label='Section')
+        return render_template('partials/courses.html')
     email = session.get('email', '')
     initial = email[0].upper() if email else 'A'
-    return render_template('pages/placeholder.html',
+    return render_template('pages/courses.html',
                            email=email,
                            initial=initial,
-                           page_title='Section',
-                           active_page='section')
+                           page_title='Courses',
+                           active_page='courses')
 
 
 @app.route('/schedule/events/')
@@ -895,6 +972,9 @@ def che_chat():
         conversation_id = data.get('conversation_id')
         # New: explicit flag for schedule page chat
         is_schedule_page = data.get('is_schedule_page', False)
+        # New: user role (admin vs user/member)
+        user_role = data.get('user_role', 'admin')
+        user_name = data.get('user_name', None)
 
         if not message:
             return jsonify({'reply': 'Please send a message.', 'error': True}), 400
@@ -922,6 +1002,22 @@ def che_chat():
 
         # Always inject schedule context for scheduling awareness
         context_data = {}
+        
+        # Add hardcoded room list to context for CHE awareness
+        context_data['available_rooms'] = [
+            'CERP AVR',
+            'DCERP Conference Room',
+            'CLH',
+            'Geomatics Room',
+            'TCC-01',
+            'TCC-02',
+            'TCC-03',
+            'TCC-04',
+            'TCC-10',
+            'TCC-11',
+            'CHE REC'
+        ]
+        
         try:
             # Schedules (always loaded for GA awareness) - FROM SUPABASE
             result = supabase.table('schedules').select('*').execute()
@@ -969,7 +1065,9 @@ def che_chat():
             message=message,
             history=history,
             context_data=context_data,
-            is_system_conversation=is_system_conversation  # Pass conversation type flag
+            is_system_conversation=is_system_conversation,  # Pass conversation type flag
+            user_role=user_role,  # Pass user role (admin or user/member)
+            user_name=user_name  # Pass user name for filtering member schedules
         )
 
         # If CHE returned a scheduling action, pre-execute it for preview
@@ -1282,20 +1380,23 @@ def get_members():
         member_type = request.args.get('type', None)
         faculty_only = request.args.get('faculty', None)
 
-        # Query Supabase instead of Firestore
-        query = supabase.table('members').select('*')
+        # Build query function for retry
+        def build_query():
+            query = supabase.table('members').select('*')
 
-        if faculty_only and faculty_only.lower() == 'true':
-            # Filter by is_faculty = true
-            query = query.eq('is_faculty', True)
-        elif member_type:
-            # Filter by type
-            query = query.eq('type', member_type)
+            if faculty_only and faculty_only.lower() == 'true':
+                # Filter by is_faculty = true
+                query = query.eq('is_faculty', True)
+            elif member_type:
+                # Filter by type
+                query = query.eq('type', member_type)
 
-        # Order by created_at
-        query = query.order('created_at', desc=False)
+            # Order by created_at
+            query = query.order('created_at', desc=False)
+            return query
 
-        result = query.execute()
+        # Execute with retry logic
+        result = retry_supabase_query(build_query)
         members = result.data or []
 
         # Ensure 'uid' field exists (use 'id' as fallback for compatibility)
@@ -1311,7 +1412,8 @@ def get_members():
         return jsonify(members)
     except Exception as e:
         logger.error(f"Error in get_members: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        # Return empty array instead of error to allow UI to load
+        return jsonify([]), 200
 
 
 @app.route('/api/members', methods=['POST'])
@@ -1912,6 +2014,10 @@ def complete_first_login():
         return jsonify({'error': str(e)}), 500
 
 
+# ── Courses API ───────────────────────────────────────────────
+# Note: Main courses API endpoints are defined later in the file (line ~3304)
+# This section is intentionally empty to avoid duplicate route definitions
+
 # ── Research API ──────────────────────────────────────────────
 
 @app.route('/api/research', methods=['GET'])
@@ -2460,6 +2566,55 @@ def get_fsr_footnotes(member_id):
 
 # ── Schedule API ──────────────────────────────────────────────
 
+@app.route('/api/schedules/generated', methods=['GET'])
+@login_required
+def get_generated_schedules():
+    """Get generated schedules from generated_schedules table (for review before saving)."""
+    try:
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
+
+        if not school_year or not semester:
+            return jsonify({'success': False, 'message': 'School year and semester required'}), 400
+
+        # Query generated_schedules table
+        result = supabase.table('generated_schedules').select('*').eq(
+            'school_year', school_year).eq('semester', semester).execute()
+
+        schedules = []
+        for row in result.data:
+            schedules.append({
+                'id': row.get('id'),
+                'subj_code': row.get('subj_code'),
+                'subjCode': row.get('subj_code'),  # Legacy format
+                'subj_name': row.get('subj_name'),
+                'subjName': row.get('subj_name'),  # Legacy format
+                'prof': row.get('prof'),
+                'room': row.get('room'),
+                'section': row.get('section'),
+                'units': row.get('units'),
+                'day': row.get('day'),
+                'start': row.get('start_time'),
+                'start_time': row.get('start_time'),
+                'end': row.get('end_time'),
+                'end_time': row.get('end_time'),
+                'type': row.get('type'),
+                'school_year': row.get('school_year'),
+                'schoolYear': row.get('school_year'),  # Legacy format
+                'semester': row.get('semester'),
+                'generation_session_id': row.get('generation_session_id'),
+                'ga_fitness_score': row.get('ga_fitness_score'),
+            })
+
+        return jsonify({'success': True, 'schedules': schedules, 'count': len(schedules)})
+
+    except Exception as e:
+        logger.error(f"Error fetching generated schedules: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+
 @app.route('/api/schedules', methods=['GET'])
 @login_required
 def get_schedules():
@@ -2523,7 +2678,7 @@ def get_schedules():
 
                 entries.append(entry)
 
-            logger.info(f"✅ Found {len(entries)} schedules from Supabase")
+            logger.info(f"Found {len(entries)} schedules from Supabase")
 
             # Detailed logging for debugging
             print("\n" + "="*80)
@@ -2642,7 +2797,7 @@ def delete_schedule(entry_id):
         result = supabase.table('schedules').delete().eq(
             'id', entry_id).execute()
 
-        logger.info(f"✅ Deleted schedule {entry_id}")
+        logger.info(f"Deleted schedule {entry_id}")
         return jsonify({'status': 'ok'})
 
     except Exception as e:
@@ -2691,7 +2846,7 @@ def update_schedule(entry_id):
         if not result.data:
             return jsonify({'error': 'Update failed.'}), 500
 
-        logger.info(f"✅ Updated schedule {entry_id}: {update_data}")
+        logger.info(f"Updated schedule {entry_id}: {update_data}")
         return jsonify({'status': 'ok', 'id': entry_id, 'updated': update_data})
 
     except Exception as e:
@@ -2779,7 +2934,7 @@ def batch_save_schedules():
                 return jsonify({'error': 'Batch insert failed'}), 500
 
             saved_count = len(insert_result.data)
-            logger.info(f"✅ Saved {saved_count} schedules")
+            logger.info(f"Saved {saved_count} schedules")
 
             return jsonify({
                 'status': 'ok',
@@ -2789,7 +2944,7 @@ def batch_save_schedules():
             })
         else:
             # No schedules to save, just return success
-            logger.info(f"✅ Cleared schedules (no new schedules to save)")
+            logger.info(f"Cleared schedules (no new schedules to save)")
             return jsonify({
                 'status': 'ok',
                 'deleted': deleted_count,
@@ -3168,6 +3323,327 @@ def delete_configured_subjects_by_professor():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/all-subjects', methods=['GET'])
+@login_required
+def get_all_subjects():
+    """Get ALL subjects from the subjects collection/table, independent of schedule configuration."""
+    try:
+        logger.info("Fetching all subjects for courses page")
+
+        # Hardcoded list of all subjects - this can be moved to database later
+        all_subjects = [
+            # CERP Courses
+            {'code': 'CERP 101', 'name': 'Orientation on Research and Extension',
+                'units': 3, 'category': 'CERP'},
+            {'code': 'CERP 102', 'name': 'Research Methods',
+                'units': 3, 'category': 'CERP'},
+            {'code': 'CERP 103', 'name': 'Technical Writing',
+                'units': 3, 'category': 'CERP'},
+            {'code': 'CERP 140', 'name': 'Research Implementation',
+                'units': 3, 'category': 'CERP'},
+            {'code': 'CERP 150', 'name': 'Thesis Writing',
+                'units': 3, 'category': 'CERP'},
+            {'code': 'CERP 201', 'name': 'Advanced Research Methods',
+                'units': 3, 'category': 'CERP'},
+            {'code': 'CERP 202', 'name': 'Quantitative Research Design',
+                'units': 3, 'category': 'CERP'},
+            {'code': 'CERP 203', 'name': 'Qualitative Research Design',
+                'units': 3, 'category': 'CERP'},
+
+            # HUME Courses
+            {'code': 'HUME 100', 'name': 'Art Appreciation',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 105', 'name': 'Ethics', 'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 111', 'name': 'Philippine History',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 123', 'name': 'Filipino sa Iba\'t Ibang Disiplina',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 130', 'name': 'Literature',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 140', 'name': 'Philosophy',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 150', 'name': 'Logic',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 160', 'name': 'World Literature',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 170', 'name': 'Asian Studies',
+                'units': 3, 'category': 'HUME'},
+            {'code': 'HUME 180', 'name': 'Philippine Literature',
+                'units': 3, 'category': 'HUME'},
+
+            # NSTP Courses
+            {'code': 'NSTP 1', 'name': 'National Service Training Program 1',
+                'units': 3, 'category': 'NSTP'},
+            {'code': 'NSTP 2', 'name': 'National Service Training Program 2',
+                'units': 3, 'category': 'NSTP'},
+        ]
+
+        logger.info(f"Returning {len(all_subjects)} subjects")
+        return jsonify({'subjects': all_subjects})
+    except Exception as e:
+        logger.error(f"Error fetching all subjects: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/courses', methods=['GET'])
+@login_required
+def get_all_courses():
+    """Get all courses with their available sections from Supabase."""
+    try:
+        logger.info("Fetching all courses from Supabase")
+
+        # Query courses table with retry logic
+        result = retry_supabase_query(
+            lambda: supabase.table('courses').select('*').order('course_code')
+        )
+
+        # Handle empty or None data
+        courses = result.data if result.data else []
+
+        logger.info(f"Fetched {len(courses)} courses")
+        return jsonify({'courses': courses})
+    except Exception as e:
+        logger.error(f"Error fetching courses: {e}")
+        logger.exception("Full traceback:")
+
+        # Return empty array instead of error to allow UI to load
+        return jsonify({'courses': [], 'error': str(e)}), 200
+
+
+@app.route('/api/courses/<course_id>/sections', methods=['PUT'])
+@login_required
+def update_course_sections(course_id):
+    """Update available sections for a specific course."""
+    try:
+        data = request.get_json()
+        available_sections = data.get('available_sections', [])
+
+        if not available_sections:
+            return jsonify({'error': 'At least one section must be provided'}), 400
+
+        logger.info(
+            f"Updating course {course_id} with sections: {available_sections}")
+
+        # Update the course
+        result = supabase.table('courses')\
+            .update({'available_sections': available_sections})\
+            .eq('id', course_id)\
+            .execute()
+
+        if not result.data:
+            return jsonify({'error': 'Course not found'}), 404
+
+        logger.info(f"Successfully updated course {course_id}")
+        return jsonify({'status': 'ok', 'course': result.data[0]})
+    except Exception as e:
+        logger.error(f"Error updating course sections: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/assigned-course-sections', methods=['GET'])
+@login_required
+def get_assigned_course_sections():
+    """Get all currently assigned course-section combinations (to prevent duplicates)."""
+    try:
+        logger.info("Fetching assigned course-sections")
+
+        # Query faculty_courses with course details with retry logic
+        result = retry_supabase_query(
+            lambda: supabase.table('faculty_courses').select(
+                'section, courses!inner(course_code)')
+        )
+
+        # Build list of 'COURSE-SECTION' strings
+        assigned = [f"{item['courses']['course_code']}-{item['section']}"
+                    for item in result.data]
+
+        logger.info(f"Found {len(assigned)} assigned course-sections")
+        return jsonify({'assigned': assigned})
+    except Exception as e:
+        logger.error(f"Error fetching assigned course-sections: {e}")
+        # Return empty array instead of error to allow UI to load
+        return jsonify({'assigned': [], 'error': str(e)}), 200
+
+
+@app.route('/api/faculty/<faculty_id>/courses', methods=['GET'])
+@login_required
+def get_faculty_courses(faculty_id):
+    """Get all course-section assignments for a specific faculty member."""
+    try:
+        logger.info(f"Fetching courses for faculty {faculty_id}")
+
+        # Join with courses table to get course details with retry logic
+        result = retry_supabase_query(
+            lambda: supabase.table('faculty_courses')
+            .select('section, courses!inner(course_code, course_name, units)')
+            .eq('faculty_id', faculty_id)
+        )
+
+        courses = []
+        for item in result.data:
+            courses.append({
+                'course_code': item['courses']['course_code'],
+                'course_name': item['courses']['course_name'],
+                'units': item['courses']['units'],
+                'section': item['section']
+            })
+
+        logger.info(f"Found {len(courses)} courses for faculty {faculty_id}")
+        return jsonify({'courses': courses})
+    except Exception as e:
+        logger.error(f"Error fetching faculty courses: {e}")
+        # Return empty courses instead of error
+        return jsonify({'courses': [], 'error': str(e)}), 200
+
+
+@app.route('/api/faculty/by-name/<professor_name>/courses', methods=['GET'])
+@login_required
+def get_faculty_courses_by_name(professor_name):
+    """Get all course-section assignments for a specific faculty member by name."""
+    try:
+        logger.info(f"Fetching courses for professor: {professor_name}")
+
+        # First, find the faculty member by name with retry logic
+        # Name format in members table: first + ' ' + last
+        members_result = retry_supabase_query(
+            lambda: supabase.table('members').select('id, first, last')
+        )
+
+        faculty_id = None
+        for member in members_result.data:
+            full_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
+            )
+            if full_name == professor_name:
+                faculty_id = member['id']
+                break
+
+        if not faculty_id:
+            logger.warning(f"No faculty found with name: {professor_name}")
+            return jsonify({'courses': []})
+
+        # Now fetch their course assignments with retry logic
+        result = retry_supabase_query(
+            lambda: supabase.table('faculty_courses')
+            .select('section, courses!inner(course_code, course_name, units)')
+            .eq('faculty_id', faculty_id)
+        )
+
+        courses = []
+        for item in result.data:
+            courses.append({
+                'course_code': item['courses']['course_code'],
+                'course_name': item['courses']['course_name'],
+                'units': item['courses']['units'],
+                'section': item['section']
+            })
+
+        logger.info(f"Found {len(courses)} courses for {professor_name}")
+        return jsonify({'courses': courses})
+    except Exception as e:
+        logger.error(f"Error fetching faculty courses by name: {e}")
+        # Return empty courses instead of error
+        return jsonify({'courses': [], 'error': str(e)}), 200
+
+
+@app.route('/api/faculty/<faculty_id>/courses', methods=['POST'])
+@login_required
+def assign_faculty_courses(faculty_id):
+    """
+    Assign course-section pairs to a faculty member.
+    Replaces all existing assignments for this faculty.
+    Enforces exclusive assignment: one course-section can only belong to one faculty.
+    If assignments is empty, removes all assignments for this faculty.
+    """
+    try:
+        data = request.get_json()
+        assignments = data.get('assignments', [])
+
+        # Allow empty assignments to clear all courses
+        if not assignments:
+            logger.info(
+                f"Removing all course assignments for faculty {faculty_id}")
+            # Delete all existing assignments
+            supabase.table('faculty_courses')\
+                .delete()\
+                .eq('faculty_id', faculty_id)\
+                .execute()
+
+            return jsonify({
+                'message': 'All assignments removed',
+                'faculty_id': faculty_id,
+                'assigned': []
+            }), 200
+
+        logger.info(
+            f"Assigning {len(assignments)} course-sections to faculty {faculty_id}")
+
+        # Get course details with available_sections
+        course_codes = list(set(a['course_code'] for a in assignments))
+        courses_result = supabase.table('courses')\
+            .select('id, course_code, available_sections')\
+            .in_('course_code', course_codes)\
+            .execute()
+
+        course_map = {c['course_code']: c for c in courses_result.data}
+
+        # Validate each assignment
+        validated_records = []
+        for assignment in assignments:
+            course_code = assignment['course_code']
+            section = assignment['section']
+
+            if course_code not in course_map:
+                return jsonify({'error': f'Course {course_code} not found'}), 400
+
+            course = course_map[course_code]
+
+            # VALIDATION 1: Check if section is available for this course
+            if section not in course['available_sections']:
+                return jsonify({
+                    'error': f'Section {section} is not available for {course_code}. '
+                    f'Available sections: {", ".join(course["available_sections"])}'
+                }), 400
+
+            # VALIDATION 2: Check if this course-section is already assigned to ANOTHER faculty
+            existing = supabase.table('faculty_courses')\
+                .select('faculty_id')\
+                .eq('course_id', course['id'])\
+                .eq('section', section)\
+                .execute()
+
+            if existing.data:
+                existing_faculty = existing.data[0]['faculty_id']
+                if existing_faculty != faculty_id:
+                    return jsonify({
+                        'error': f'{course_code} Section {section} is already assigned to another faculty'
+                    }), 409  # Conflict
+
+            validated_records.append({
+                'faculty_id': faculty_id,
+                'course_id': course['id'],
+                'section': section
+            })
+
+        # Delete existing assignments for this faculty
+        supabase.table('faculty_courses')\
+            .delete()\
+            .eq('faculty_id', faculty_id)\
+            .execute()
+
+        # Insert new assignments
+        if validated_records:
+            supabase.table('faculty_courses').insert(
+                validated_records).execute()
+
+        logger.info(
+            f"Successfully assigned {len(validated_records)} course-sections to faculty {faculty_id}")
+        return jsonify({'status': 'ok', 'assigned_count': len(validated_records)})
+
+    except Exception as e:
+        logger.error(f"Error assigning courses: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/schedule/generate-full', methods=['POST'])
 @login_required
 def api_generate_full_schedule():
@@ -3175,10 +3651,28 @@ def api_generate_full_schedule():
     Full semester schedule generation using enhanced GA with Phase 2 integration.
     Runs in background with real-time progress updates.
     """
+    # Direct file logging for debugging
+    with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
+        f.write("=" * 80 + "\n")
+        f.write(f"ENDPOINT CALLED at {datetime.now()}\n")
+        f.write("=" * 80 + "\n")
+        f.flush()
+    
+    print("=" * 80, flush=True)
+    print("🎯 /api/schedule/generate-full ENDPOINT CALLED", flush=True)
+    print("=" * 80, flush=True)
+    logger.info("/api/schedule/generate-full called")
     try:
         from services.scheduler_service import run_full_ga_v3, FullGAConfig, SubjectInput
 
         data = request.get_json()
+        
+        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
+            f.write(f"Request data: {data}\n")
+            f.flush()
+        
+        print(f"📦 Request data received: {data}", flush=True)
+        logger.info(f"� Request data: {data}")
         if not data:
             return jsonify({'success': False, 'message': 'No data provided.'}), 400
 
@@ -3187,6 +3681,18 @@ def api_generate_full_schedule():
         reference_semester = data.get('reference_semester', '1')
         reference_school_year = data.get('reference_school_year', '2026-2027')
         save_to_db = data.get('save_to_db', True)
+        
+        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
+            f.write(f"Target: {target_school_year} Sem {target_semester}\n")
+            f.write(f"Reference: {reference_school_year} Sem {reference_semester}\n")
+            f.flush()
+        
+        print(f"🎯 Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}", flush=True)
+        logger.info(f"Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}")
+
+        # CRITICAL FIX: Capture user_id BEFORE entering background thread
+        # (session is not available outside request context)
+        current_user_id = session.get('user_id')
 
         # Check if GA is already running
         with ga_progress_lock:
@@ -3204,18 +3710,44 @@ def api_generate_full_schedule():
 
         def run_ga_background():
             """Run GA with Phase 2 in background thread."""
+            with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                f.write(f"run_ga_background() started at {datetime.now()}\n")
+                f.flush()
+            
             try:
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write("Setting ga_progress running flag\n")
+                    f.flush()
+                
                 with ga_progress_lock:
                     ga_progress['running'] = True
 
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write("Updating progress: Loading reference schedules\n")
+                    f.flush()
+                
                 update_ga_progress(
                     status='running', message='Loading reference schedules...')
 
                 # Load reference semester schedules
                 reference_schedules = []
+                
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write("About to query Supabase for reference schedules\n")
+                    f.flush()
+                
                 try:
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"Querying: semester={reference_semester}, school_year={reference_school_year}\n")
+                        f.flush()
+                    
                     ref_result = supabase.table('schedules').select('*').eq(
                         'semester', reference_semester).eq('school_year', reference_school_year).execute()
+                    
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"Query successful: {len(ref_result.data)} records\n")
+                        f.flush()
+                    
                     for rd in ref_result.data:
                         reference_schedules.append({
                             'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
@@ -3228,19 +3760,50 @@ def api_generate_full_schedule():
                             'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
                             'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
                         })
+                    
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"Finished processing {len(reference_schedules)} reference schedules\n")
+                        f.flush()
+                        
                 except Exception as e:
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"ERROR loading reference schedules: {e}\n")
+                        import traceback
+                        f.write(traceback.format_exc())
+                        f.flush()
                     logger.warning(f"Reference semester load error: {e}")
 
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write(f"Calling update_ga_progress with {len(reference_schedules)} schedules\n")
+                    f.flush()
+                    
                 update_ga_progress(
                     status='running', message=f'Loaded {len(reference_schedules)} reference schedules')
 
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write("Progress updated successfully\n")
+                    f.flush()
+                    
+                logger.info(f"� Reference schedules loaded: {len(reference_schedules)} from {reference_school_year} Semester {reference_semester}")
+
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write("Loading faculty data from Firestore\n")
+                    f.flush()
+                    
                 # Load faculty data
                 prof_availability = {}
                 teaching_loads_map = {}
                 try:
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write("Querying members collection\n")
+                        f.flush()
+                    
                     member_docs = db.collection('members').where(
                         'is_faculty', '==', True).stream()
+                    
+                    faculty_count = 0
                     for d in member_docs:
+                        faculty_count += 1
                         md = d.to_dict()
                         full_name = f"{md.get('first', '')} {md.get('last', '')}".strip(
                         )
@@ -3252,39 +3815,182 @@ def api_generate_full_schedule():
                         load = md.get('teaching_load')
                         if load:
                             teaching_loads_map[full_name] = int(load)
+                    
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"Loaded {faculty_count} faculty members\n")
+                        f.flush()
+                        
                 except Exception as e:
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"ERROR loading faculty: {e}\n")
+                        import traceback
+                        f.write(traceback.format_exc())
+                        f.flush()
                     logger.warning(f"Faculty load error: {e}")
 
-                # Load rooms from Firestore
-                rooms_list = []
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write("Loading faculty course-section assignments\n")
+                    f.flush()
+                    
+                # Load faculty course-section assignments from Supabase
+                # {faculty_full_name: ["COURSE-SECTION", ...]}
+                faculty_course_assignments = {}
+                course_section_assignments = {}  # {"COURSE-SECTION": faculty_full_name}
+                try:
+                    # Fetch all faculty course assignments
+                    assignments_result = supabase.table('faculty_courses')\
+                        .select('faculty_id, section, courses!inner(course_code)')\
+                        .execute()
+
+                    # Fetch all members to map faculty_id to full name
+                    members_result = supabase.table('members')\
+                        .select('id, first, last, suffix')\
+                        .execute()
+
+                    # Build faculty ID to name mapping
+                    faculty_id_to_name = {}
+                    for member in members_result.data:
+                        full_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
+                        )
+                        if member.get('suffix'):
+                            full_name += f", {member['suffix']}"
+                        faculty_id_to_name[member['id']] = full_name
+
+                    # Build assignment dictionaries
+                    for assignment in assignments_result.data:
+                        faculty_id = assignment['faculty_id']
+                        course_code = assignment['courses']['course_code']
+                        section = assignment['section']
+                        course_section_key = f"{course_code}-{section}"
+
+                        faculty_name = faculty_id_to_name.get(faculty_id)
+                        if faculty_name:
+                            # Add to faculty assignments
+                            if faculty_name not in faculty_course_assignments:
+                                faculty_course_assignments[faculty_name] = []
+                            faculty_course_assignments[faculty_name].append(
+                                course_section_key)
+
+                            # Add to reverse mapping
+                            course_section_assignments[course_section_key] = faculty_name
+
+                    logger.info(
+                        f"Loaded {len(course_section_assignments)} faculty course-section assignments")
+                except Exception as e:
+                    logger.warning(
+                        f"Error loading faculty course assignments: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+                # Load rooms - ALWAYS use hardcoded list to ensure all rooms are included
+                # (Firestore may not have complete room data)
+                rooms_list = [
+                    'CERP AVR',
+                    'DCERP Conference Room',
+                    'CLH',
+                    'Geomatics Room',
+                    'TCC-01',
+                    'TCC-02',
+                    'TCC-03',
+                    'TCC-04',
+                    'TCC-10',
+                    'TCC-11',
+                    'CHE REC'
+                ]
+                
+                # Optionally merge with Firestore rooms if they exist
                 try:
                     room_docs = db.collection('rooms').stream()
                     for d in room_docs:
                         rd = d.to_dict()
-                        rooms_list.append(rd.get('name', d.id))
+                        room_name = rd.get('name', d.id)
+                        if room_name not in rooms_list:
+                            rooms_list.append(room_name)
                 except Exception:
-                    rooms_list = ['CERP AVR', 'CLH', 'DCERP Conference Room',
-                                  'TCC - 01', 'TCC - 02', 'TCC - 04', 'TCC - 11']
+                    pass  # Use hardcoded list only
 
                 # Extract subjects from reference schedules
+                # Deduplicate by course-section, but track day patterns (max 2 days per course)
                 subjects_dict = {}
+                day_patterns = {}  # Track which days each course-section meets
+                
                 for rs in reference_schedules:
-                    key = f"{rs['subjCode']}-{rs['section']}-{rs['prof']}"
+                    key = f"{rs['subjCode']}-{rs['section']}"
+                    
+                    # Track day pattern (deduplicate by day, max 2 days)
+                    if key not in day_patterns:
+                        day_patterns[key] = {}
+                    
+                    # Use day as key to avoid duplicate days, limit to 2 days max
+                    day = rs['day']
+                    if day not in day_patterns[key] and len(day_patterns[key]) < 2:
+                        day_patterns[key][day] = {
+                            'day': day,
+                            'start': rs['start'],
+                            'end': rs['end'],
+                            'room': rs['room']
+                        }
+                    
+                    # Create subject entry (deduplicated)
                     if key not in subjects_dict:
+                        # CRITICAL: Get professor from faculty_courses allocation, NOT from reference schedule
+                        assigned_prof = course_section_assignments.get(key)
+                        if not assigned_prof:
+                            # Fallback to reference if no current assignment
+                            assigned_prof = rs['prof']
+                            logger.warning(f"No faculty assignment found for {key}, using reference professor: {assigned_prof}")
+                        
                         subjects_dict[key] = {
                             'code': rs['subjCode'],
                             'name': rs['subjName'],
                             'section': rs['section'],
                             'units': rs['units'],
-                            'weekly_hours': rs['units'],  # Approximate
-                            # Fixed: was 'professors'
-                            'allocated_professors': [rs['prof']]
+                            'weekly_hours': rs['units'],
+                            'allocated_professors': [assigned_prof]  # Use current faculty allocation
                         }
+                
+                # Convert day_patterns from dict to list, ensure exactly 2 days
+                for key in day_patterns:
+                    days_list = list(day_patterns[key].values())
+                    if len(days_list) < 2:
+                        logger.warning(f"{key} has only {len(days_list)} meeting day(s), expected 2")
+                    day_patterns[key] = days_list[:2]  # Take only first 2 days
 
                 subjects = [SubjectInput(**s) for s in subjects_dict.values()]
 
+                logger.info(f"Extracted {len(subjects)} unique course-sections from reference")
+                logger.info(f"Day patterns tracked for {len(day_patterns)} course-sections")
+
                 update_ga_progress(
                     status='running', message=f'Building GA config for {len(subjects)} subjects...')
+
+                # Build QualificationMatrix with course-section assignments
+                from services.scheduler_service import QualificationMatrix
+                qualification_matrix = QualificationMatrix()
+
+                # Populate course-section assignments
+                qualification_matrix.course_section_to_faculty = course_section_assignments
+                qualification_matrix.faculty_to_course_sections = faculty_course_assignments
+
+                # Also build course-level mappings (without sections) for backward compatibility
+                for course_section_key, faculty_name in course_section_assignments.items():
+                    course_code = course_section_key.split('-')[0]
+
+                    # Add to course_to_faculty
+                    if course_code not in qualification_matrix.course_to_faculty:
+                        qualification_matrix.course_to_faculty[course_code] = [
+                        ]
+                    if faculty_name not in qualification_matrix.course_to_faculty[course_code]:
+                        qualification_matrix.course_to_faculty[course_code].append(
+                            faculty_name)
+
+                    # Add to faculty_to_courses
+                    if faculty_name not in qualification_matrix.faculty_to_courses:
+                        qualification_matrix.faculty_to_courses[faculty_name] = [
+                        ]
+                    if course_code not in qualification_matrix.faculty_to_courses[faculty_name]:
+                        qualification_matrix.faculty_to_courses[faculty_name].append(
+                            course_code)
 
                 # Build GA config
                 config = FullGAConfig(
@@ -3293,6 +3999,7 @@ def api_generate_full_schedule():
                     prof_availability=prof_availability,
                     teaching_loads=teaching_loads_map,
                     reference_schedules=reference_schedules,
+                    qualification_matrix=qualification_matrix,  # ADD QUALIFICATION MATRIX
                     pop_size=50,
                     max_generations=100,
                     time_limit_seconds=45.0  # Minimum 45 seconds as requested
@@ -3312,46 +4019,161 @@ def api_generate_full_schedule():
                 # RUN PHASE 2 GA!
                 update_ga_progress(
                     status='running', message='🚀 Starting Phase 2 GA...')
+                
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write("About to call run_full_ga_v3()\n")
+                    f.write(f"Config: {len(subjects)} subjects, {len(rooms_list)} rooms\n")
+                    f.flush()
+                
+                logger.info(f"� About to call run_full_ga_v3()")
+                logger.info(f"� Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
+                
                 result = run_full_ga_v3(
                     config, progress_callback=progress_callback)
+                
+                with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                    f.write(f"run_full_ga_v3() returned: success={result.get('success')}\n")
+                    f.flush()
+                
+                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
+
+                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
 
                 if result['success']:
                     schedules = result.get('schedules', [])
+                    
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"GA returned {len(schedules)} schedules\n")
+                        if schedules:
+                            f.write(f"First 3 schedules:\n")
+                            for i, sched in enumerate(schedules[:3]):
+                                f.write(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}\n")
+                        f.flush()
+                    
+                    logger.info(f"GA returned {len(schedules)} schedules")
 
-                    # Save to database if requested
+                    # EXPAND SCHEDULES BASED ON DAY PATTERNS FROM REFERENCE
+                    # Use the GA's optimized times, but duplicate for all days in the pattern
+                    expanded_schedules = []
+                    for sched in schedules:
+                        key = f"{sched.get('subjCode')}-{sched.get('section')}"
+                        pattern = day_patterns.get(key, [])
+                        
+                        if pattern and len(pattern) >= 2:
+                            # Has a defined pattern from reference (e.g., MW, TTH, WF)
+                            # Create one entry for each day, using GA's time/room but reference days
+                            days_in_pattern = [p['day'] for p in pattern]
+                            for day in days_in_pattern:
+                                entry = sched.copy()
+                                entry['day'] = day
+                                # Keep GA's optimized time and room
+                                expanded_schedules.append(entry)
+                        else:
+                            # No pattern or only one day - keep as is
+                            expanded_schedules.append(sched)
+                    
+                    with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                        f.write(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns\n")
+                        f.write(f"Sample expanded:\n")
+                        for i, sched in enumerate(expanded_schedules[:5]):
+                            f.write(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}\n")
+                        f.flush()
+                    
+                    logger.info(f"Expanded {len(schedules)} schedules to {len(expanded_schedules)} using reference patterns")
+                    
+                    schedules = expanded_schedules
+
+                    # Save directly to main schedules table (so users can see and review on timetable)
                     if save_to_db and schedules:
+                        with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                            f.write(f"Starting save: {len(schedules)} schedules to main schedules table\n")
+                            f.flush()
+                        
                         update_ga_progress(
-                            status='running', message=f'Saving {len(schedules)} schedules to database...')
-                        saved = 0
-                        for sched in schedules:
-                            new_id = str(uuid.uuid4())
-                            supabase.table('schedules').insert({
-                                'id': new_id,
-                                'subj_code': sched.get('subjCode', ''),
-                                'subj_name': sched.get('subjName', ''),
-                                'prof': sched.get('prof', ''),
-                                'room': sched.get('room', ''),
-                                'section': sched.get('section', ''),
-                                'units': int(float(sched.get('units', 0))) if sched.get('units') else 0,
-                                'day': sched.get('day', ''),
-                                'start': sched.get('start', ''),
-                                'end': sched.get('end', ''),
-                                'type': 'Lecture',
-                                'year': '1',
-                                'semester': target_semester,
-                                'school_year': target_school_year,
-                                'created_at': datetime.now(timezone.utc).isoformat(),
-                            }).execute()
-                            saved += 1
+                            status='running', message=f'Saving {len(schedules)} schedules to timetable...')
 
-                    update_ga_progress(
-                        status='completed',
-                        message=f'✅ Generated {len(schedules)} schedules successfully!' + (
-                            f' Saved to database.' if save_to_db else ''),
-                        hard_viols=result.get('hard_violations', 0),
-                        soft_viols=result.get('soft_violations', 0),
-                        schedules=schedules  # Include schedules for frontend to display
-                    )
+                        saved = 0
+                        save_errors = []
+
+                        # Clear any existing schedules for this semester first
+                        try:
+                            logger.info(
+                                f"Clearing old schedules for {target_school_year} Semester {target_semester}")
+                            delete_result = supabase.table('schedules').delete().eq(
+                                'semester', str(target_semester)).eq('school_year', target_school_year).execute()
+                            logger.info(f"Cleared old schedules")
+                        except Exception as e:
+                            logger.warning(f"Error clearing old schedules: {e}")
+
+                        # BATCH INSERT: Prepare all schedule records first
+                        schedule_records = []
+                        for idx, sched in enumerate(schedules):
+                            try:
+                                new_id = str(uuid.uuid4())
+                                schedule_data = {
+                                    'id': new_id,
+                                    'subj_code': sched.get('subjCode', ''),
+                                    'subj_name': sched.get('subjName', ''),
+                                    'prof': sched.get('prof', ''),
+                                    'room': sched.get('room', ''),
+                                    'section': sched.get('section', ''),
+                                    'units': float(sched.get('units', 0)) if sched.get('units') else 0,
+                                    'day': sched.get('day', ''),
+                                    'start': sched.get('start', ''),
+                                    'end': sched.get('end', ''),
+                                    'type': 'Lecture',
+                                    'semester': str(target_semester),
+                                    'school_year': target_school_year,
+                                    'year': '1',
+                                    'created_at': datetime.now(timezone.utc).isoformat(),
+                                    'pairedWith': None
+                                }
+                                schedule_records.append(schedule_data)
+                                
+                                # Log first schedule for debugging
+                                if idx == 0:
+                                    logger.info(f"First schedule data: {schedule_data}")
+                            except Exception as e:
+                                error_msg = f"Failed to prepare schedule {idx}: {e}"
+                                logger.error(error_msg)
+                                save_errors.append(error_msg)
+                        
+                        logger.info(f"Prepared {len(schedule_records)} schedule records for batch insert")
+                        
+                        # Insert in chunks of 100 to avoid payload size limits
+                        chunk_size = 100
+                        for i in range(0, len(schedule_records), chunk_size):
+                            chunk = schedule_records[i:i + chunk_size]
+                            try:
+                                insert_result = supabase.table('schedules').insert(chunk).execute()
+                                saved += len(chunk)
+                                logger.info(f"Batch inserted chunk {i//chunk_size + 1}: {len(chunk)} schedules (total: {saved})")
+                            except Exception as e:
+                                error_msg = f"Failed to insert batch starting at {i}: {e}"
+                                logger.error(error_msg)
+                                save_errors.append(error_msg)
+                                if (saved % 50) == 0:
+                                    logger.info(f"Progress: {saved} schedules saved so far")
+                        
+                        logger.info(
+                            f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
+                        
+                        with open('documents/debug_ga.txt', 'a', encoding='utf-8') as f:
+                            f.write(f"✅ Save complete: {saved} schedules saved to main schedules table\n")
+                            f.flush()
+                        
+                        if save_errors:
+                            logger.error(f"{len(save_errors)} schedules failed to save:")
+                            for err in save_errors[:5]:  # Log first 5 errors
+                                logger.error(f"  - {err}")
+
+                        update_ga_progress(
+                            status='completed',
+                            message=f'✅ Generated {saved} schedules for {target_school_year} Semester {target_semester}! Review them on the timetable.',
+                            hard_viols=result.get('hard_violations', 0),
+                            soft_viols=result.get('soft_violations', 0),
+                            schedules=schedules  # Include schedules for frontend to display
+                        )
                 else:
                     update_ga_progress(
                         status='failed',
@@ -3370,15 +4192,120 @@ def api_generate_full_schedule():
                 with ga_progress_lock:
                     ga_progress['running'] = False
 
-        # Start background thread
-        thread = threading.Thread(target=run_ga_background, daemon=True)
+        # Start background thread WITH app context
+        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
+            f.write("About to create background thread\n")
+            f.flush()
+        
+        print("=" * 80, flush=True)
+        print("🎬 About to create background thread...", flush=True)
+        print("=" * 80, flush=True)
+        logger.info(f"� About to create background thread...")
+        
+        def run_with_context():
+            with open('documents/debug_thread.txt', 'a', encoding='utf-8') as f:
+                f.write(f"Thread started at {datetime.now()}\n")
+                f.flush()
+            
+            print("🚀 Background thread started, acquiring app context...", flush=True)
+            logger.info(f"� Background thread started, acquiring app context...")
+            try:
+                with app.app_context():
+                    with open('documents/debug_thread.txt', 'a', encoding='utf-8') as f:
+                        f.write("App context acquired\n")
+                        f.flush()
+                    
+                    print("✅ App context acquired, starting GA...", flush=True)
+                    logger.info("App context acquired, starting GA...")
+                    run_ga_background()
+            except Exception as e:
+                with open('documents/debug_thread.txt', 'a', encoding='utf-8') as f:
+                    f.write(f"ERROR: {e}\n")
+                    import traceback
+                    f.write(traceback.format_exc())
+                    f.flush()
+                
+                print(f"❌ Fatal error in background thread: {e}", flush=True)
+                logger.error(f" Fatal error in background thread: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
+            f.write("Creating thread object\n")
+            f.flush()
+        
+        print("🔧 Creating thread object...", flush=True)
+        logger.info(f"� Creating thread object...")
+        thread = threading.Thread(target=run_with_context, daemon=True)
+        
+        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
+            f.write("Starting thread\n")
+            f.flush()
+        
+        print("▶️ Starting thread...", flush=True)
+        logger.info("Starting thread...")
         thread.start()
+        
+        with open('documents/debug_endpoint.txt', 'a', encoding='utf-8') as f:
+            f.write("Thread started successfully\n")
+            f.flush()
+        
+        print("📤 Background thread dispatched", flush=True)
+        logger.info(f"� Background thread dispatched")
 
         return jsonify({
             'success': True,
             'message': 'Schedule generation started with Phase 2',
-            'note': 'Poll /api/schedule/generate-progress for real-time updates'
+            'note': 'Poll /api/schedule/generate-progress for real-time updates. Generated schedules will be saved to generated_schedules table for review.'
         })
+
+    except Exception as e:
+        logger.error(f"Generate full schedule error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/schedule/save-generated', methods=['POST'])
+@login_required
+def api_save_generated_schedule():
+    """
+    Acknowledge completion of schedule generation.
+    Schedules are already saved to main table during generation,
+    so this just returns a success message.
+    """
+    try:
+        data = request.get_json()
+        school_year = data.get('school_year')
+        semester = data.get('semester')
+
+        if not school_year or not semester:
+            return jsonify({'success': False, 'message': 'School year and semester required'}), 400
+
+        # Verify schedules exist in main table
+        result = supabase.table('schedules').select('id').eq(
+            'school_year', school_year).eq('semester', str(semester)).limit(1).execute()
+
+        if not result.data:
+            return jsonify({'success': False, 'message': f'No schedules found for {school_year} Semester {semester}'}), 404
+
+        # Count total schedules for this semester
+        count_result = supabase.table('schedules').select('id', count='exact').eq(
+            'school_year', school_year).eq('semester', str(semester)).execute()
+        
+        schedule_count = count_result.count if hasattr(count_result, 'count') else len(count_result.data)
+
+        return jsonify({
+            'success': True,
+            'message': f'✅ Generation complete! {schedule_count} schedules are now on the timetable for {school_year} Semester {semester}.',
+            'count': schedule_count
+        })
+
+    except Exception as e:
+        logger.error(f"Error confirming saved schedules: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
     except Exception as e:
         logger.error(f"Generate full schedule error: {e}")
@@ -4030,11 +4957,24 @@ def member_fsr_data():
         ext_docs = db.collection('extensions').where('uid', '==', uid).stream()
         extensions = [d.to_dict() for d in ext_docs]
 
-        # Schedules — match by last name
+        # Schedules — match by last name and filter by semester/year if provided
+        semester = request.args.get('semester')
+        school_year = request.args.get('school_year')
+        
         last_name = (member_data.get('last') or '').strip().lower()
         schedules = []
         if last_name:
-            all_sched = supabase.table('schedules').select('*').execute()
+            # Build query with optional filters
+            query = supabase.table('schedules').select('*')
+            
+            # Apply filters if provided
+            if semester:
+                query = query.eq('semester', semester)
+            if school_year:
+                query = query.eq('school_year', school_year)
+            
+            all_sched = query.execute()
+            
             for s in (all_sched.data or []):
                 prof = (s.get('prof') or '').lower()
                 if last_name in prof:
@@ -4047,6 +4987,8 @@ def member_fsr_data():
                         'end':      s.get('end', ''),
                         'section':  s.get('section', ''),
                         'units':    s.get('units', ''),
+                        'semester': s.get('semester', ''),
+                        'school_year': s.get('school_year', ''),
                     })
 
         return jsonify({
@@ -4363,3 +5305,6 @@ def user_admin_page():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+

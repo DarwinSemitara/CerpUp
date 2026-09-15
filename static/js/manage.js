@@ -388,6 +388,270 @@ function showSuccessModal(message) {
     }, 2000);
 }
 
+// ── Courses Management ────────────────────────────────────────
+
+let coursesData = [];
+let facultyData = [];
+let currentCategory = 'CERP';
+let selectedFacultyId = null;
+
+async function loadCourses() {
+    try {
+        const res = await fetch('/api/courses');
+        if (!res.ok) throw new Error();
+        coursesData = await res.json();
+        renderCourses();
+    } catch (error) {
+        console.error('Failed to load courses:', error);
+        coursesData = [];
+        renderCourses();
+    }
+}
+
+async function loadFacultyForCourses() {
+    try {
+        const res = await fetch('/api/members');
+        if (!res.ok) throw new Error();
+        const allMembers = await res.json();
+        // Filter only faculty members
+        facultyData = allMembers.filter(m => m.is_faculty === true);
+        renderFacultyCards();
+    } catch (error) {
+        console.error('Failed to load faculty:', error);
+        facultyData = [];
+        renderFacultyCards();
+    }
+}
+
+window.switchCourseCategory = function (category, button) {
+    currentCategory = category;
+
+    // Update active button
+    document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+
+    renderCourses();
+};
+
+function renderCourses() {
+    const container = document.getElementById('courses-list');
+    if (!container) return;
+
+    // Filter courses by current category
+    const filtered = coursesData.filter(course => {
+        const code = course.course_code || '';
+        if (currentCategory === 'CERP') {
+            return code.startsWith('CERP');
+        } else if (currentCategory === 'HUME') {
+            return code.startsWith('HUME');
+        } else if (currentCategory === 'NSTP') {
+            return code.startsWith('NSTP');
+        }
+        return false;
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+                <p>No ${currentCategory} courses found</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(course => {
+        return `
+            <div class="course-block" draggable="true" data-course-id="${course.id}" ondragstart="handleCourseDragStart(event)">
+                <div class="course-code">${course.course_code || 'N/A'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderFacultyCards() {
+    const container = document.getElementById('faculty-grid');
+    if (!container) return;
+
+    if (facultyData.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                <p>No faculty members found</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = facultyData.map(faculty => {
+        const photoHtml = faculty.photo_url
+            ? `<img src="${faculty.photo_url}" class="faculty-photo" alt="${faculty.first}">`
+            : `<div class="faculty-avatar">${(faculty.first || 'U')[0].toUpperCase()}</div>`;
+
+        const isExpanded = selectedFacultyId === faculty.id;
+
+        return `
+            <div class="faculty-card ${isExpanded ? 'expanded' : ''}" data-faculty-id="${faculty.id}" onclick="toggleFacultyCard('${faculty.id}')">
+                <div class="faculty-header">
+                    ${photoHtml}
+                    <div class="faculty-info">
+                        <h3 class="faculty-name">${faculty.first} ${faculty.last}</h3>
+                        <p class="faculty-position">${faculty.position || 'Faculty Member'}</p>
+                    </div>
+                    <svg class="expand-icon" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+                <div class="faculty-courses-area" ondrop="handleCourseDrop(event, '${faculty.id}')" ondragover="handleCourseDragOver(event)">
+                    ${isExpanded ? '<div class="loading-courses">Loading courses...</div>' : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // If a faculty was expanded, reload their courses
+    if (selectedFacultyId) {
+        loadFacultyCourses(selectedFacultyId);
+    }
+}
+
+window.toggleFacultyCard = async function (facultyId) {
+    if (selectedFacultyId === facultyId) {
+        // Collapse
+        selectedFacultyId = null;
+        renderFacultyCards();
+    } else {
+        // Expand
+        selectedFacultyId = facultyId;
+        renderFacultyCards();
+    }
+};
+
+async function loadFacultyCourses(facultyId) {
+    const card = document.querySelector(`.faculty-card[data-faculty-id="${facultyId}"]`);
+    if (!card) return;
+
+    const coursesArea = card.querySelector('.faculty-courses-area');
+
+    try {
+        const res = await fetch(`/api/faculty/${facultyId}/courses`);
+        if (!res.ok) throw new Error();
+        const facultyCourses = await res.json();
+
+        if (facultyCourses.length === 0) {
+            coursesArea.innerHTML = `
+                <div class="empty-courses-message">
+                    <p>No courses assigned yet. Drag courses here to assign.</p>
+                </div>
+            `;
+        } else {
+            coursesArea.innerHTML = facultyCourses.map(course => `
+                <div class="faculty-course-block" data-course-id="${course.id}">
+                    <div class="course-code">${course.course_code || 'N/A'}</div>
+                    <button class="remove-course-btn" onclick="removeCourseFromFaculty(event, '${facultyId}', '${course.id}')">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load faculty courses:', error);
+        coursesArea.innerHTML = `
+            <div class="empty-courses-message error">
+                <p>Failed to load courses. Please try again.</p>
+            </div>
+        `;
+    }
+}
+
+// Drag and drop handlers
+window.handleCourseDragStart = function (event) {
+    const courseId = event.target.dataset.courseId;
+    event.dataTransfer.setData('courseId', courseId);
+    event.target.classList.add('dragging');
+};
+
+window.handleCourseDragOver = function (event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('drag-over');
+};
+
+window.handleCourseDrop = async function (event, facultyId) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.classList.remove('drag-over');
+
+    const courseId = event.dataTransfer.getData('courseId');
+    if (!courseId) return;
+
+    // Remove dragging class
+    document.querySelectorAll('.course-block.dragging').forEach(el => el.classList.remove('dragging'));
+
+    try {
+        const res = await fetch(`/api/faculty/${facultyId}/courses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ course_id: courseId })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Failed to assign course');
+        }
+
+        // Reload the faculty's courses
+        await loadFacultyCourses(facultyId);
+        showSuccessModal('Course assigned successfully!');
+    } catch (error) {
+        alert('Failed to assign course: ' + error.message);
+    }
+};
+
+window.removeCourseFromFaculty = async function (event, facultyId, courseId) {
+    event.stopPropagation();
+
+    try {
+        const res = await fetch(`/api/faculty/${facultyId}/courses/${courseId}`, {
+            method: 'DELETE'
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Failed to remove course');
+        }
+
+        // Reload the faculty's courses
+        await loadFacultyCourses(facultyId);
+        showSuccessModal('Course removed successfully!');
+    } catch (error) {
+        alert('Failed to remove course: ' + error.message);
+    }
+}
+
+// Remove drag-over class when leaving
+document.addEventListener('dragleave', function (event) {
+    if (event.target.classList.contains('faculty-courses-area')) {
+        event.target.classList.remove('drag-over');
+    }
+});
+
+document.addEventListener('dragend', function (event) {
+    document.querySelectorAll('.course-block.dragging').forEach(el => el.classList.remove('dragging'));
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+});
+
 // ── Initialize ────────────────────────────────────────────────
 
 loadMembers();
+
+// Initialize courses page if we're on it
+if (document.getElementById('courses-list')) {
+    loadCourses();
+    loadFacultyForCourses();
+}

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CERP — Member Portal</title>
+    <title>Member Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1999,16 +1999,43 @@
                 const profSelect = document.getElementById('sf-professor');
                 if (profSelect) {
                     // Wait for the professor dropdown to be populated
-                    setTimeout(() => {
-                        const option = Array.from(profSelect.options).find(opt => opt.textContent.includes(currentMember.fullName));
+                    // Use shorter timeout and check if dropdown is ready
+                    const attemptSetFilter = (attempts = 0) => {
+                        if (attempts > 10) {
+                            console.warn('⚠️ Failed to set member filter after 10 attempts');
+                            return;
+                        }
+                        
+                        // Check if dropdown is populated
+                        if (profSelect.options.length === 0) {
+                            console.log('⏳ Dropdown not ready, retrying... (attempt', attempts + 1, ')');
+                            setTimeout(() => attemptSetFilter(attempts + 1), 200);
+                            return;
+                        }
+                        
+                        // Find member's name in dropdown
+                        const option = Array.from(profSelect.options).find(opt => 
+                            opt.textContent.trim().includes(currentMember.fullName.trim())
+                        );
+                        
                         if (option) {
+                            console.log('✅ Found member in dropdown:', option.textContent);
                             profSelect.value = option.value;
                             profSelect.dispatchEvent(new Event('change'));
+                        } else {
+                            console.warn('⚠️ Member not found in dropdown:', currentMember.fullName);
+                            console.log('Available options:', Array.from(profSelect.options).map(o => o.textContent));
                         }
+                        
                         // Disable the dropdown
                         profSelect.disabled = true;
                         profSelect.style.background = '#f9fafb';
-                    }, 1000);
+                        profSelect.style.opacity = '0.7';
+                        profSelect.style.cursor = 'not-allowed';
+                        console.log('🔒 Professor dropdown disabled for member');
+                    };
+                    
+                    attemptSetFilter();
                 }
             }
 
@@ -2328,14 +2355,67 @@
         async function loadFSRContent(cardId) {
             let fsrData;
             let staffList = [];
+            
+            // Use selected values or defaults (1st semester 2026-2027)
+            const selectedSemester = window._selectedFSRSemester || '1';
+            const selectedYear = window._selectedFSRYear || '2026-2027';
+            
+            console.log('Loading FSR with filters:', { selectedSemester, selectedYear });
+
             try {
-                const [fsrRes, staffRes] = await Promise.all([
-                    fetch('/api/member-fsr-data'),
-                    fetch('/api/staff')
+                // Fetch ALL data (no filters in API)
+                const [fsrRes, staffRes, schedulesRes] = await Promise.all([
+                    fetch(`/api/member-fsr-data`),  // No filters - get member info only
+                    fetch('/api/staff'),
+                    fetch('/api/schedules')  // Fetch ALL schedules
                 ]);
+                
                 if (!fsrRes.ok) throw new Error('Failed to load FSR data');
                 fsrData = await fsrRes.json();
                 if (staffRes.ok) staffList = await staffRes.json();
+                
+                // Get member's last name for filtering
+                const member = fsrData.member || {};
+                const lastName = (member.last || '').toLowerCase();
+                
+                // Filter schedules CLIENT-SIDE (like admin FSR does)
+                let allSchedules = [];
+                if (schedulesRes.ok) {
+                    allSchedules = await schedulesRes.json();
+                    console.log('All schedules fetched:', allSchedules.length);
+                    
+                    // Debug: Log first schedule to see structure
+                    if (allSchedules.length > 0) {
+                        console.log('Sample schedule structure:', allSchedules[0]);
+                    }
+                    
+                    // Filter by professor name, year, and semester
+                    fsrData.schedules = allSchedules.filter(s => {
+                        const profMatch = lastName && (s.prof || '').toLowerCase().includes(lastName);
+                        const yearMatch = s.school_year === selectedYear || s.schoolYear === selectedYear;
+                        const semesterMatch = s.semester === selectedSemester;
+                        
+                        // Debug first few matches
+                        if (profMatch) {
+                            console.log('Prof match found:', {
+                                prof: s.prof,
+                                school_year: s.school_year,
+                                schoolYear: s.schoolYear,
+                                semester: s.semester,
+                                selectedYear,
+                                selectedSemester,
+                                yearMatch,
+                                semesterMatch
+                            });
+                        }
+                        
+                        return profMatch && yearMatch && semesterMatch;
+                    });
+                    
+                    console.log('Filtered schedules:', fsrData.schedules.length, 'matches for', lastName, selectedYear, selectedSemester);
+                } else {
+                    fsrData.schedules = [];
+                }
             } catch (e) {
                 const card = document.getElementById(cardId);
                 if (card) card.innerHTML = `
@@ -2350,6 +2430,10 @@
             const research = fsrData.research || [];
             const extensions = fsrData.extensions || [];
             const schedules = fsrData.schedules || [];
+            
+            // Use selected semester/year
+            const currentSemester = selectedSemester;
+            const currentSchoolYear = selectedYear;
 
             // Classify research by research_type field (must be before usage)
             const researchProposals = research.filter(r => r.research_type === 'proposal');
@@ -2378,6 +2462,12 @@
             window._fsrStaffList = staffList;
 
             // ── Helpers ──
+            function getSemesterLabel(sem) {
+                if (sem === '1') return '1st Semester';
+                if (sem === '2') return '2nd Semester';
+                if (sem === 'summer') return 'Summer';
+                return sem;
+            }
             function fmtRange(s, e) {
                 if (!s || !e) return '';
                 const [hs, ms] = String(s).split(':').map(Number);
@@ -2395,29 +2485,55 @@
             }
             const DAY = { Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'TH', Friday: 'F', Saturday: 'S' };
 
-            // Consolidate schedule rows
+            console.log('Consolidating schedules:', schedules.length);
+            
+            // Consolidate schedule rows BY COURSE+SECTION (not by time/room)
             const consolidated = {};
             schedules.forEach(s => {
-                const key = `${s.subjCode}||${s.room}||${s.start}||${s.end}`;
-                if (!consolidated[key]) consolidated[key] = { ...s, days: [] };
+                const key = `${s.subjCode}||${s.section}`;  // Group by course code + section only
+                if (!consolidated[key]) {
+                    consolidated[key] = { 
+                        ...s, 
+                        days: [],
+                        timeSlots: []  // Track multiple time slots
+                    };
+                }
                 const abbr = DAY[s.day] || (s.day || '').slice(0, 2).toUpperCase();
-                if (abbr && !consolidated[key].days.includes(abbr)) consolidated[key].days.push(abbr);
+                if (abbr && !consolidated[key].days.includes(abbr)) {
+                    consolidated[key].days.push(abbr);
+                }
+                // Track unique time slots
+                const timeStr = `${fmtRange(s.start, s.end)}`;
+                if (!consolidated[key].timeSlots.includes(timeStr)) {
+                    consolidated[key].timeSlots.push(timeStr);
+                }
             });
             const teachingRows = Object.values(consolidated).sort((a, b) => (a.subjCode || '').localeCompare(b.subjCode || ''));
+            
+            console.log('Teaching rows after consolidation:', teachingRows.length);
 
             // Teaching load rows
             let teachHtml = '';
             if (teachingRows.length) {
                 teachingRows.forEach(r => {
+                    // All courses are 3 hours per week and 3 course credits
+                    const hoursPerWeek = 3;
+                    const courseCredit = 3;
+                    
+                    // Handle time display - use timeSlots array or fall back to single time
+                    const timeDisplay = (r.timeSlots && r.timeSlots.length > 0) 
+                        ? r.timeSlots.join(', ') 
+                        : fmtRange(r.start, r.end);
+                    
                     teachHtml += `<tr>
                         <td colspan="2" style="font-weight:600;">${r.subjCode || ''}</td>
-                        <td style="text-align:center;color:#9ca3af;font-style:italic;">—</td>
+                        <td style="text-align:center;">${r.section || '—'}</td>
                         <td style="text-align:center;">${r.room || ''}</td>
                         <td style="text-align:center;">${r.days.join('/')}</td>
-                        <td style="text-align:center;">${fmtRange(r.start, r.end)}</td>
+                        <td style="text-align:center;">${timeDisplay}</td>
+                        <td style="text-align:center;">${hoursPerWeek}</td>
                         <td style="text-align:center;color:#9ca3af;">—</td>
-                        <td style="text-align:center;color:#9ca3af;">—</td>
-                        <td style="text-align:center;color:#9ca3af;">—</td>
+                        <td style="text-align:center;">${courseCredit}</td>
                         <td style="text-align:center;color:#9ca3af;">—</td>
                         <td style="text-align:center;color:#9ca3af;">—</td>
                     </tr>`;
@@ -2578,22 +2694,43 @@
                     .fsr-editable-cell:focus{border-color:#014421;background:#f0fdf4;}
                     .fsr-editable-cell::placeholder{color:#9ca3af;font-weight:400;font-style:italic;}
                 </style>
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;">
                     <div>
                         <div class="chart-title">Faculty Service Record</div>
-                        <div class="chart-subtitle">2nd Semester 2025–2026</div>
+                        <div class="chart-subtitle" id="fsr-subtitle">${getSemesterLabel(currentSemester)} ${currentSchoolYear}</div>
                     </div>
-                    <button onclick="downloadMemberFSR()" id="mfsr-dl-btn"
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                            <label style="font-size:0.72rem;font-weight:600;color:#6b7280;">School Year</label>
+                            <select id="fsr-year-select" onchange="changeFSRFilters()" 
+                                style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;background:white;cursor:pointer;min-width:120px;">
+                                <option value="2024-2025" ${currentSchoolYear === '2024-2025' ? 'selected' : ''}>2024-2025</option>
+                                <option value="2025-2026" ${currentSchoolYear === '2025-2026' ? 'selected' : ''}>2025-2026</option>
+                                <option value="2026-2027" ${currentSchoolYear === '2026-2027' ? 'selected' : ''}>2026-2027</option>
+                                <option value="2027-2028" ${currentSchoolYear === '2027-2028' ? 'selected' : ''}>2027-2028</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                            <label style="font-size:0.72rem;font-weight:600;color:#6b7280;">Semester</label>
+                            <select id="fsr-semester-select" onchange="changeFSRFilters()" 
+                                style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;background:white;cursor:pointer;min-width:140px;">
+                                <option value="1" ${currentSemester === '1' ? 'selected' : ''}>1st Semester</option>
+                                <option value="2" ${currentSemester === '2' ? 'selected' : ''}>2nd Semester</option>
+                                <option value="summer" ${currentSemester === 'summer' ? 'selected' : ''}>Summer</option>
+                            </select>
+                        </div>
+                        <button onclick="downloadMemberFSR()" id="mfsr-dl-btn"
                         style="display:flex;align-items:center;gap:6px;padding:8px 18px;background:#014421;color:white;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                         </svg>
                         Download Excel
                     </button>
+                    </div>
                 </div>
                 <div style="overflow:auto;max-height:600px;border:1px solid #e5e7eb;border-radius:8px;">
                     <table class="mfsr-table">
-                        <tr class="mfsr-hdr"><th colspan="11">FACULTY SERVICE RECORD — 2nd Semester 2025–2026</th></tr>
+                        <tr class="mfsr-hdr"><th colspan="11">FACULTY SERVICE RECORD — ${getSemesterLabel(currentSemester)} ${currentSchoolYear}</th></tr>
                         <tr>
                             <th class="mfsr-lbl">PRINTED NAME:</th>
                             <th class="mfsr-lbl" style="font-size:.68rem;">(Family)</th>
@@ -3032,6 +3169,36 @@
 
             // Load existing footnotes from database
             setTimeout(loadExistingFootnotes, 100);
+        }
+
+        // Change FSR filters (year and semester)
+        async function changeFSRFilters() {
+            // Get selected values
+            const yearSelect = document.getElementById('fsr-year-select');
+            const semesterSelect = document.getElementById('fsr-semester-select');
+            
+            if (!yearSelect || !semesterSelect) {
+                console.error('FSR selectors not found');
+                return;
+            }
+            
+            // Store selected values globally
+            window._selectedFSRYear = yearSelect.value;
+            window._selectedFSRSemester = semesterSelect.value;
+            
+            console.log('Filters changed to:', yearSelect.value, semesterSelect.value);
+            
+            // Find the FSR card (could be dashboard or page)
+            const dashboardCard = document.getElementById('dashboard-fsr-card');
+            const pageCard = document.getElementById('fsr-page-card');
+            const cardId = dashboardCard ? 'dashboard-fsr-card' : 'fsr-page-card';
+            
+            // Reload FSR content with new filters
+            if (dashboardCard || pageCard) {
+                await loadFSRContent(cardId);
+            } else {
+                console.error('Could not find FSR card element');
+            }
         }
 
         async function downloadMemberFSR() {

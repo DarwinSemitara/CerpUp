@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CERP Admin</title>
+    <title>Admin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS Version 1.2 - Fixed active padding v2 -->
@@ -1031,7 +1031,7 @@
                 <div class="sub-nav" id="schedule-sub">
                     <div class="sub-nav-item" onclick="loadPartial('/schedule/class/', 'Class Schedule', this)">Class
                         Schedule</div>
-                    <div class="sub-nav-item" onclick="loadPartial('/schedule/section/', 'Section', this)">Section</div>
+                    <div class="sub-nav-item" onclick="loadPartial('/schedule/courses/', 'Courses', this)">Courses</div>
                     <div class="sub-nav-item" onclick="loadPartial('/schedule/events/', 'News and Events', this)">News
                         and Events</div>
                 </div>
@@ -1472,7 +1472,7 @@
             history.pushState({ url, title }, title, newUrl);
 
             try {
-                const res = await fetch(url, { headers: { 'X-Partial': '1' } });
+                const res = await fetch(url, { headers: { 'X-Partial': '1' }, cache: 'no-store' });
                 if (!res.ok) throw new Error('Failed to load');
                 const html = await res.text();
                 content.innerHTML = html;
@@ -1502,7 +1502,7 @@
             if (event.state && event.state.url) {
                 const content = document.getElementById('content');
                 content.innerHTML = '<div class="content-spinner"><div class="spinner-ring"></div> Loading…</div>';
-                fetch(event.state.url, { headers: { 'X-Partial': '1' } })
+                fetch(event.state.url, { headers: { 'X-Partial': '1' }, cache: 'no-store' })
                     .then(res => res.text())
                     .then(html => {
                         content.innerHTML = html;

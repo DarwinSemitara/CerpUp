@@ -21,7 +21,7 @@ async function loadPartial(url, title, element) {
     history.pushState({ url, title }, title, newUrl);
 
     try {
-        const res = await fetch(url, { headers: { 'X-Partial': '1' } });
+        const res = await fetch(url, { headers: { 'X-Partial': '1' }, cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load');
         const html = await res.text();
         content.innerHTML = html;
@@ -51,7 +51,7 @@ window.addEventListener('popstate', (event) => {
     if (event.state && event.state.url) {
         const content = document.getElementById('content');
         content.innerHTML = '<div class="content-spinner"><div class="spinner-ring"></div> Loading…</div>';
-        fetch(event.state.url, { headers: { 'X-Partial': '1' } })
+        fetch(event.state.url, { headers: { 'X-Partial': '1' }, cache: 'no-store' })
             .then(res => res.text())
             .then(html => {
                 content.innerHTML = html;

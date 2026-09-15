@@ -29,6 +29,23 @@ from dataclasses import dataclass, field
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+
+# MW/WF/TTH day pairing for 1.5-hour blocks
+DAY_PAIRS = {
+    'Monday': 'Wednesday',
+    'Wednesday': 'Monday',
+    'Monday-Wednesday': ['Monday', 'Wednesday'],
+    'Wednesday-Friday': ['Wednesday', 'Friday'],
+    'Tuesday-Thursday': ['Tuesday', 'Thursday'],
+}
+
+# Valid day pairs for paired scheduling (MW, WF, TTH)
+PAIRED_DAYS = [
+    ('Monday', 'Wednesday'),
+    ('Wednesday', 'Friday'),
+    ('Tuesday', 'Thursday'),
+]
+
 SLOTS_PER_DAY = 20        # 30-min slots: 0=7:00 … 19=16:30
 START_HOUR = 7             # 7:00 AM
 MAX_BLOCK_SLOTS = 6        # 3 hours max per block
@@ -250,12 +267,35 @@ class QualificationMatrix:
     course_to_faculty: Dict[str, List[str]] = field(
         default_factory=dict)  # course_code -> [faculty_ids]
 
-    def is_qualified(self, faculty_id: str, course_code: str) -> bool:
-        """Check if faculty is qualified to teach a course."""
+    # NEW: Support for course-section assignments
+    faculty_to_course_sections: Dict[str, List[str]] = field(
+        default_factory=dict)  # faculty_id -> ["COURSE-SECTION"]
+    course_section_to_faculty: Dict[str, str] = field(
+        default_factory=dict)  # "COURSE-SECTION" -> faculty_id
+
+    def is_qualified(self, faculty_id: str, course_code: str, section: str = None) -> bool:
+        """Check if faculty is qualified to teach a course (and optionally a specific section)."""
+        # If section provided, check course-section assignment
+        if section:
+            course_section_key = f"{course_code}-{section}"
+            assigned_faculty = self.course_section_to_faculty.get(
+                course_section_key)
+            if assigned_faculty:
+                return assigned_faculty == faculty_id
+
+        # Fall back to course-level check
         return course_code in self.faculty_to_courses.get(faculty_id, [])
 
-    def get_qualified_faculty(self, course_code: str) -> List[str]:
-        """Get all faculty qualified to teach a course."""
+    def get_qualified_faculty(self, course_code: str, section: str = None) -> List[str]:
+        """Get all faculty qualified to teach a course (and optionally a specific section)."""
+        # If section provided, return the single assigned faculty
+        if section:
+            course_section_key = f"{course_code}-{section}"
+            assigned_faculty = self.course_section_to_faculty.get(
+                course_section_key)
+            return [assigned_faculty] if assigned_faculty else []
+
+        # Fall back to course-level check
         return self.course_to_faculty.get(course_code, [])
 
 
@@ -417,20 +457,30 @@ def check_section_time_conflict(chromosome: List['Gene'], gene_idx: int) -> Opti
 
 def check_faculty_qualification(gene: 'Gene', qualification_matrix: Optional[QualificationMatrix],
                                 subject_allocations: Dict[str, List[str]]) -> Optional[ConstraintViolation]:
-    """H4: Check if faculty is qualified to teach the course."""
+    """H4: Check if faculty is qualified to teach the course (and specific section if assigned)."""
     # Use qualification matrix if available, otherwise fall back to subject_allocations
     if qualification_matrix:
-        if not qualification_matrix.is_qualified(gene.professor, gene.subj_code):
+        # Check course-section assignment first (if section info available)
+        section = getattr(gene, 'section', None)
+        if not qualification_matrix.is_qualified(gene.professor, gene.subj_code, section):
             qualified_faculty = qualification_matrix.get_qualified_faculty(
-                gene.subj_code)
+                gene.subj_code, section)
+
+            # Build helpful message
+            if section:
+                message = f"Faculty {gene.professor} not assigned to teach {gene.subj_code} Section {section}"
+            else:
+                message = f"Faculty {gene.professor} not qualified to teach {gene.subj_code}"
+
             return ConstraintViolation(
                 constraint_type='faculty_qualification',
                 gene_index=-1,  # Will be set by caller
                 severity='hard',
                 penalty=HARD_PENALTY,
-                message=f"Faculty {gene.professor} not qualified to teach {gene.subj_code}",
+                message=message,
                 details={
                     'course': gene.subj_code,
+                    'section': section,
                     'faculty': gene.professor,
                     'qualified_faculty': qualified_faculty
                 }
@@ -581,6 +631,65 @@ def check_block_length(gene: 'Gene', is_lab: bool) -> Optional[ConstraintViolati
     return None
 
 
+def check_course_section_uniqueness(chromosome: List['Gene'], gene_idx: int) -> Optional[ConstraintViolation]:
+    """
+    H10: Check if course-section assignment is unique and doesn't exceed 3 units.
+
+    Rules:
+    - A course-section can only be assigned to ONE faculty member
+    - Total units for a course-section across all genes must not exceed 3 units
+    - Example: CERP 101 Section T should only be taught by one faculty for max 3 units total
+    """
+    gene = chromosome[gene_idx]
+    course_section_key = f"{gene.subj_code}-{gene.section}"
+
+    # Track faculty teaching this course-section and total units
+    faculty_set = set()
+    total_units = 0
+
+    for i, other in enumerate(chromosome):
+        if other.subj_code == gene.subj_code and other.section == gene.section:
+            faculty_set.add(other.professor)
+            # Each gene represents a time block; accumulate units
+            # Assuming each block represents units/hours proportional to duration
+            total_units += (other.duration / 2.0)  # Convert slots to hours
+
+    violations = []
+
+    # Check 1: Multiple faculty teaching same course-section
+    if len(faculty_set) > 1:
+        return ConstraintViolation(
+            constraint_type='course_section_duplicate_faculty',
+            gene_index=gene_idx,
+            severity='hard',
+            penalty=HARD_PENALTY * len(faculty_set),
+            message=f"Course-section {course_section_key} assigned to multiple faculty: {', '.join(sorted(faculty_set))}",
+            details={
+                'course_section': course_section_key,
+                'faculty_count': len(faculty_set),
+                'faculty_list': list(faculty_set)
+            }
+        )
+
+    # Check 2: Total units exceed 3
+    if total_units > 3.0:
+        return ConstraintViolation(
+            constraint_type='course_section_units_exceeded',
+            gene_index=gene_idx,
+            severity='hard',
+            penalty=HARD_PENALTY * (total_units - 3.0),
+            message=f"Course-section {course_section_key} total units {total_units:.1f} exceeds maximum 3 units",
+            details={
+                'course_section': course_section_key,
+                'total_units': total_units,
+                'max_units': 3.0,
+                'excess': total_units - 3.0
+            }
+        )
+
+    return None
+
+
 def check_all_hard_constraints(chromosome: List['Gene'], gene_idx: int, config: FullGAConfig) -> List[ConstraintViolation]:
     """Run all hard constraint checks on a specific gene and return violations."""
     gene = chromosome[gene_idx]
@@ -653,6 +762,11 @@ def check_all_hard_constraints(chromosome: List['Gene'], gene_idx: int, config: 
     v = check_room_capacity(gene, config.rooms, section_student_count)
     if v:
         v.gene_index = gene_idx
+        violations.append(v)
+
+    # H10: Course-section uniqueness (max 3 units, single faculty only)
+    v = check_course_section_uniqueness(chromosome, gene_idx)
+    if v:
         violations.append(v)
 
     return violations
@@ -1325,8 +1439,21 @@ def greedy_feasible_schedule(config: FullGAConfig) -> Optional[List['Gene']]:
             if not avail_days:
                 avail_days = WEEKDAYS
 
+            # CRITICAL FIX: For 1.5-hour blocks, try MW/WF/TTH pairs first
+            days_to_try = []
+            if block_slots == 3:  # 1.5 hours = 3 slots
+                # Build list of valid paired days
+                for day1, day2 in PAIRED_DAYS:
+                    if day1 in avail_days and day2 in avail_days:
+                        days_to_try.extend([day1, day2])
+                # If no pairs available, fall back to all available days
+                if not days_to_try:
+                    days_to_try = avail_days
+            else:
+                days_to_try = avail_days
+
             # Try each available day
-            for day in avail_days:
+            for day in days_to_try:
                 if placed:
                     break
 
@@ -1416,7 +1543,7 @@ class Gene:
 
 def random_gene(subject: Dict, rooms: List[str],
                 prof_availability: Dict[str, List[str]] = None) -> Gene:
-    """Create a random gene, respecting professor availability if provided."""
+    """Create a random gene, respecting professor availability and MW/WF/TTH pairing for 1.5-hour blocks."""
     prof = subject['professor']
     avail_days = WEEKDAYS  # default
 
@@ -1425,8 +1552,28 @@ def random_gene(subject: Dict, rooms: List[str],
         if avail:
             avail_days = avail
 
-    day = random.choice(avail_days)
     duration = min(subject['block_slots'], MAX_BLOCK_SLOTS)
+
+    # CRITICAL FIX: For 1.5-hour (3-slot) blocks, use MW/WF/TTH pairs
+    # This ensures the UI can properly display paired blocks
+    if duration == 3:  # 1.5 hours = 3 slots (30min each)
+        # Filter available paired days based on professor availability
+        valid_pairs = []
+        for day1, day2 in PAIRED_DAYS:
+            if day1 in avail_days and day2 in avail_days:
+                valid_pairs.append((day1, day2))
+
+        if valid_pairs:
+            # Pick one day from a random valid pair
+            pair = random.choice(valid_pairs)
+            day = random.choice(pair)
+        else:
+            # Fallback if no paired days available
+            day = random.choice(avail_days)
+    else:
+        # For non-1.5-hour blocks, use any available day
+        day = random.choice(avail_days)
+
     max_start = SLOTS_PER_DAY - duration
     start = random.randint(0, max(0, max_start))
     room = random.choice(rooms) if rooms else 'TBA'
@@ -1756,10 +1903,24 @@ def mutate_v3(chromosome: List[Gene], config: FullGAConfig,
             3 if (targeted and i in violated_genes) else rate
 
         if random.random() < effective_rate:
-            # Mutate day (respect availability)
+            # Mutate day (respect availability AND MW/WF/TTH pairing for 1.5-hour blocks)
             avail = prof_availability.get(g.professor, [])
             valid_days = avail if avail else WEEKDAYS
-            g.day = random.choice(valid_days)
+
+            # CRITICAL FIX: For 1.5-hour blocks, use MW/WF/TTH pairs
+            if g.duration == 3:  # 1.5 hours = 3 slots
+                valid_pairs = []
+                for day1, day2 in PAIRED_DAYS:
+                    if day1 in valid_days and day2 in valid_days:
+                        valid_pairs.append((day1, day2))
+
+                if valid_pairs:
+                    pair = random.choice(valid_pairs)
+                    g.day = random.choice(pair)
+                else:
+                    g.day = random.choice(valid_days)
+            else:
+                g.day = random.choice(valid_days)
 
             # Mutate start time
             max_start = SLOTS_PER_DAY - g.duration
@@ -2197,20 +2358,43 @@ def seed_from_reference(reference_schedules: List[Dict],
                 ref_genes.append(random_gene(s, rooms, prof_availability))
                 remaining -= block
 
-    # Create seeded population — ALL with randomized time slots
-    # No direct copies: we want the GA to find NEW optimal placements
+    # Create seeded population with varying levels of preservation
     population = []
-    for _ in range(pop_size):
+    
+    # 10% exact copies from reference (to ensure we don't lose a working solution)
+    for _ in range(min(max(1, pop_size // 10), 5)):
+        population.append(copy.deepcopy(ref_genes))
+    
+    # 40% with moderate variation (shift times but keep day patterns)
+    for _ in range(len(population), min(pop_size // 2, 20)):
         variant = copy.deepcopy(ref_genes)
         for g in variant:
-            # Fully randomize day and time (respecting availability)
+            # Keep the day, but allow time shifts (±2 hours)
+            if random.random() < 0.5:
+                shift = random.choice([-4, -3, -2, -1, 0, 1, 2, 3, 4])  # ±2 hours
+                new_start = max(0, min(SLOTS_PER_DAY - g.duration, g.start_slot + shift))
+                g.start_slot = new_start
+            # Occasionally change room
+            if rooms and random.random() < 0.2:
+                g.room = random.choice(rooms)
+        population.append(variant)
+    
+    # 50% with full randomization of times (but preserve day patterns from avail)
+    for _ in range(len(population), pop_size):
+        variant = copy.deepcopy(ref_genes)
+        for g in variant:
+            # Keep day if it's in professor's availability, otherwise randomize
             avail = prof_availability.get(g.professor, [])
             valid_days = avail if avail else WEEKDAYS
-            g.day = random.choice(valid_days)
+            if g.day not in valid_days:
+                g.day = random.choice(valid_days)
+            
+            # Randomize time slot
             max_start = SLOTS_PER_DAY - g.duration
             g.start_slot = random.randint(0, max(0, max_start))
-            # Also randomize room occasionally
-            if rooms and random.random() < 0.2:
+            
+            # Randomize room occasionally
+            if rooms and random.random() < 0.3:
                 g.room = random.choice(rooms)
         population.append(variant)
 
@@ -3783,17 +3967,29 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
             'warnings': ['No subject data to generate from.']
         }
 
-    # Prepare subjects (same as legacy)
+    # Prepare subjects (use qualification matrix for correct prof assignment)
     subjects_for_ga = []
     for subj in config.subjects:
-        prof_list = subj.allocated_professors or config.subject_allocations.get(
-            subj.code, [])
-        if not prof_list:
-            warnings.append(
-                f"{subj.code} has no allocated professor — skipping")
-            continue
+        # CRITICAL FIX: Use qualification matrix to get the CORRECT professor for this course-section
+        assigned_prof = None
+        if config.qualification_matrix and subj.section:
+            course_section_key = f"{subj.code}-{subj.section}"
+            assigned_prof = config.qualification_matrix.course_section_to_faculty.get(
+                course_section_key)
 
-        professor = prof_list[0]
+        # Fall back to allocated_professors (from reference schedule) if no matrix assignment
+        if not assigned_prof:
+            prof_list = subj.allocated_professors or config.subject_allocations.get(
+                subj.code, [])
+            if prof_list:
+                assigned_prof = prof_list[0]
+            else:
+                # FINAL FALLBACK: Skip only if NO professor found anywhere
+                warnings.append(
+                    f"{subj.code}-{subj.section} has no allocated professor — skipping")
+                continue
+
+        professor = assigned_prof
         weekly_slots = slots_for_duration(subj.weekly_hours)
         subjects_for_ga.append({
             'code': subj.code,
@@ -3802,7 +3998,7 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
             'section': subj.section,
             'units': subj.units,
             'weekly_slots': weekly_slots,
-            'allocated_professors': prof_list,
+            'allocated_professors': [professor],  # Single professor per course-section
         })
 
     if not subjects_for_ga:
