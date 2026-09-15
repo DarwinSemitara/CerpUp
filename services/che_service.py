@@ -134,7 +134,7 @@ Context data provided includes:
 - Time slots
 - Available rooms list (all classrooms in the system)
 
-When listing rooms, use the available_rooms data if provided in context."""
+When listing rooms, use the available_rooms data if provided in context.
 
 ## What you CAN do in this conversation:
 - Generate class schedules using the Genetic Algorithm
