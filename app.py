@@ -3759,20 +3759,20 @@ def api_generate_full_schedule():
                 except Exception as e:
                     logger.warning(f"ERROR loading reference schedules: {e}")
                     import traceback
-                        f.write(traceback.format_exc())
-                        f.flush()
-                    logger.warning(f"Reference semester load error: {e}")
+                    logger.warning(traceback.format_exc())
 
                 logger.info(f"Calling update_ga_progress with {len(reference_schedules)} schedules")
                     
                 update_ga_progress(
                     status='running', message=f'Loaded {len(reference_schedules)} reference schedules')
-logger.info(f"� Reference schedules loaded: {len(reference_schedules)} from {reference_school_year} Semester {reference_semester}")
-# Load faculty data
+
+                logger.info(f"📚 Reference schedules loaded: {len(reference_schedules)} from {reference_school_year} Semester {reference_semester}")
+
+                # Load faculty data
                 prof_availability = {}
                 teaching_loads_map = {}
                 try:
-member_docs = db.collection('members').where(
+                    member_docs = db.collection('members').where(
                         'is_faculty', '==', True).stream()
                     
                     faculty_count = 0
@@ -4146,7 +4146,8 @@ member_docs = db.collection('members').where(
                         
                         logger.info(
                             f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
-if save_errors:
+                        
+                        if save_errors:
                             logger.error(f"{len(save_errors)} schedules failed to save:")
                             for err in save_errors[:5]:  # Log first 5 errors
                                 logger.error(f"  - {err}")
@@ -4177,10 +4178,10 @@ if save_errors:
                     ga_progress['running'] = False
 
         # Start background thread WITH app context
-print("=" * 80, flush=True)
+        print("=" * 80, flush=True)
         print("🎬 About to create background thread...", flush=True)
         print("=" * 80, flush=True)
-        logger.info(f"� About to create background thread...")
+        logger.info(f"🎬 About to create background thread...")
         
         def run_with_context():
             logger.info(f"Thread started at {datetime.now()}")
@@ -4201,14 +4202,17 @@ print("=" * 80, flush=True)
                 logger.error(f"❌ Fatal error in background thread: {e}")
                 import traceback
                 traceback.print_exc()
-print("🔧 Creating thread object...", flush=True)
-        logger.info(f"� Creating thread object...")
+        
+        print("🔧 Creating thread object...", flush=True)
+        logger.info(f"🔧 Creating thread object...")
         thread = threading.Thread(target=run_with_context, daemon=True)
-print("▶️ Starting thread...", flush=True)
+        
+        print("▶️ Starting thread...", flush=True)
         logger.info("Starting thread...")
         thread.start()
-print("📤 Background thread dispatched", flush=True)
-        logger.info(f"� Background thread dispatched")
+        
+        print("📤 Background thread dispatched", flush=True)
+        logger.info(f"📤 Background thread dispatched")
 
         return jsonify({
             'success': True,
