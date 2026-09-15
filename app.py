@@ -4101,45 +4101,93 @@ def api_generate_full_schedule():
                         
                         schedules = expanded_schedules
 
-                        # CRITICAL: Check for conflicts AFTER expansion
-                        # Expansion can create conflicts that didn't exist in the GA output
+                        # COMPREHENSIVE CONFLICT DETECTION AFTER EXPANSION
+                        # Check ALL types of conflicts:
+                        # 1. Room conflicts (same room, same day/time)
+                        # 2. Section conflicts (same section scheduled twice at same time)
+                        # 3. Faculty conflicts (same professor teaching two courses at same time)
+                        
                         logger.info("🔍 Checking for conflicts after day pattern expansion...")
-                        conflict_check = []
                         conflicts_found = False
+                        conflict_messages = []
+                        
+                        # Track allocations
+                        room_allocations = []      # {room, day, start, end, course}
+                        section_allocations = []   # {section, day, start, end, course}
+                        faculty_allocations = []   # {prof, day, start, end, course}
+                        
+                        def times_overlap(start1, end1, start2, end2):
+                            """Check if two time ranges overlap"""
+                            # Convert to comparable format (assuming HH:MM format)
+                            return not (end1 <= start2 or end2 <= start1)
                         
                         for sched in schedules:
-                            prof = sched.get('prof', '')
-                            day = sched.get('day', '')
-                            start = sched.get('start', '')
-                            end = sched.get('end', '')
+                            room = sched.get('room', '').strip()
+                            section = sched.get('section', '').strip()
+                            prof = sched.get('prof', '').strip()
+                            day = sched.get('day', '').strip()
+                            start = sched.get('start', '').strip()
+                            end = sched.get('end', '').strip()
+                            course = sched.get('subjCode', '').strip()
                             
-                            # Check if this prof already has a schedule at this time
-                            for existing in conflict_check:
+                            # CHECK 1: Room conflicts
+                            for existing in room_allocations:
+                                if (existing['room'] == room and 
+                                    existing['day'] == day and
+                                    times_overlap(start, end, existing['start'], existing['end'])):
+                                    msg = f"❌ ROOM CONFLICT: {room} is double-booked on {day} {start}-{end} for {course}-{section} and {existing['course']}-{existing['section']}"
+                                    logger.error(msg)
+                                    conflict_messages.append(msg)
+                                    conflicts_found = True
+                            
+                            # CHECK 2: Section conflicts (same section can't be in two places at once)
+                            for existing in section_allocations:
+                                if (existing['section'] == section and 
+                                    existing['day'] == day and
+                                    times_overlap(start, end, existing['start'], existing['end'])):
+                                    msg = f"❌ SECTION CONFLICT: Section {section} is scheduled twice on {day} {start}-{end} for {course} and {existing['course']}"
+                                    logger.error(msg)
+                                    conflict_messages.append(msg)
+                                    conflicts_found = True
+                            
+                            # CHECK 3: Faculty conflicts (professor can't teach two courses at once)
+                            for existing in faculty_allocations:
                                 if (existing['prof'] == prof and 
                                     existing['day'] == day and
-                                    existing['start'] == start and
-                                    existing['end'] == end):
-                                    # CONFLICT FOUND!
-                                    error_msg = f"❌ CONFLICT: {prof} has {sched.get('subjCode')} and {existing['subjCode']} both on {day} at {start}-{end}"
-                                    logger.error(error_msg)
+                                    times_overlap(start, end, existing['start'], existing['end'])):
+                                    msg = f"❌ FACULTY CONFLICT: {prof} has {course}-{section} and {existing['course']}-{existing['section']} both on {day} {start}-{end}"
+                                    logger.error(msg)
+                                    conflict_messages.append(msg)
                                     conflicts_found = True
-                                    break
                             
-                            if conflicts_found:
-                                break
-                            
-                            conflict_check.append({'prof': prof, 'day': day, 'start': start, 'end': end, 'subjCode': sched.get('subjCode')})
+                            # Add to tracking lists
+                            room_allocations.append({
+                                'room': room, 'day': day, 'start': start, 'end': end, 
+                                'course': course, 'section': section
+                            })
+                            section_allocations.append({
+                                'section': section, 'day': day, 'start': start, 'end': end,
+                                'course': course
+                            })
+                            faculty_allocations.append({
+                                'prof': prof, 'day': day, 'start': start, 'end': end,
+                                'course': course, 'section': section
+                            })
                         
                         if conflicts_found:
                             retry_count += 1
+                            logger.error(f"Found {len(conflict_messages)} conflicts:")
+                            for msg in conflict_messages[:5]:  # Log first 5
+                                logger.error(f"  - {msg}")
+                            
                             if retry_count < max_retries:
                                 logger.info(f"🔄 Conflicts detected. Retrying with different seed (attempt {retry_count + 1}/{max_retries})...")
-                                continue  # Retry with new seed
+                                continue  # Retry with new seed and larger population
                             else:
                                 logger.error(f"❌ Failed to generate conflict-free schedule after {max_retries} attempts")
                                 update_ga_progress(
                                     status='failed', 
-                                    message=f'Schedule generation failed: Conflicts detected after {max_retries} attempts. Please try again.')
+                                    message=f'Schedule generation failed: {len(conflict_messages)} conflicts detected after {max_retries} attempts. Please try again.')
                                 
                                 with ga_progress_lock:
                                     ga_progress['running'] = False
