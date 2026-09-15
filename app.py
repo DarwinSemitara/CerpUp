@@ -3963,55 +3963,10 @@ def api_generate_full_schedule():
                     teaching_loads=teaching_loads_map,
                     reference_schedules=reference_schedules,
                     qualification_matrix=qualification_matrix,  # ADD QUALIFICATION MATRIX
-                    pop_size=50,
-                    max_generations=100,
-                    time_limit_seconds=45.0  # Minimum 45 seconds as requested
+                    pop_size=100,
+                    max_generations=500,
+                    time_limit_seconds=180.0  # 3 minutes - enough time for 100+ courses
                 )
-                
-                # PRE-EXPANSION ANALYSIS: Identify courses that will share days after expansion
-                # If two courses for the same prof will expand to the same day, they MUST have different times
-                logger.info("🔍 Analyzing day patterns to detect potential conflicts...")
-                prof_day_conflicts = {}  # {prof: [(course1, course2, shared_day), ...]}
-                
-                for prof_name, course_list in faculty_course_assignments.items():
-                    if len(course_list) < 2:
-                        continue  # Single course, no conflicts possible
-                    
-                    # Check every pair of courses for this professor
-                    for i in range(len(course_list)):
-                        for j in range(i + 1, len(course_list)):
-                            course1 = course_list[i]
-                            course2 = course_list[j]
-                            
-                            pattern1 = day_patterns.get(course1, {})
-                            pattern2 = day_patterns.get(course2, {})
-                            
-                            # Safety check: ensure patterns are dicts
-                            if not isinstance(pattern1, dict):
-                                pattern1 = {}
-                            if not isinstance(pattern2, dict):
-                                pattern2 = {}
-                            
-                            # Find shared days between the two patterns
-                            shared_days = set(pattern1.keys()) & set(pattern2.keys())
-                            
-                            if shared_days:
-                                if prof_name not in prof_day_conflicts:
-                                    prof_day_conflicts[prof_name] = []
-                                
-                                for shared_day in shared_days:
-                                    prof_day_conflicts[prof_name].append({
-                                        'course1': course1,
-                                        'course2': course2,
-                                        'day': shared_day
-                                    })
-                                    logger.warning(f"⚠️ POTENTIAL CONFLICT: {prof_name} teaches {course1} and {course2}, both on {shared_day}")
-                
-                if prof_day_conflicts:
-                    logger.info(f"Found {sum(len(v) for v in prof_day_conflicts.values())} potential post-expansion conflicts")
-                    logger.info("GA must ensure these course pairs have non-overlapping times")
-                else:
-                    logger.info("✅ No day pattern conflicts detected - all courses expand to different days")
 
                 # Progress callback
                 def progress_callback(progress):
@@ -4034,302 +3989,181 @@ def api_generate_full_schedule():
                 logger.info(f"� About to call run_full_ga_v3()")
                 logger.info(f"� Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
                 
-                # RETRY LOOP: Try up to 3 times with different seeds if conflicts detected
-                max_retries = 3
-                retry_count = 0
-                schedules = None
-                current_pop_size = 50
-                current_max_gen = 100
+                result = run_full_ga_v3(
+                    config, progress_callback=progress_callback)
                 
-                while retry_count < max_retries:
-                    if retry_count > 0:
-                        # Increase diversity on retry
-                        current_pop_size = 50 + (retry_count * 25)  # 50, 75, 100
-                        current_max_gen = 100 + (retry_count * 50)  # 100, 150, 200
-                        
-                        logger.info(f"🔄 RETRY {retry_count}/{max_retries}: Using pop_size={current_pop_size}, max_gen={current_max_gen}")
-                        
-                        # Rebuild config with larger population
-                        config = FullGAConfig(
-                            subjects=subjects,
-                            rooms_legacy=rooms_list,
-                            prof_availability=prof_availability,
-                            teaching_loads=teaching_loads_map,
-                            reference_schedules=reference_schedules,
-                            qualification_matrix=qualification_matrix,
-                            pop_size=current_pop_size,
-                            max_generations=current_max_gen,
-                            time_limit_seconds=45.0 + (retry_count * 15)  # 45s, 60s, 75s
-                        )
-                        
-                        update_ga_progress(
-                            status='running', 
-                            message=f'Retry {retry_count}/{max_retries}: Increasing diversity (pop={current_pop_size}, gen={current_max_gen})...')
-                    
-                    result = run_full_ga_v3(
-                        config, progress_callback=progress_callback)
-                    
-                    logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
+                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}")
+                
+                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
 
-                    if result['success']:
-                        schedules = result.get('schedules', [])
-                        
-                        logger.info(f"GA returned {len(schedules)} schedules")
-                        if schedules:
-                            logger.info(f"First 3 schedules:")
-                            for i, sched in enumerate(schedules[:3]):
-                                logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
-                        
-                        logger.info(f"Day patterns available: {len(day_patterns)} courses")
-                        # Log a sample pattern to debug structure
-                        if day_patterns:
-                            sample_key = list(day_patterns.keys())[0]
-                            sample_pattern = day_patterns[sample_key]
-                            logger.info(f"Sample day_pattern['{sample_key}'] = {sample_pattern} (type: {type(sample_pattern)})")
+                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
 
-                        # EXPAND SCHEDULES BASED ON DAY PATTERNS FROM REFERENCE
-                        # Use the GA's optimized times, but duplicate for all days in the pattern
-                        expanded_schedules = []
-                        expansion_stats = {'expanded': 0, 'not_expanded': 0, 'no_pattern': 0}
-                        
-                        for sched in schedules:
-                            key = f"{sched.get('subjCode')}-{sched.get('section')}"
-                            pattern = day_patterns.get(key, {})
-                            
-                            # Safety check: ensure pattern is a dict
-                            if not isinstance(pattern, dict):
-                                logger.warning(f"Pattern for {key} is not a dict (type: {type(pattern)}), treating as no pattern")
-                                pattern = {}
-                                expansion_stats['no_pattern'] += 1
-                            
-                            # pattern is a dict: {day: {day, start, end, room}}
-                            if pattern and len(pattern) >= 2:
-                                # Has a defined pattern from reference (e.g., MW, TTH, WF)
-                                # Create one entry for each day, using GA's time/room but reference days
-                                days_in_pattern = list(pattern.keys())  # Get the days from dict keys
-                                logger.debug(f"Expanding {key}: {days_in_pattern}")
-                                for day in days_in_pattern:
-                                    entry = sched.copy()
-                                    entry['day'] = day
-                                    # Keep GA's optimized time and room
-                                    expanded_schedules.append(entry)
-                                expansion_stats['expanded'] += 1
-                            else:
-                                # No pattern or only one day - keep as is
-                                expanded_schedules.append(sched)
-                                expansion_stats['not_expanded'] += 1
-                        
-                        logger.info(f"Expansion stats: {expansion_stats['expanded']} expanded to multiple days, {expansion_stats['not_expanded']} kept as-is, {expansion_stats['no_pattern']} had invalid patterns")
-                        
-                        logger.info(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns")
-                        logger.info(f"Sample expanded:")
-                        for i, sched in enumerate(expanded_schedules[:5]):
+                if result['success']:
+                    schedules = result.get('schedules', [])
+                    
+                    logger.info(f"GA returned {len(schedules)} schedules")
+                    if schedules:
+                        logger.info(f"First 3 schedules:")
+                        for i, sched in enumerate(schedules[:3]):
                             logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
-                        
-                        schedules = expanded_schedules
+                    
+                    logger.info(f"GA returned {len(schedules)} schedules")
 
-                        # COMPREHENSIVE CONFLICT DETECTION AFTER EXPANSION
-                        # Check ALL types of conflicts:
-                        # 1. Room conflicts (same room, same day/time)
-                        # 2. Section conflicts (same section scheduled twice at same time)
-                        # 3. Faculty conflicts (same professor teaching two courses at same time)
+                    # EXPAND SCHEDULES BASED ON DAY PATTERNS FROM REFERENCE
+                    # Use the GA's optimized times, but duplicate for all days in the pattern
+                    expanded_schedules = []
+                    for sched in schedules:
+                        key = f"{sched.get('subjCode')}-{sched.get('section')}"
+                        pattern = day_patterns.get(key, [])
                         
-                        logger.info("🔍 Checking for conflicts after day pattern expansion...")
-                        conflicts_found = False
-                        conflict_messages = []
+                        if pattern and len(pattern) >= 2:
+                            # Has a defined pattern from reference (e.g., MW, TTH, WF)
+                            # Create one entry for each day, using GA's time/room but reference days
+                            days_in_pattern = [p['day'] for p in pattern]
+                            for day in days_in_pattern:
+                                entry = sched.copy()
+                                entry['day'] = day
+                                # Keep GA's optimized time and room
+                                expanded_schedules.append(entry)
+                        else:
+                            # No pattern or only one day - keep as is
+                            expanded_schedules.append(sched)
+                    
+                    logger.info(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns")
+                    logger.info(f"Sample expanded:")
+                    for i, sched in enumerate(expanded_schedules[:5]):
+                        logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
+                    
+                    logger.info(f"Expanded {len(schedules)} schedules to {len(expanded_schedules)} using reference patterns")
+                    
+                    schedules = expanded_schedules
+
+                    # CRITICAL: Check for conflicts AFTER expansion
+                    # Expansion can create conflicts that didn't exist in the GA output
+                    conflict_check = []
+                    for sched in schedules:
+                        prof = sched.get('prof', '')
+                        day = sched.get('day', '')
+                        start = sched.get('start', '')
+                        end = sched.get('end', '')
                         
-                        # Track allocations
-                        room_allocations = []      # {room, day, start, end, course}
-                        section_allocations = []   # {section, day, start, end, course}
-                        faculty_allocations = []   # {prof, day, start, end, course}
-                        
-                        def times_overlap(start1, end1, start2, end2):
-                            """Check if two time ranges overlap"""
-                            # Convert to comparable format (assuming HH:MM format)
-                            return not (end1 <= start2 or end2 <= start1)
-                        
-                        for sched in schedules:
-                            room = sched.get('room', '').strip()
-                            section = sched.get('section', '').strip()
-                            prof = sched.get('prof', '').strip()
-                            day = sched.get('day', '').strip()
-                            start = sched.get('start', '').strip()
-                            end = sched.get('end', '').strip()
-                            course = sched.get('subjCode', '').strip()
-                            
-                            # CHECK 1: Room conflicts
-                            for existing in room_allocations:
-                                if (existing['room'] == room and 
-                                    existing['day'] == day and
-                                    times_overlap(start, end, existing['start'], existing['end'])):
-                                    msg = f"❌ ROOM CONFLICT: {room} is double-booked on {day} {start}-{end} for {course}-{section} and {existing['course']}-{existing['section']}"
-                                    logger.error(msg)
-                                    conflict_messages.append(msg)
-                                    conflicts_found = True
-                            
-                            # CHECK 2: Section conflicts (same section can't be in two places at once)
-                            for existing in section_allocations:
-                                if (existing['section'] == section and 
-                                    existing['day'] == day and
-                                    times_overlap(start, end, existing['start'], existing['end'])):
-                                    msg = f"❌ SECTION CONFLICT: Section {section} is scheduled twice on {day} {start}-{end} for {course} and {existing['course']}"
-                                    logger.error(msg)
-                                    conflict_messages.append(msg)
-                                    conflicts_found = True
-                            
-                            # CHECK 3: Faculty conflicts (professor can't teach two courses at once)
-                            for existing in faculty_allocations:
-                                if (existing['prof'] == prof and 
-                                    existing['day'] == day and
-                                    times_overlap(start, end, existing['start'], existing['end'])):
-                                    msg = f"❌ FACULTY CONFLICT: {prof} has {course}-{section} and {existing['course']}-{existing['section']} both on {day} {start}-{end}"
-                                    logger.error(msg)
-                                    conflict_messages.append(msg)
-                                    conflicts_found = True
-                            
-                            # Add to tracking lists
-                            room_allocations.append({
-                                'room': room, 'day': day, 'start': start, 'end': end, 
-                                'course': course, 'section': section
-                            })
-                            section_allocations.append({
-                                'section': section, 'day': day, 'start': start, 'end': end,
-                                'course': course
-                            })
-                            faculty_allocations.append({
-                                'prof': prof, 'day': day, 'start': start, 'end': end,
-                                'course': course, 'section': section
-                            })
-                        
-                        if conflicts_found:
-                            retry_count += 1
-                            logger.error(f"Found {len(conflict_messages)} conflicts:")
-                            for msg in conflict_messages[:5]:  # Log first 5
-                                logger.error(f"  - {msg}")
-                            
-                            if retry_count < max_retries:
-                                logger.info(f"🔄 Conflicts detected. Retrying with different seed (attempt {retry_count + 1}/{max_retries})...")
-                                continue  # Retry with new seed and larger population
-                            else:
-                                logger.error(f"❌ Failed to generate conflict-free schedule after {max_retries} attempts")
-                                update_ga_progress(
-                                    status='failed', 
-                                    message=f'Schedule generation failed: {len(conflict_messages)} conflicts detected after {max_retries} attempts. Please try again.')
+                        # Check if this prof already has a schedule at this time
+                        for existing in conflict_check:
+                            if (existing['prof'] == prof and 
+                                existing['day'] == day and
+                                existing['start'] == start and
+                                existing['end'] == end):
+                                # CONFLICT FOUND!
+                                error_msg = f"CONFLICT after expansion: {prof} has {sched.get('subjCode')} and {existing['subjCode']} both on {day} at {start}-{end}"
+                                logger.error(error_msg)
+                                
+                                update_ga_progress(status='error', message='Schedule generation failed: Conflicts detected after day pattern expansion')
                                 
                                 with ga_progress_lock:
                                     ga_progress['running'] = False
                                 
-                                return  # Give up after max retries
-                        else:
-                            logger.info("✅ No conflicts detected after expansion")
-                            break  # Success! Exit retry loop
-                    else:
-                        # GA failed to find solution
-                        retry_count += 1
-                        if retry_count < max_retries:
-                            logger.info(f"🔄 GA failed. Retrying with different seed (attempt {retry_count + 1}/{max_retries})...")
-                            continue
-                        else:
-                            update_ga_progress(
-                                status='failed',
-                                message=f'❌ Generation failed: {result.get("message", "Unknown error")}'
-                            )
-                            with ga_progress_lock:
-                                ga_progress['running'] = False
-                            return
-                
-                # AFTER RETRY LOOP: Save schedules if we have them
-                if save_to_db and schedules:
-                    logger.info(f"Starting save: {len(schedules)} schedules to main schedules table")
+                                # Return error - do NOT save conflicting schedules
+                                return
+                        
+                        conflict_check.append({'prof': prof, 'day': day, 'start': start, 'end': end, 'subjCode': sched.get('subjCode')})
                     
-                    update_ga_progress(
-                        status='running', message=f'Saving {len(schedules)} schedules to timetable...')
+                    logger.info("✅ No conflicts detected after expansion")
 
-                    saved = 0
-                    save_errors = []
+                    # Save directly to main schedules table (so users can see and review on timetable)
+                    if save_to_db and schedules:
+                        logger.info(f"Starting save: {len(schedules)} schedules to main schedules table")
+                        
+                        update_ga_progress(
+                            status='running', message=f'Saving {len(schedules)} schedules to timetable...')
 
-                    # Clear any existing schedules for this semester first
-                    try:
+                        saved = 0
+                        save_errors = []
+
+                        # Clear any existing schedules for this semester first
+                        try:
+                            logger.info(
+                                f"Clearing old schedules for {target_school_year} Semester {target_semester}")
+                            delete_result = supabase.table('schedules').delete().eq(
+                                'semester', str(target_semester)).eq('school_year', target_school_year).execute()
+                            logger.info(f"Cleared old schedules")
+                        except Exception as e:
+                            logger.warning(f"Error clearing old schedules: {e}")
+
+                        # BATCH INSERT: Prepare all schedule records first
+                        schedule_records = []
+                        for idx, sched in enumerate(schedules):
+                            try:
+                                new_id = str(uuid.uuid4())
+                                # CRITICAL: Normalize room names to consistent format (TCC - 01, not TCC-01)
+                                room_name = sched.get('room', '')
+                                import re
+                                normalized_room = re.sub(r'(\w+)-(\d+)', r'\1 - \2', room_name)  # TCC-01 → TCC - 01
+                                
+                                schedule_data = {
+                                    'id': new_id,
+                                    'subj_code': sched.get('subjCode', ''),
+                                    'subj_name': sched.get('subjName', ''),
+                                    'prof': sched.get('prof', ''),
+                                    'room': normalized_room,
+                                    'section': sched.get('section', ''),
+                                    'units': float(sched.get('units', 0)) if sched.get('units') else 0,
+                                    'day': sched.get('day', ''),
+                                    'start': sched.get('start', ''),
+                                    'end': sched.get('end', ''),
+                                    'type': 'Lecture',
+                                    'semester': str(target_semester),
+                                    'school_year': target_school_year,
+                                    'year': '1',
+                                    'created_at': datetime.now(timezone.utc).isoformat(),
+                                    'pairedWith': None
+                                }
+                                schedule_records.append(schedule_data)
+                                
+                                # Log first schedule for debugging
+                                if idx == 0:
+                                    logger.info(f"First schedule data: {schedule_data}")
+                            except Exception as e:
+                                error_msg = f"Failed to prepare schedule {idx}: {e}"
+                                logger.error(error_msg)
+                                save_errors.append(error_msg)
+                        
+                        logger.info(f"Prepared {len(schedule_records)} schedule records for batch insert")
+                        
+                        # Insert in chunks of 100 to avoid payload size limits
+                        chunk_size = 100
+                        for i in range(0, len(schedule_records), chunk_size):
+                            chunk = schedule_records[i:i + chunk_size]
+                            try:
+                                insert_result = supabase.table('schedules').insert(chunk).execute()
+                                saved += len(chunk)
+                                logger.info(f"Batch inserted chunk {i//chunk_size + 1}: {len(chunk)} schedules (total: {saved})")
+                            except Exception as e:
+                                error_msg = f"Failed to insert batch starting at {i}: {e}"
+                                logger.error(error_msg)
+                                save_errors.append(error_msg)
+                                if (saved % 50) == 0:
+                                    logger.info(f"Progress: {saved} schedules saved so far")
+                        
                         logger.info(
-                            f"Clearing old schedules for {target_school_year} Semester {target_semester}")
-                        delete_result = supabase.table('schedules').delete().eq(
-                            'semester', str(target_semester)).eq('school_year', target_school_year).execute()
-                        logger.info(f"Cleared old schedules")
-                    except Exception as e:
-                        logger.warning(f"Error clearing old schedules: {e}")
+                            f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
+                        
+                        if save_errors:
+                            logger.error(f"{len(save_errors)} schedules failed to save:")
+                            for err in save_errors[:5]:  # Log first 5 errors
+                                logger.error(f"  - {err}")
 
-                    # BATCH INSERT: Prepare all schedule records first
-                    schedule_records = []
-                    for idx, sched in enumerate(schedules):
-                        try:
-                            new_id = str(uuid.uuid4())
-                            # CRITICAL: Normalize room names to consistent format (TCC - 01, not TCC-01)
-                            room_name = sched.get('room', '')
-                            import re
-                            normalized_room = re.sub(r'(\w+)-(\d+)', r'\1 - \2', room_name)  # TCC-01 → TCC - 01
-                            
-                            schedule_data = {
-                                'id': new_id,
-                                'subj_code': sched.get('subjCode', ''),
-                                'subj_name': sched.get('subjName', ''),
-                                'prof': sched.get('prof', ''),
-                                'room': normalized_room,
-                                'section': sched.get('section', ''),
-                                'units': float(sched.get('units', 0)) if sched.get('units') else 0,
-                                'day': sched.get('day', ''),
-                                'start': sched.get('start', ''),
-                                'end': sched.get('end', ''),
-                                'type': 'Lecture',
-                                'semester': str(target_semester),
-                                'school_year': target_school_year,
-                                'year': '1',
-                                'created_at': datetime.now(timezone.utc).isoformat(),
-                                'pairedWith': None
-                            }
-                            schedule_records.append(schedule_data)
-                            
-                            # Log first schedule for debugging
-                            if idx == 0:
-                                logger.info(f"First schedule data: {schedule_data}")
-                        except Exception as e:
-                            error_msg = f"Failed to prepare schedule {idx}: {e}"
-                            logger.error(error_msg)
-                            save_errors.append(error_msg)
-                    
-                    logger.info(f"Prepared {len(schedule_records)} schedule records for batch insert")
-                    
-                    # Insert in chunks of 100 to avoid payload size limits
-                    chunk_size = 100
-                    for i in range(0, len(schedule_records), chunk_size):
-                        chunk = schedule_records[i:i + chunk_size]
-                        try:
-                            insert_result = supabase.table('schedules').insert(chunk).execute()
-                            saved += len(chunk)
-                            logger.info(f"Batch inserted chunk {i//chunk_size + 1}: {len(chunk)} schedules (total: {saved})")
-                        except Exception as e:
-                            error_msg = f"Failed to insert batch starting at {i}: {e}"
-                            logger.error(error_msg)
-                            save_errors.append(error_msg)
-                            if (saved % 50) == 0:
-                                logger.info(f"Progress: {saved} schedules saved so far")
-                    
-                    logger.info(
-                        f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
-                    
-                    if save_errors:
-                        logger.error(f"{len(save_errors)} schedules failed to save:")
-                        for err in save_errors[:5]:  # Log first 5 errors
-                            logger.error(f"  - {err}")
-
-                    update_ga_progress(
-                        status='completed',
-                        message=f'✅ Generated {saved} schedules for {target_school_year} Semester {target_semester}! Review them on the timetable.',
-                        hard_viols=0,
-                        soft_viols=0,
-                        schedules=schedules  # Include schedules for frontend to display
-                    )
+                        update_ga_progress(
+                            status='completed',
+                            message=f'✅ Generated {saved} schedules for {target_school_year} Semester {target_semester}! Review them on the timetable.',
+                            hard_viols=result.get('hard_violations', 0),
+                            soft_viols=result.get('soft_violations', 0),
+                            schedules=schedules  # Include schedules for frontend to display
+                        )
                 else:
-                    logger.warning("No schedules to save or save_to_db is False")
+                    update_ga_progress(
+                        status='failed',
+                        message=f'❌ Generation failed: {result.get("message", "Unknown error")}'
+                    )
 
             except Exception as e:
                 logger.error(f"GA background error: {e}")
