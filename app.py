@@ -3967,6 +3967,45 @@ def api_generate_full_schedule():
                     max_generations=100,
                     time_limit_seconds=45.0  # Minimum 45 seconds as requested
                 )
+                
+                # PRE-EXPANSION ANALYSIS: Identify courses that will share days after expansion
+                # If two courses for the same prof will expand to the same day, they MUST have different times
+                logger.info("🔍 Analyzing day patterns to detect potential conflicts...")
+                prof_day_conflicts = {}  # {prof: [(course1, course2, shared_day), ...]}
+                
+                for prof_name, course_list in faculty_course_assignments.items():
+                    if len(course_list) < 2:
+                        continue  # Single course, no conflicts possible
+                    
+                    # Check every pair of courses for this professor
+                    for i in range(len(course_list)):
+                        for j in range(i + 1, len(course_list)):
+                            course1 = course_list[i]
+                            course2 = course_list[j]
+                            
+                            pattern1 = day_patterns.get(course1, {})
+                            pattern2 = day_patterns.get(course2, {})
+                            
+                            # Find shared days between the two patterns
+                            shared_days = set(pattern1.keys()) & set(pattern2.keys())
+                            
+                            if shared_days:
+                                if prof_name not in prof_day_conflicts:
+                                    prof_day_conflicts[prof_name] = []
+                                
+                                for shared_day in shared_days:
+                                    prof_day_conflicts[prof_name].append({
+                                        'course1': course1,
+                                        'course2': course2,
+                                        'day': shared_day
+                                    })
+                                    logger.warning(f"⚠️ POTENTIAL CONFLICT: {prof_name} teaches {course1} and {course2}, both on {shared_day}")
+                
+                if prof_day_conflicts:
+                    logger.info(f"Found {sum(len(v) for v in prof_day_conflicts.values())} potential post-expansion conflicts")
+                    logger.info("GA must ensure these course pairs have non-overlapping times")
+                else:
+                    logger.info("✅ No day pattern conflicts detected - all courses expand to different days")
 
                 # Progress callback
                 def progress_callback(progress):
@@ -3993,13 +4032,33 @@ def api_generate_full_schedule():
                 max_retries = 3
                 retry_count = 0
                 schedules = None
+                current_pop_size = 50
+                current_max_gen = 100
                 
                 while retry_count < max_retries:
                     if retry_count > 0:
-                        logger.info(f"🔄 RETRY {retry_count}/{max_retries}: Attempting with different random seed")
+                        # Increase diversity on retry
+                        current_pop_size = 50 + (retry_count * 25)  # 50, 75, 100
+                        current_max_gen = 100 + (retry_count * 50)  # 100, 150, 200
+                        
+                        logger.info(f"🔄 RETRY {retry_count}/{max_retries}: Using pop_size={current_pop_size}, max_gen={current_max_gen}")
+                        
+                        # Rebuild config with larger population
+                        config = FullGAConfig(
+                            subjects=subjects,
+                            rooms_legacy=rooms_list,
+                            prof_availability=prof_availability,
+                            teaching_loads=teaching_loads_map,
+                            reference_schedules=reference_schedules,
+                            qualification_matrix=qualification_matrix,
+                            pop_size=current_pop_size,
+                            max_generations=current_max_gen,
+                            time_limit_seconds=45.0 + (retry_count * 15)  # 45s, 60s, 75s
+                        )
+                        
                         update_ga_progress(
                             status='running', 
-                            message=f'Retry {retry_count}/{max_retries}: Regenerating with different seed...')
+                            message=f'Retry {retry_count}/{max_retries}: Increasing diversity (pop={current_pop_size}, gen={current_max_gen})...')
                     
                     result = run_full_ga_v3(
                         config, progress_callback=progress_callback)
