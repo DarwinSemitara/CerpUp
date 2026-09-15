@@ -1042,24 +1042,38 @@ def che_chat():
             context_data['schedules'] = []
 
         if include_context:
+            # Try to load additional context data, but don't fail if tables don't exist
             try:
                 member_docs = db.collection('members').stream()
                 context_data['members'] = [
                     {'id': d.id, **d.to_dict()} for d in member_docs]
-
+            except Exception as member_err:
+                logger.warning(f"CHE context: members table not available - {member_err}")
+                context_data['members'] = []
+            
+            try:
                 research_docs = db.collection('research').stream()
                 context_data['research'] = [
                     {'id': d.id, **d.to_dict()} for d in research_docs]
-
+            except Exception as research_err:
+                logger.warning(f"CHE context: research table not available - {research_err}")
+                context_data['research'] = []
+            
+            try:
                 ext_docs = db.collection('extensions').stream()
                 context_data['extensions'] = [
                     {'id': d.id, **d.to_dict()} for d in ext_docs]
-
+            except Exception as ext_err:
+                logger.warning(f"CHE context: extensions table not available - {ext_err}")
+                context_data['extensions'] = []
+            
+            try:
                 news_docs = db.collection('news').stream()
                 context_data['news'] = [
                     {'id': d.id, **d.to_dict()} for d in news_docs]
-            except Exception as ctx_err:
-                logger.warning(f"CHE context fetch partial failure: {ctx_err}")
+            except Exception as news_err:
+                logger.warning(f"CHE context: news table not available - {news_err}")
+                context_data['news'] = []
 
         result = che_chat_fn(
             message=message,
