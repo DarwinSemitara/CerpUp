@@ -4079,10 +4079,19 @@ def api_generate_full_schedule():
                             logger.info(f"First 3 schedules:")
                             for i, sched in enumerate(schedules[:3]):
                                 logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
+                        
+                        logger.info(f"Day patterns available: {len(day_patterns)} courses")
+                        # Log a sample pattern to debug structure
+                        if day_patterns:
+                            sample_key = list(day_patterns.keys())[0]
+                            sample_pattern = day_patterns[sample_key]
+                            logger.info(f"Sample day_pattern['{sample_key}'] = {sample_pattern} (type: {type(sample_pattern)})")
 
                         # EXPAND SCHEDULES BASED ON DAY PATTERNS FROM REFERENCE
                         # Use the GA's optimized times, but duplicate for all days in the pattern
                         expanded_schedules = []
+                        expansion_stats = {'expanded': 0, 'not_expanded': 0, 'no_pattern': 0}
+                        
                         for sched in schedules:
                             key = f"{sched.get('subjCode')}-{sched.get('section')}"
                             pattern = day_patterns.get(key, {})
@@ -4091,20 +4100,26 @@ def api_generate_full_schedule():
                             if not isinstance(pattern, dict):
                                 logger.warning(f"Pattern for {key} is not a dict (type: {type(pattern)}), treating as no pattern")
                                 pattern = {}
+                                expansion_stats['no_pattern'] += 1
                             
                             # pattern is a dict: {day: {day, start, end, room}}
                             if pattern and len(pattern) >= 2:
                                 # Has a defined pattern from reference (e.g., MW, TTH, WF)
                                 # Create one entry for each day, using GA's time/room but reference days
                                 days_in_pattern = list(pattern.keys())  # Get the days from dict keys
+                                logger.debug(f"Expanding {key}: {days_in_pattern}")
                                 for day in days_in_pattern:
                                     entry = sched.copy()
                                     entry['day'] = day
                                     # Keep GA's optimized time and room
                                     expanded_schedules.append(entry)
+                                expansion_stats['expanded'] += 1
                             else:
                                 # No pattern or only one day - keep as is
                                 expanded_schedules.append(sched)
+                                expansion_stats['not_expanded'] += 1
+                        
+                        logger.info(f"Expansion stats: {expansion_stats['expanded']} expanded to multiple days, {expansion_stats['not_expanded']} kept as-is, {expansion_stats['no_pattern']} had invalid patterns")
                         
                         logger.info(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns")
                         logger.info(f"Sample expanded:")
