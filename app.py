@@ -3986,6 +3986,12 @@ def api_generate_full_schedule():
                             pattern1 = day_patterns.get(course1, {})
                             pattern2 = day_patterns.get(course2, {})
                             
+                            # Safety check: ensure patterns are dicts
+                            if not isinstance(pattern1, dict):
+                                pattern1 = {}
+                            if not isinstance(pattern2, dict):
+                                pattern2 = {}
+                            
                             # Find shared days between the two patterns
                             shared_days = set(pattern1.keys()) & set(pattern2.keys())
                             
@@ -4079,12 +4085,13 @@ def api_generate_full_schedule():
                         expanded_schedules = []
                         for sched in schedules:
                             key = f"{sched.get('subjCode')}-{sched.get('section')}"
-                            pattern = day_patterns.get(key, [])
+                            pattern = day_patterns.get(key, {})
                             
+                            # pattern is a dict: {day: {day, start, end, room}}
                             if pattern and len(pattern) >= 2:
                                 # Has a defined pattern from reference (e.g., MW, TTH, WF)
                                 # Create one entry for each day, using GA's time/room but reference days
-                                days_in_pattern = [p['day'] for p in pattern]
+                                days_in_pattern = list(pattern.keys())  # Get the days from dict keys
                                 for day in days_in_pattern:
                                     entry = sched.copy()
                                     entry['day'] = day
