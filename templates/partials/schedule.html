@@ -9488,6 +9488,8 @@
                     var data = JSON.parse(saved);
                     scheduleChatState.chatHistory = data.history || [];
                     scheduleChatState.lastGenerationParams = data.lastGenerationParams || null;
+                    scheduleChatState.showButtons = data.showButtons || false;
+                    scheduleChatState.scheduleSaved = data.scheduleSaved || false;
 
                     // Restore chat messages in UI
                     var messagesContainer = document.getElementById('schedule-chat-messages');
@@ -9512,6 +9514,11 @@
                             }
                         });
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        
+                        // Restore buttons if they were shown before
+                        if (scheduleChatState.showButtons) {
+                            showSaveAndRegenerateButtons(scheduleChatState.scheduleSaved);
+                        }
                     }
                 }
             } catch (e) {
@@ -9528,6 +9535,12 @@
 
                 var data = {
                     history: scheduleChatState.chatHistory,
+                    lastGenerationParams: scheduleChatState.lastGenerationParams,
+                    showButtons: scheduleChatState.showButtons || false,  // Track if buttons should be shown
+                    scheduleSaved: scheduleChatState.scheduleSaved || false,  // Track if schedule was saved
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('schedule_chat_history_' + schoolYear + '_' + semester, JSON.stringify(data));
                     lastGenerationParams: scheduleChatState.lastGenerationParams,
                     timestamp: new Date().toISOString()
                 };
@@ -9846,12 +9859,16 @@
         }
 
         // Show save and re-generate buttons after successful generation
-        function showSaveAndRegenerateButtons() {
+        function showSaveAndRegenerateButtons(disabled) {
             var messagesContainer = document.getElementById('schedule-chat-messages');
             if (!messagesContainer) return;
 
             // Check if buttons already exist
             if (document.getElementById('schedule-action-buttons')) return;
+            
+            // Mark that buttons should be shown
+            scheduleChatState.showButtons = true;
+            saveChatHistory();
 
             var btnContainer = document.createElement('div');
             btnContainer.id = 'schedule-action-buttons';
@@ -9859,11 +9876,14 @@
 
             // Save button
             var saveBtn = document.createElement('button');
-            saveBtn.onclick = function () { confirmSaveGeneratedSchedule(); };
-            saveBtn.style.cssText = 'width:100%;padding:10px 16px;background:#10b981;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;';
-            saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg> Save Schedule';
-            saveBtn.onmouseover = function () { this.style.background = '#059669'; };
-            saveBtn.onmouseout = function () { this.style.background = '#10b981'; };
+            saveBtn.onclick = disabled ? null : function () { confirmSaveGeneratedSchedule(); };
+            saveBtn.disabled = disabled;
+            saveBtn.style.cssText = 'width:100%;padding:10px 16px;background:' + (disabled ? '#9ca3af' : '#10b981') + ';color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:' + (disabled ? 'not-allowed' : 'pointer') + ';display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;opacity:' + (disabled ? '0.6' : '1') + ';';
+            saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg> ' + (disabled ? 'Schedule Saved' : 'Save Schedule');
+            if (!disabled) {
+                saveBtn.onmouseover = function () { this.style.background = '#059669'; };
+                saveBtn.onmouseout = function () { this.style.background = '#10b981'; };
+            }
 
             // Re-generate button
             var regenBtn = document.createElement('button');
@@ -9948,19 +9968,29 @@
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
                     if (data.success) {
+                        // Mark schedule as saved
+                        scheduleChatState.scheduleSaved = true;
+                        saveChatHistory();
+                        
                         showScheduleAIMessage('Schedule saved successfully! The schedule is now visible to all users.', false);
+                        
+                        // Update buttons to show disabled state
+                        var btnContainer = document.getElementById('schedule-action-buttons');
+                        if (btnContainer) btnContainer.remove();
+                        showSaveAndRegenerateButtons(true);  // true = disabled
+                        
                         // Reload main schedules
                         loadSchedules();
                     } else {
                         showScheduleAIMessage('Failed to save schedule: ' + (data.message || 'Unknown error'), true);
                         // Restore action buttons
-                        showSaveAndRegenerateButtons();
+                        showSaveAndRegenerateButtons(false);
                     }
                 })
                 .catch(function (err) {
                     showScheduleAIMessage('Error saving schedule: ' + err.message, true);
                     // Restore action buttons
-                    showSaveAndRegenerateButtons();
+                    showSaveAndRegenerateButtons(false);
                 });
         };
 
@@ -10335,13 +10365,24 @@
                 ? progress.best_fitness.toFixed(1)
                 : '∞';
             var conflicts = (progress.hard_viols || 0) + (progress.soft_viols || 0);
-            var percentage = maxGen > 0 ? Math.min(100, (gen / maxGen) * 100) : 0;
+            
+            // If status is completed, animate to 100% regardless of generation count
+            var percentage;
+            if (progress.status === 'completed') {
+                percentage = 100;
+            } else {
+                percentage = maxGen > 0 ? Math.min(100, (gen / maxGen) * 100) : 0;
+            }
 
             document.getElementById('progress-message').textContent = message;
             document.getElementById('progress-gen').textContent = gen + '/' + maxGen;
             document.getElementById('progress-fitness').textContent = fitness;
             document.getElementById('progress-conflicts').textContent = conflicts;
-            document.getElementById('progress-bar').style.width = percentage + '%';
+            
+            // Animate progress bar
+            var progressBar = document.getElementById('progress-bar');
+            progressBar.style.transition = 'width 0.5s ease-out';
+            progressBar.style.width = percentage + '%';
 
             // Display schedules in real-time if available
             if (progress.schedules && progress.schedules.length > 0) {
@@ -10402,8 +10443,11 @@
                                 false
                             );
 
-                            // Add Save and Re-generate buttons
-                            showSaveAndRegenerateButtons();
+                            // Reset saved flag for new generation
+                            scheduleChatState.scheduleSaved = false;
+                            
+                            // Add Save and Re-generate buttons (not disabled for new generation)
+                            showSaveAndRegenerateButtons(false);
 
                             // Reload schedules without page refresh (loads into generated_schedules view)
                             loadGeneratedSchedules();
