@@ -4087,6 +4087,11 @@ def api_generate_full_schedule():
                             key = f"{sched.get('subjCode')}-{sched.get('section')}"
                             pattern = day_patterns.get(key, {})
                             
+                            # Safety check: ensure pattern is a dict
+                            if not isinstance(pattern, dict):
+                                logger.warning(f"Pattern for {key} is not a dict (type: {type(pattern)}), treating as no pattern")
+                                pattern = {}
+                            
                             # pattern is a dict: {day: {day, start, end, room}}
                             if pattern and len(pattern) >= 2:
                                 # Has a defined pattern from reference (e.g., MW, TTH, WF)
