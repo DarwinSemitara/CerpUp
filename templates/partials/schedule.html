@@ -10263,8 +10263,12 @@
         // Show draggable progress indicator
         var progressWidget = null;
         var progressPollInterval = null;
+        var generationCompletionShown = false;  // Flag to prevent duplicate completion messages
 
         function showGenerationProgress() {
+            // Reset completion flag when starting new generation
+            generationCompletionShown = false;
+            
             // Create floating progress widget
             progressWidget = document.createElement('div');
             progressWidget.id = 'ga-progress-widget';
@@ -10377,25 +10381,32 @@
                         updateProgressWidget(progress);
 
                         if (progress.status === 'completed') {
+                            // Prevent duplicate completion messages
+                            if (generationCompletionShown) {
+                                console.log('⚠️ Completion already handled, skipping duplicate');
+                                return;
+                            }
+                            generationCompletionShown = true;
+                            
                             clearInterval(progressPollInterval);
-                            setTimeout(function () {
-                                hideGenerationProgress();
+                            progressPollInterval = null;  // Prevent re-entry
+                            
+                            hideGenerationProgress();
 
-                                // Ask CHE if user is satisfied with the generated schedule
-                                showScheduleAIMessage(
-                                    'Schedule generation completed successfully!\n\n' +
-                                    'Review the generated schedule below. Are you satisfied with this schedule?\n\n' +
-                                    'If yes, click "Save Schedule" to commit it to the database.\n' +
-                                    'If not, you can click "Re-Generate" to try again with different parameters.',
-                                    false
-                                );
+                            // Ask CHE if user is satisfied with the generated schedule
+                            showScheduleAIMessage(
+                                'Schedule generation completed successfully!\n\n' +
+                                'Review the generated schedule below. Are you satisfied with this schedule?\n\n' +
+                                'If yes, click "Save Schedule" to commit it to the database.\n' +
+                                'If not, you can click "Re-Generate" to try again with different parameters.',
+                                false
+                            );
 
-                                // Add Save and Re-generate buttons
-                                showSaveAndRegenerateButtons();
+                            // Add Save and Re-generate buttons
+                            showSaveAndRegenerateButtons();
 
-                                // Reload schedules without page refresh (loads into generated_schedules view)
-                                loadGeneratedSchedules();
-                            }, 2000);
+                            // Reload schedules without page refresh (loads into generated_schedules view)
+                            loadGeneratedSchedules();
                         } else if (progress.status === 'failed') {
                             clearInterval(progressPollInterval);
                             hideGenerationProgress();
