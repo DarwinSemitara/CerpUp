@@ -4103,102 +4103,99 @@ def api_generate_full_schedule():
                             with ga_progress_lock:
                                 ga_progress['running'] = False
                             return
-
-                    # Save directly to main schedules table (so users can see and review on timetable)
-                    if save_to_db and schedules:
-                        logger.info(f"Starting save: {len(schedules)} schedules to main schedules table")
-                        
-                        update_ga_progress(
-                            status='running', message=f'Saving {len(schedules)} schedules to timetable...')
-
-                        saved = 0
-                        save_errors = []
-
-                        # Clear any existing schedules for this semester first
-                        try:
-                            logger.info(
-                                f"Clearing old schedules for {target_school_year} Semester {target_semester}")
-                            delete_result = supabase.table('schedules').delete().eq(
-                                'semester', str(target_semester)).eq('school_year', target_school_year).execute()
-                            logger.info(f"Cleared old schedules")
-                        except Exception as e:
-                            logger.warning(f"Error clearing old schedules: {e}")
-
-                        # BATCH INSERT: Prepare all schedule records first
-                        schedule_records = []
-                        for idx, sched in enumerate(schedules):
-                            try:
-                                new_id = str(uuid.uuid4())
-                                # CRITICAL: Normalize room names to consistent format (TCC - 01, not TCC-01)
-                                room_name = sched.get('room', '')
-                                import re
-                                normalized_room = re.sub(r'(\w+)-(\d+)', r'\1 - \2', room_name)  # TCC-01 → TCC - 01
-                                
-                                schedule_data = {
-                                    'id': new_id,
-                                    'subj_code': sched.get('subjCode', ''),
-                                    'subj_name': sched.get('subjName', ''),
-                                    'prof': sched.get('prof', ''),
-                                    'room': normalized_room,
-                                    'section': sched.get('section', ''),
-                                    'units': float(sched.get('units', 0)) if sched.get('units') else 0,
-                                    'day': sched.get('day', ''),
-                                    'start': sched.get('start', ''),
-                                    'end': sched.get('end', ''),
-                                    'type': 'Lecture',
-                                    'semester': str(target_semester),
-                                    'school_year': target_school_year,
-                                    'year': '1',
-                                    'created_at': datetime.now(timezone.utc).isoformat(),
-                                    'pairedWith': None
-                                }
-                                schedule_records.append(schedule_data)
-                                
-                                # Log first schedule for debugging
-                                if idx == 0:
-                                    logger.info(f"First schedule data: {schedule_data}")
-                            except Exception as e:
-                                error_msg = f"Failed to prepare schedule {idx}: {e}"
-                                logger.error(error_msg)
-                                save_errors.append(error_msg)
-                        
-                        logger.info(f"Prepared {len(schedule_records)} schedule records for batch insert")
-                        
-                        # Insert in chunks of 100 to avoid payload size limits
-                        chunk_size = 100
-                        for i in range(0, len(schedule_records), chunk_size):
-                            chunk = schedule_records[i:i + chunk_size]
-                            try:
-                                insert_result = supabase.table('schedules').insert(chunk).execute()
-                                saved += len(chunk)
-                                logger.info(f"Batch inserted chunk {i//chunk_size + 1}: {len(chunk)} schedules (total: {saved})")
-                            except Exception as e:
-                                error_msg = f"Failed to insert batch starting at {i}: {e}"
-                                logger.error(error_msg)
-                                save_errors.append(error_msg)
-                                if (saved % 50) == 0:
-                                    logger.info(f"Progress: {saved} schedules saved so far")
-                        
-                        logger.info(
-                            f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
-                        
-                        if save_errors:
-                            logger.error(f"{len(save_errors)} schedules failed to save:")
-                            for err in save_errors[:5]:  # Log first 5 errors
-                                logger.error(f"  - {err}")
-
-                        update_ga_progress(
-                            status='completed',
-                            message=f'✅ Generated {saved} schedules for {target_school_year} Semester {target_semester}! Review them on the timetable.',
-                            hard_viols=result.get('hard_violations', 0),
-                            soft_viols=result.get('soft_violations', 0),
-                            schedules=schedules  # Include schedules for frontend to display
-                        )
-                else:
+                
+                # AFTER RETRY LOOP: Save schedules if we have them
+                if save_to_db and schedules:
+                    logger.info(f"Starting save: {len(schedules)} schedules to main schedules table")
+                    
                     update_ga_progress(
-                        status='failed',
-                        message=f'❌ Generation failed: {result.get("message", "Unknown error")}'
+                        status='running', message=f'Saving {len(schedules)} schedules to timetable...')
+
+                    saved = 0
+                    save_errors = []
+
+                    # Clear any existing schedules for this semester first
+                    try:
+                        logger.info(
+                            f"Clearing old schedules for {target_school_year} Semester {target_semester}")
+                        delete_result = supabase.table('schedules').delete().eq(
+                            'semester', str(target_semester)).eq('school_year', target_school_year).execute()
+                        logger.info(f"Cleared old schedules")
+                    except Exception as e:
+                        logger.warning(f"Error clearing old schedules: {e}")
+
+                    # BATCH INSERT: Prepare all schedule records first
+                    schedule_records = []
+                    for idx, sched in enumerate(schedules):
+                        try:
+                            new_id = str(uuid.uuid4())
+                            # CRITICAL: Normalize room names to consistent format (TCC - 01, not TCC-01)
+                            room_name = sched.get('room', '')
+                            import re
+                            normalized_room = re.sub(r'(\w+)-(\d+)', r'\1 - \2', room_name)  # TCC-01 → TCC - 01
+                            
+                            schedule_data = {
+                                'id': new_id,
+                                'subj_code': sched.get('subjCode', ''),
+                                'subj_name': sched.get('subjName', ''),
+                                'prof': sched.get('prof', ''),
+                                'room': normalized_room,
+                                'section': sched.get('section', ''),
+                                'units': float(sched.get('units', 0)) if sched.get('units') else 0,
+                                'day': sched.get('day', ''),
+                                'start': sched.get('start', ''),
+                                'end': sched.get('end', ''),
+                                'type': 'Lecture',
+                                'semester': str(target_semester),
+                                'school_year': target_school_year,
+                                'year': '1',
+                                'created_at': datetime.now(timezone.utc).isoformat(),
+                                'pairedWith': None
+                            }
+                            schedule_records.append(schedule_data)
+                            
+                            # Log first schedule for debugging
+                            if idx == 0:
+                                logger.info(f"First schedule data: {schedule_data}")
+                        except Exception as e:
+                            error_msg = f"Failed to prepare schedule {idx}: {e}"
+                            logger.error(error_msg)
+                            save_errors.append(error_msg)
+                    
+                    logger.info(f"Prepared {len(schedule_records)} schedule records for batch insert")
+                    
+                    # Insert in chunks of 100 to avoid payload size limits
+                    chunk_size = 100
+                    for i in range(0, len(schedule_records), chunk_size):
+                        chunk = schedule_records[i:i + chunk_size]
+                        try:
+                            insert_result = supabase.table('schedules').insert(chunk).execute()
+                            saved += len(chunk)
+                            logger.info(f"Batch inserted chunk {i//chunk_size + 1}: {len(chunk)} schedules (total: {saved})")
+                        except Exception as e:
+                            error_msg = f"Failed to insert batch starting at {i}: {e}"
+                            logger.error(error_msg)
+                            save_errors.append(error_msg)
+                            if (saved % 50) == 0:
+                                logger.info(f"Progress: {saved} schedules saved so far")
+                    
+                    logger.info(
+                        f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
+                    
+                    if save_errors:
+                        logger.error(f"{len(save_errors)} schedules failed to save:")
+                        for err in save_errors[:5]:  # Log first 5 errors
+                            logger.error(f"  - {err}")
+
+                    update_ga_progress(
+                        status='completed',
+                        message=f'✅ Generated {saved} schedules for {target_school_year} Semester {target_semester}! Review them on the timetable.',
+                        hard_viols=0,
+                        soft_viols=0,
+                        schedules=schedules  # Include schedules for frontend to display
                     )
+                else:
+                    logger.warning("No schedules to save or save_to_db is False")
 
             except Exception as e:
                 logger.error(f"GA background error: {e}")
