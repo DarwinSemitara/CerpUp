@@ -3989,85 +3989,120 @@ def api_generate_full_schedule():
                 logger.info(f"� About to call run_full_ga_v3()")
                 logger.info(f"� Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
                 
-                result = run_full_ga_v3(
-                    config, progress_callback=progress_callback)
+                # RETRY LOOP: Try up to 3 times with different seeds if conflicts detected
+                max_retries = 3
+                retry_count = 0
+                schedules = None
                 
-                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}")
-                
-                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
-
-                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
-
-                if result['success']:
-                    schedules = result.get('schedules', [])
+                while retry_count < max_retries:
+                    if retry_count > 0:
+                        logger.info(f"🔄 RETRY {retry_count}/{max_retries}: Attempting with different random seed")
+                        update_ga_progress(
+                            status='running', 
+                            message=f'Retry {retry_count}/{max_retries}: Regenerating with different seed...')
                     
-                    logger.info(f"GA returned {len(schedules)} schedules")
-                    if schedules:
-                        logger.info(f"First 3 schedules:")
-                        for i, sched in enumerate(schedules[:3]):
+                    result = run_full_ga_v3(
+                        config, progress_callback=progress_callback)
+                    
+                    logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
+
+                    if result['success']:
+                        schedules = result.get('schedules', [])
+                        
+                        logger.info(f"GA returned {len(schedules)} schedules")
+                        if schedules:
+                            logger.info(f"First 3 schedules:")
+                            for i, sched in enumerate(schedules[:3]):
+                                logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
+
+                        # EXPAND SCHEDULES BASED ON DAY PATTERNS FROM REFERENCE
+                        # Use the GA's optimized times, but duplicate for all days in the pattern
+                        expanded_schedules = []
+                        for sched in schedules:
+                            key = f"{sched.get('subjCode')}-{sched.get('section')}"
+                            pattern = day_patterns.get(key, [])
+                            
+                            if pattern and len(pattern) >= 2:
+                                # Has a defined pattern from reference (e.g., MW, TTH, WF)
+                                # Create one entry for each day, using GA's time/room but reference days
+                                days_in_pattern = [p['day'] for p in pattern]
+                                for day in days_in_pattern:
+                                    entry = sched.copy()
+                                    entry['day'] = day
+                                    # Keep GA's optimized time and room
+                                    expanded_schedules.append(entry)
+                            else:
+                                # No pattern or only one day - keep as is
+                                expanded_schedules.append(sched)
+                        
+                        logger.info(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns")
+                        logger.info(f"Sample expanded:")
+                        for i, sched in enumerate(expanded_schedules[:5]):
                             logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
-                    
-                    logger.info(f"GA returned {len(schedules)} schedules")
-
-                    # EXPAND SCHEDULES BASED ON DAY PATTERNS FROM REFERENCE
-                    # Use the GA's optimized times, but duplicate for all days in the pattern
-                    expanded_schedules = []
-                    for sched in schedules:
-                        key = f"{sched.get('subjCode')}-{sched.get('section')}"
-                        pattern = day_patterns.get(key, [])
                         
-                        if pattern and len(pattern) >= 2:
-                            # Has a defined pattern from reference (e.g., MW, TTH, WF)
-                            # Create one entry for each day, using GA's time/room but reference days
-                            days_in_pattern = [p['day'] for p in pattern]
-                            for day in days_in_pattern:
-                                entry = sched.copy()
-                                entry['day'] = day
-                                # Keep GA's optimized time and room
-                                expanded_schedules.append(entry)
-                        else:
-                            # No pattern or only one day - keep as is
-                            expanded_schedules.append(sched)
-                    
-                    logger.info(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns")
-                    logger.info(f"Sample expanded:")
-                    for i, sched in enumerate(expanded_schedules[:5]):
-                        logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
-                    
-                    logger.info(f"Expanded {len(schedules)} schedules to {len(expanded_schedules)} using reference patterns")
-                    
-                    schedules = expanded_schedules
+                        schedules = expanded_schedules
 
-                    # CRITICAL: Check for conflicts AFTER expansion
-                    # Expansion can create conflicts that didn't exist in the GA output
-                    conflict_check = []
-                    for sched in schedules:
-                        prof = sched.get('prof', '')
-                        day = sched.get('day', '')
-                        start = sched.get('start', '')
-                        end = sched.get('end', '')
+                        # CRITICAL: Check for conflicts AFTER expansion
+                        # Expansion can create conflicts that didn't exist in the GA output
+                        logger.info("🔍 Checking for conflicts after day pattern expansion...")
+                        conflict_check = []
+                        conflicts_found = False
                         
-                        # Check if this prof already has a schedule at this time
-                        for existing in conflict_check:
-                            if (existing['prof'] == prof and 
-                                existing['day'] == day and
-                                existing['start'] == start and
-                                existing['end'] == end):
-                                # CONFLICT FOUND!
-                                error_msg = f"CONFLICT after expansion: {prof} has {sched.get('subjCode')} and {existing['subjCode']} both on {day} at {start}-{end}"
-                                logger.error(error_msg)
-                                
-                                update_ga_progress(status='error', message='Schedule generation failed: Conflicts detected after day pattern expansion')
+                        for sched in schedules:
+                            prof = sched.get('prof', '')
+                            day = sched.get('day', '')
+                            start = sched.get('start', '')
+                            end = sched.get('end', '')
+                            
+                            # Check if this prof already has a schedule at this time
+                            for existing in conflict_check:
+                                if (existing['prof'] == prof and 
+                                    existing['day'] == day and
+                                    existing['start'] == start and
+                                    existing['end'] == end):
+                                    # CONFLICT FOUND!
+                                    error_msg = f"❌ CONFLICT: {prof} has {sched.get('subjCode')} and {existing['subjCode']} both on {day} at {start}-{end}"
+                                    logger.error(error_msg)
+                                    conflicts_found = True
+                                    break
+                            
+                            if conflicts_found:
+                                break
+                            
+                            conflict_check.append({'prof': prof, 'day': day, 'start': start, 'end': end, 'subjCode': sched.get('subjCode')})
+                        
+                        if conflicts_found:
+                            retry_count += 1
+                            if retry_count < max_retries:
+                                logger.info(f"🔄 Conflicts detected. Retrying with different seed (attempt {retry_count + 1}/{max_retries})...")
+                                continue  # Retry with new seed
+                            else:
+                                logger.error(f"❌ Failed to generate conflict-free schedule after {max_retries} attempts")
+                                update_ga_progress(
+                                    status='failed', 
+                                    message=f'Schedule generation failed: Conflicts detected after {max_retries} attempts. Please try again.')
                                 
                                 with ga_progress_lock:
                                     ga_progress['running'] = False
                                 
-                                # Return error - do NOT save conflicting schedules
-                                return
-                        
-                        conflict_check.append({'prof': prof, 'day': day, 'start': start, 'end': end, 'subjCode': sched.get('subjCode')})
-                    
-                    logger.info("✅ No conflicts detected after expansion")
+                                return  # Give up after max retries
+                        else:
+                            logger.info("✅ No conflicts detected after expansion")
+                            break  # Success! Exit retry loop
+                    else:
+                        # GA failed to find solution
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            logger.info(f"🔄 GA failed. Retrying with different seed (attempt {retry_count + 1}/{max_retries})...")
+                            continue
+                        else:
+                            update_ga_progress(
+                                status='failed',
+                                message=f'❌ Generation failed: {result.get("message", "Unknown error")}'
+                            )
+                            with ga_progress_lock:
+                                ga_progress['running'] = False
+                            return
 
                     # Save directly to main schedules table (so users can see and review on timetable)
                     if save_to_db and schedules:
