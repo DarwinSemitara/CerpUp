@@ -4162,12 +4162,17 @@ def api_generate_full_schedule():
                         for idx, sched in enumerate(schedules):
                             try:
                                 new_id = str(uuid.uuid4())
+                                # CRITICAL: Normalize room names to consistent format (TCC - 01, not TCC-01)
+                                room_name = sched.get('room', '')
+                                import re
+                                normalized_room = re.sub(r'(\w+)-(\d+)', r'\1 - \2', room_name)  # TCC-01 → TCC - 01
+                                
                                 schedule_data = {
                                     'id': new_id,
                                     'subj_code': sched.get('subjCode', ''),
                                     'subj_name': sched.get('subjName', ''),
                                     'prof': sched.get('prof', ''),
-                                    'room': sched.get('room', ''),
+                                    'room': normalized_room,
                                     'section': sched.get('section', ''),
                                     'units': float(sched.get('units', 0)) if sched.get('units') else 0,
                                     'day': sched.get('day', ''),

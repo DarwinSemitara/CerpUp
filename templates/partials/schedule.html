@@ -8952,7 +8952,12 @@
             // Use available schedules
             schedulesToUse.forEach(function (sched) {
                 // Filter by room if selected
-                if (selectedRoom && sched.room !== selectedRoom) return;
+                // CRITICAL: Normalize room names for comparison (handle both "TCC - 01" and "TCC-01" formats)
+                if (selectedRoom) {
+                    var normalizedSchedRoom = sched.room.replace(/\s*-\s*/g, ' - '); // Normalize to "TCC - 01"
+                    var normalizedSelectedRoom = selectedRoom.replace(/\s*-\s*/g, ' - '); // Normalize to "TCC - 01"
+                    if (normalizedSchedRoom !== normalizedSelectedRoom) return;
+                }
 
                 matchingCount++;
                 console.log('✓ Matching schedule:', sched.subjCode, 'Room:', sched.room, 'Day:', sched.day, 'Start:', sched.start);
