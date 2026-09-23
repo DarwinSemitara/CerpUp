@@ -1,5 +1,8 @@
 .env
+.env.*
+!.env.example
 firebase-credentials.json
+.kiro/
 __pycache__/
 *.pyc
 *.pyo

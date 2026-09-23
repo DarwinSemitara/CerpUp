@@ -203,6 +203,28 @@
             overflow-y: auto;
         }
 
+        /* Sidebar-loaded partials: lift panels off the page background */
+        #content:not(:has(#dashboard-view)) {
+            background: #f9fafb;
+        }
+
+        #content:not(:has(#dashboard-view)) .config-section,
+        #content:not(:has(#dashboard-view)) .courses-container,
+        #content:not(:has(#dashboard-view)) .faculty-container,
+        #content:not(:has(#dashboard-view)) .offering-container,
+        #content:not(:has(#dashboard-view)) .faculty-card,
+        #content:not(:has(#dashboard-view)) .research-main-card,
+        #content:not(:has(#dashboard-view)) .extensions-main-card,
+        #content:not(:has(#dashboard-view)) .card,
+        #content:not(:has(#dashboard-view)) .news-card,
+        #content:not(:has(#dashboard-view)) .timetable-wrap,
+        #content:not(:has(#dashboard-view)) .faculty-side-panel,
+        #content:not(:has(#dashboard-view)) .add-subject-card,
+        #content:not(:has(#dashboard-view)) .fsr-generator-section,
+        #content:not(:has(#dashboard-view)) .fsr-preview-section {
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+        }
+
         .page-title {
             font-size: 1rem;
             font-weight: 600;
@@ -1051,14 +1073,6 @@
                     </svg>
                     Instructions
                 </button>
-
-                <button class="nav-item" onclick="loadPartial('/che/', 'CHE Assistant', this)">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    CHE Assistant
-                </button>
             </nav>
 
             <div class="sidebar-footer">
@@ -1326,7 +1340,7 @@
                 <label class="avail-chip"><input type="checkbox" value="Wednesday" name="avail"> Wednesday</label>
                 <label class="avail-chip"><input type="checkbox" value="Thursday" name="avail"> Thursday</label>
                 <label class="avail-chip"><input type="checkbox" value="Friday" name="avail"> Friday</label>
-                <label class="avail-chip"><input type="checkbox" value="Saturday" name="avail"> Saturday</label>
+                <label class="avail-chip"><input type="checkbox" value="Saturday" name="avail" checked> Saturday</label>
             </div>
 
             <p id="add-member-error" style="font-size:0.78rem;color:#dc2626;margin:12px 0 0;display:none;"></p>

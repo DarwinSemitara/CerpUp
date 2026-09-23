@@ -25,6 +25,24 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
 # Create Supabase client with service role key (for backend operations)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+# HTTP/2 on Windows often raises WinError 10035 (WSAEWOULDBLOCK) through httpx.
+try:
+    import httpx
+    old_session = supabase.postgrest.session
+    supabase.postgrest.session = httpx.Client(
+        base_url=str(old_session.base_url),
+        headers=dict(old_session.headers),
+        timeout=old_session.timeout,
+        follow_redirects=True,
+        http2=False,
+    )
+    try:
+        old_session.close()
+    except Exception:
+        pass
+except Exception as e:
+    print(f"Could not switch Supabase client to HTTP/1.1: {e}")
+
 print(f"✅ Supabase initialized: {SUPABASE_URL}")
 
 

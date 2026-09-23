@@ -1,6 +1,28 @@
 <!-- Courses Partial -->
 <div class="courses-page">
-    <!-- Course Configuration Section (Collapsible) -->
+    <div id="alloc-setup-banner" class="resource-setup" style="display:none;margin-bottom:16px;"></div>
+
+    <!-- Course Assignment: who may teach each course -->
+    <div class="config-section">
+        <div class="config-header" onclick="toggleCourseAssignSection()">
+            <h3 class="config-title">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                Course Assignment
+            </h3>
+            <span class="config-toggle" id="course-assign-toggle">▼</span>
+        </div>
+        <div class="config-content" id="course-assign-content" style="display: none;">
+            <p class="config-subtitle">Choose which faculty can handle each course. Do this before offering sections or assigning a course+section.</p>
+            <div id="course-assign-list" class="course-config-list">
+                <!-- Faculty-per-course checkboxes load here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Assignment: which sections a course is offered for -->
     <div class="config-section">
         <div class="config-header" onclick="toggleConfigSection()">
             <h3 class="config-title">
@@ -9,83 +31,155 @@
                         d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                Course Section Configuration
+                Section Assignment
             </h3>
             <span class="config-toggle" id="config-toggle">▼</span>
         </div>
         <div class="config-content" id="config-content" style="display: none;">
-            <p class="config-subtitle">Configure which sections each course is offered for</p>
+            <p class="config-subtitle">Choose which sections each course can be offered for. CERP 101 and CERP 200 can both offer Section A. This list is used every term.</p>
             <div id="course-config-list" class="course-config-list">
-                <!-- Course configuration items will be loaded here -->
+                <!-- Section checkboxes load here -->
             </div>
         </div>
     </div>
 
     <div class="courses-grid">
-        <!-- Left Container: Courses Checklist -->
+        <!-- Left: Faculty Assignment spans both rows -->
         <div class="courses-container">
             <div class="container-header">
-                <h2 class="container-title">Course Assignment</h2>
-                <p class="container-subtitle">Select courses to assign</p>
+                <h2 class="container-title">Faculty Assignment</h2>
             </div>
 
             <div id="courses-checklist" class="courses-checklist">
-                <!-- CERP Courses Section -->
                 <div class="course-category-section">
                     <h3 class="category-title">CERP Courses</h3>
-                    <div class="course-items" id="cerp-courses">
-                        <!-- CERP courses will be loaded here -->
-                    </div>
+                    <div class="course-items" id="cerp-courses"></div>
                 </div>
-
-                <!-- HUME Courses Section -->
                 <div class="course-category-section">
                     <h3 class="category-title">HUME Courses</h3>
-                    <div class="course-items" id="hume-courses">
-                        <!-- HUME courses will be loaded here -->
-                    </div>
+                    <div class="course-items" id="hume-courses"></div>
                 </div>
-
-                <!-- NSTP Courses Section -->
                 <div class="course-category-section">
                     <h3 class="category-title">NSTP Courses</h3>
-                    <div class="course-items" id="nstp-courses">
-                        <!-- NSTP courses will be loaded here -->
-                    </div>
+                    <div class="course-items" id="nstp-courses"></div>
+                </div>
+                <div class="course-category-section" id="other-courses-section" style="display: none;">
+                    <h3 class="category-title">Other Courses</h3>
+                    <div class="course-items" id="other-courses"></div>
                 </div>
             </div>
 
-            <!-- Assignment Actions -->
             <div class="assignment-actions" id="assignment-actions" style="display: none;">
                 <div class="selected-faculty-info">
                     <span class="info-label">Assigning to:</span>
                     <span class="faculty-name-display" id="selected-faculty-name">No faculty selected</span>
                 </div>
-                <button class="btn-assign-courses" onclick="assignSelectedCourses()">
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    Assign Selected Courses
+                <button type="button" class="btn-assign-courses" id="btn-assign-courses" onclick="assignSelectedCourses()">
+                    <span class="btn-assign-label">Assign</span>
+                    <span class="btn-assign-spinner" aria-hidden="true"></span>
                 </button>
             </div>
         </div>
 
-        <!-- Right Container: Faculty -->
-        <div class="faculty-container">
-            <div class="container-header">
-                <h2 class="container-title">Faculty Members</h2>
-                <p class="container-subtitle">Click a card to select and assign courses</p>
-            </div>
-            <div id="faculty-grid" class="faculty-grid">
-                <!-- Faculty cards will be loaded here -->
-                <div class="empty-state">
-                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                    </svg>
-                    <p>Loading faculty...</p>
+        <!-- Right column: Faculty Members + Custom stacked -->
+        <div class="courses-side">
+            <div class="faculty-container">
+                <div class="container-header">
+                    <h2 class="container-title">Faculty Members</h2>
+                    <p class="container-subtitle">Click a card, then pick their course+sections</p>
                 </div>
+                <div id="faculty-grid" class="faculty-grid">
+                    <div class="empty-state">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                        <p>Loading faculty...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="offering-container">
+                <div class="container-header offering-header">
+                    <button type="button" class="btn-add-custom" onclick="openCustomBlockForm()">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Add Custom
+                    </button>
+                </div>
+                <div class="offering-body" id="offering-content">
+                    <ol id="custom-blocks-list" class="custom-blocks-live"></ol>
+                    <div id="custom-sections-list" class="resource-list" hidden></div>
+                    <div id="rooms-list" class="resource-list" hidden></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom block form -->
+    <div class="faculty-modal" id="offering-modal" onclick="closeCustomBlockForm(event)">
+        <div class="faculty-modal-content offering-modal-content" onclick="event.stopPropagation()">
+            <div class="faculty-modal-header offering-modal-header">
+                <div class="faculty-modal-info">
+                    <h3>Add Custom Block</h3>
+                    <p>Course, section, room, faculty, and units for this custom block</p>
+                </div>
+            </div>
+            <div class="offering-modal-body">
+                <div class="offering-form">
+                    <div class="offering-field">
+                        <label for="offering-course">Course</label>
+                        <select id="offering-course" class="offering-select" onchange="onOfferingCourseChange()">
+                            <option value="">Select a course</option>
+                            <option value="__new__">+ New course…</option>
+                        </select>
+                        <div id="offering-course-new" class="offering-new-fields" style="display: none;">
+                            <input type="text" id="offering-course-code" class="resource-input" maxlength="40"
+                                placeholder="Course code e.g. CERP 300">
+                            <input type="text" id="offering-course-name" class="resource-input" maxlength="80"
+                                placeholder="Course name">
+                            <input type="number" id="offering-course-units" class="resource-input" min="1" max="12"
+                                value="3" title="Units">
+                        </div>
+                    </div>
+                    <div class="offering-field">
+                        <label for="offering-section">Section</label>
+                        <select id="offering-section" class="offering-select" onchange="onOfferingSectionChange()">
+                            <option value="">Select a section</option>
+                            <option value="__new__">+ New section…</option>
+                        </select>
+                        <input type="text" id="offering-section-new" class="resource-input offering-new-fields"
+                            maxlength="40" placeholder="e.g. BSCE-1A" style="display: none;">
+                    </div>
+                    <div class="offering-field">
+                        <label for="offering-room">Room</label>
+                        <select id="offering-room" class="offering-select" onchange="onOfferingRoomChange()">
+                            <option value="">Select a room</option>
+                            <option value="__new__">+ New room…</option>
+                        </select>
+                        <input type="text" id="offering-room-new" class="resource-input offering-new-fields"
+                            maxlength="40" placeholder="e.g. TCC-12" style="display: none;">
+                    </div>
+                    <div class="offering-field">
+                        <label for="offering-faculty">FIC</label>
+                        <select id="offering-faculty" class="offering-select">
+                            <option value="">Who handles this course+section</option>
+                        </select>
+                    </div>
+                    <div class="offering-field">
+                        <label for="offering-units">Units</label>
+                        <input type="number" id="offering-units" class="resource-input" min="0.5" max="12" step="0.5"
+                            value="3" title="Units for this custom block">
+                    </div>
+                </div>
+            </div>
+            <div class="offering-modal-footer">
+                <button type="button" class="offering-cancel-btn" onclick="closeCustomBlockForm()">Cancel</button>
+                <button type="button" class="config-save-btn" id="offering-submit-btn" onclick="submitOffering()">
+                    Save custom block
+                </button>
             </div>
         </div>
     </div>
@@ -126,7 +220,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
-                        Assigned Courses
+                        Assigned this term
                     </div>
                     <div class="faculty-modal-course-list" id="faculty-modal-course-list">
                         <div class="faculty-modal-empty">
@@ -143,6 +237,24 @@
             <button class="faculty-modal-close" onclick="closeFacultyModal()">Close</button>
         </div>
     </div>
+
+    <!-- Confirm sharing a course+section with another faculty -->
+    <div class="faculty-modal" id="share-section-modal" onclick="closeShareSectionModal(event)">
+        <div class="faculty-modal-content share-section-modal-content" onclick="event.stopPropagation()">
+            <div class="faculty-modal-header">
+                <div class="faculty-modal-info">
+                    <h3 id="share-section-title">Assign this section again?</h3>
+                    <p id="share-section-text">This course+section is already assigned.</p>
+                </div>
+            </div>
+            <div class="offering-modal-footer">
+                <button type="button" class="offering-cancel-btn" onclick="closeShareSectionModal()">Cancel</button>
+                <button type="button" class="config-save-btn" id="share-section-confirm" onclick="confirmShareSection()">
+                    Assign anyway
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -150,6 +262,154 @@
         padding: 24px;
         height: 100%;
         overflow-y: auto;
+    }
+
+    .year-sem-select {
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        background: white;
+        color: #111827;
+        outline: none;
+        max-width: 160px;
+    }
+
+    .year-sem-select:focus {
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.12);
+    }
+
+    .eligible-line {
+        font-size: 0.72rem;
+        color: #6b7280;
+        margin: 6px 0 0;
+        line-height: 1.4;
+    }
+
+    .faculty-dropdown {
+        position: relative;
+        flex: 0 0 220px;
+        width: 220px;
+        min-width: 180px;
+    }
+
+    .faculty-dropdown-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 12px;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: #111827;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .faculty-dropdown-btn:hover:not(:disabled) {
+        border-color: #6b0f1a;
+    }
+
+    .faculty-dropdown-btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+        background: #f3f4f6;
+    }
+
+    .faculty-dropdown-btn span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .faculty-dropdown-btn svg {
+        flex-shrink: 0;
+        transition: transform 0.2s;
+    }
+
+    .faculty-dropdown.open .faculty-dropdown-btn svg {
+        transform: rotate(180deg);
+    }
+
+    .faculty-dropdown-panel {
+        position: fixed;
+        z-index: 40;
+        max-height: 220px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+        padding: 6px;
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .faculty-dropdown.open .faculty-dropdown-panel,
+    .faculty-dropdown-panel.open {
+        display: flex;
+    }
+
+    .faculty-dropdown-panel .section-checkbox-item {
+        padding: 6px 8px;
+        border-radius: 6px;
+    }
+
+    .faculty-dropdown-panel .section-checkbox-item:hover {
+        background: #f9fafb;
+    }
+
+    .faculty-dropdown-panel .section-checkbox-item label {
+        font-size: 0.8rem;
+        max-width: none;
+        white-space: nowrap;
+    }
+
+    .section-btn.taken {
+        opacity: 0.55;
+        cursor: not-allowed;
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .section-btn.assigned.share-1 {
+        background: #f6c9cf;
+        color: #6b0f1a;
+        border-color: #c45a68;
+    }
+
+    .section-btn.assigned.share-2 {
+        background: #c45a68;
+        color: #fff;
+        border-color: #9a2a3a;
+    }
+
+    .section-btn.assigned.share-3 {
+        background: #8b1424;
+        color: #fff;
+        border-color: #6b0f1a;
+    }
+
+    .section-btn.assigned.share-4 {
+        background: #4a0a12;
+        color: #fff;
+        border-color: #3a080e;
+    }
+
+    .section-btn.mine:not(.assigned) {
+        background: #6b0f1a;
+        color: white;
+        border-color: #6b0f1a;
+    }
+
+    .section-btn.mine.assigned {
+        box-shadow: inset 0 0 0 2px #fff;
     }
 
     /* Course Configuration Section */
@@ -283,6 +543,62 @@
         cursor: pointer;
     }
 
+    .section-custom-add {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1 0 180px;
+        min-width: 180px;
+        max-width: 240px;
+    }
+
+    .section-custom-input {
+        flex: 1;
+        min-width: 0;
+        width: 100%;
+        padding: 7px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #111827;
+        background: white;
+        box-sizing: border-box;
+    }
+
+    .section-custom-input:focus {
+        outline: none;
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.12);
+    }
+
+    .section-custom-input:disabled {
+        background: #f3f4f6;
+        color: #9ca3af;
+    }
+
+    .section-custom-add-btn {
+        padding: 7px 12px;
+        background: white;
+        color: #6b0f1a;
+        border: 1px solid #6b0f1a;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .section-custom-add-btn:hover:not(:disabled) {
+        background: #6b0f1a;
+        color: white;
+    }
+
+    .section-custom-add-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     .config-save-btn {
         padding: 8px 16px;
         background: #6b0f1a;
@@ -312,7 +628,17 @@
         display: grid;
         grid-template-columns: 35fr 65fr;
         gap: 20px;
-        height: calc(100vh - 280px);
+        height: calc(100vh - 140px);
+        min-height: 720px;
+        align-items: stretch;
+    }
+
+    .courses-side {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        min-height: 0;
+        height: 100%;
     }
 
     /* Containers */
@@ -324,6 +650,23 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        min-height: 0;
+    }
+
+    .courses-container {
+        height: 100%;
+    }
+
+    .courses-side .faculty-container {
+        flex: 8 1 0;
+        min-height: 0;
+        margin-top: 0;
+    }
+
+    .courses-side .offering-container {
+        flex: 2 1 0;
+        min-height: 0;
+        margin-top: 0;
     }
 
     .container-header {
@@ -347,6 +690,283 @@
         font-size: 0.8rem;
         color: #6b7280;
         margin: 0;
+    }
+
+    /* Add course + section + room */
+    .offering-container {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        margin-top: 0;
+        min-height: 0;
+    }
+
+    .offering-header {
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .offering-header-copy {
+        flex: 1;
+        min-width: 220px;
+    }
+
+    .offering-header-copy .container-subtitle {
+        margin-top: 4px;
+    }
+
+    .offering-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-add-custom {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #6b0f1a;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+
+    .btn-add-custom:hover {
+        background: #8b1424;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(107, 15, 26, 0.3);
+    }
+
+    .offering-body {
+        padding: 12px 20px 16px;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .custom-blocks-live {
+        column-count: 2;
+        column-gap: 28px;
+        list-style: decimal;
+        margin: 0;
+        padding: 0 0 0 1.35em;
+        min-height: 0;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .custom-blocks-live li {
+        break-inside: avoid;
+        font-size: 0.8rem;
+        line-height: 1.4;
+        color: #374151;
+        padding: 3px 0 7px;
+    }
+
+    .custom-blocks-live li.custom-blocks-empty {
+        list-style: none;
+        margin-left: -1.35em;
+        color: #9ca3af;
+        font-style: italic;
+        column-span: all;
+    }
+
+    .custom-block-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    .custom-block-row span {
+        min-width: 0;
+    }
+
+    .custom-block-row .resource-remove {
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    .offering-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .offering-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .offering-field label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .offering-modal-content {
+        max-width: 480px;
+    }
+
+    .offering-modal-header {
+        padding: 20px 24px;
+    }
+
+    .offering-modal-header h3 {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .offering-modal-header p {
+        margin: 4px 0 0;
+        font-size: 0.8rem;
+        opacity: 0.85;
+    }
+
+    .offering-modal-body {
+        padding: 24px;
+        overflow-y: auto;
+    }
+
+    .offering-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 16px 24px;
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+
+    .offering-cancel-btn {
+        padding: 8px 16px;
+        background: white;
+        color: #374151;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .offering-cancel-btn:hover {
+        background: #f3f4f6;
+    }
+
+    .offering-select,
+    .resource-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-family: inherit;
+        color: #111827;
+        background: white;
+        box-sizing: border-box;
+    }
+
+    .offering-select:focus,
+    .resource-input:focus {
+        outline: none;
+        border-color: #6b0f1a;
+        box-shadow: 0 0 0 3px rgba(107, 15, 26, 0.12);
+    }
+
+    .offering-new-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .offering-extras {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    .offering-extras-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin: 0 0 8px 0;
+    }
+
+    .resource-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 40px;
+        max-height: 180px;
+        overflow-y: auto;
+    }
+
+    .resource-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px 6px 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .resource-remove {
+        border: none;
+        background: transparent;
+        color: #9ca3af;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0 2px;
+        cursor: pointer;
+    }
+
+    .resource-remove:hover {
+        color: #6b0f1a;
+    }
+
+    .resource-empty,
+    .resource-setup {
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+
+    .resource-setup {
+        padding: 10px 12px;
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: 8px;
+        color: #92400e;
+        line-height: 1.5;
+    }
+
+    .resource-setup code {
+        font-size: 0.75rem;
+        background: rgba(0, 0, 0, 0.06);
+        padding: 1px 4px;
+        border-radius: 3px;
+    }
+
+    @media (max-width: 700px) {
+        .offering-extras {
+            grid-template-columns: 1fr;
+        }
     }
 
     /* Courses Checklist Styles */
@@ -453,28 +1073,43 @@
     }
 
     .section-buttons-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
         gap: 8px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
 
     .section-btn {
-        padding: 8px 12px;
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        padding: 0;
+        flex: 0 0 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         background: white;
         color: #374151;
         border: 2px solid #d1d5db;
-        border-radius: 6px;
+        border-radius: 8px;
         font-size: 0.8rem;
-        font-weight: 600;
+        font-weight: 700;
         cursor: pointer;
         transition: all 0.2s;
         text-align: center;
+        white-space: nowrap;
+        line-height: 1;
+        overflow: hidden;
     }
 
-    .section-btn:hover {
+    .section-btn:hover:not(.assigned) {
         border-color: #6b0f1a;
         background: #fef2f2;
+    }
+
+    .section-btn.assigned:hover {
+        filter: brightness(0.96);
     }
 
     .section-btn.selected {
@@ -558,7 +1193,9 @@
     }
 
     .btn-assign-courses {
-        padding: 8px 16px;
+        position: relative;
+        min-width: 96px;
+        padding: 8px 20px;
         background: #6b0f1a;
         color: white;
         border: none;
@@ -566,45 +1203,82 @@
         font-size: 0.85rem;
         font-weight: 600;
         cursor: pointer;
-        display: flex;
+        display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 6px;
         transition: all 0.2s;
     }
 
-    .btn-assign-courses:hover {
+    .btn-assign-courses:hover:not(:disabled) {
         background: #8b1424;
         transform: translateY(-1px);
         box-shadow: 0 2px 8px rgba(107, 15, 26, 0.3);
     }
 
-    .btn-assign-courses:active {
+    .btn-assign-courses:active:not(:disabled) {
         transform: translateY(0);
     }
 
-    /* Faculty Grid */
-    .faculty-grid {
+    .btn-assign-courses:disabled,
+    .btn-assign-courses.is-loading {
+        cursor: wait;
+        pointer-events: none;
+        opacity: 0.88;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .btn-assign-spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: assign-spin 0.55s linear infinite;
+    }
+
+    .btn-assign-courses.is-loading .btn-assign-label {
+        visibility: hidden;
+    }
+
+    .btn-assign-courses.is-loading .btn-assign-spinner {
+        display: block;
+        position: absolute;
+    }
+
+    @keyframes assign-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Faculty Grid — override admin.css card layout (photo was pinned top-left) */
+    .courses-page .faculty-grid {
         padding: 20px;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 16px;
         overflow-y: auto;
         flex: 1;
+        align-content: start;
     }
 
-    .faculty-card {
+    .courses-page .faculty-card {
         background: white;
         border: 2px solid #e5e7eb;
         border-radius: 10px;
-        padding: 16px;
+        padding: 22px 16px 18px;
         cursor: pointer;
         transition: all 0.2s;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: flex-start;
         text-align: center;
-        min-height: 140px;
+        min-height: 240px;
+        min-width: 0;
         position: relative;
+        overflow: hidden;
     }
 
     .faculty-card:hover {
@@ -619,20 +1293,26 @@
         background: #fef2f2;
     }
 
-    .faculty-photo {
-        width: 64px;
-        height: 64px;
+    .courses-page .faculty-photo,
+    .courses-page .faculty-avatar {
+        position: static;
+        top: auto;
+        left: auto;
+        width: 72px;
+        height: 72px;
         border-radius: 50%;
         border: 3px solid #6b0f1a;
-        object-fit: cover;
-        background: white;
-        margin-bottom: 10px;
+        margin: 0 0 12px 0;
+        flex-shrink: 0;
+        box-shadow: none;
     }
 
-    .faculty-avatar {
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
+    .courses-page .faculty-photo {
+        object-fit: cover;
+        background: white;
+    }
+
+    .courses-page .faculty-avatar {
         background: linear-gradient(135deg, #6b0f1a 0%, #a41623 100%);
         color: white;
         display: flex;
@@ -640,28 +1320,36 @@
         justify-content: center;
         font-weight: 700;
         font-size: 1.3rem;
-        margin-bottom: 10px;
-        border: 3px solid #6b0f1a;
     }
 
-    .faculty-info {
+    .courses-page .faculty-info {
         width: 100%;
-        flex: 1;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: flex-start;
         min-height: 0;
+        flex: 1;
     }
 
-    .faculty-name {
+    .courses-page .faculty-name {
+        width: 100%;
+        max-width: 100%;
         font-size: 0.9rem;
         font-weight: 600;
         color: #111827;
-        line-height: 1.3;
-        margin-bottom: 4px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
+        line-height: 1.35;
+        margin: 0 0 8px 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        display: block;
+        -webkit-line-clamp: unset;
+        -webkit-box-orient: unset;
+        overflow: visible;
     }
 
     .faculty-units {
@@ -716,6 +1404,35 @@
         border-radius: 6px;
     }
 
+    .assigned-section-item.share-1 {
+        background: #fdecef;
+        border-color: #f3c5cb;
+    }
+
+    .assigned-section-item.share-2 {
+        background: #f6c9cf;
+        border-color: #c45a68;
+    }
+
+    .assigned-section-item.share-3 {
+        background: #c45a68;
+        border-color: #8b1424;
+        color: #fff;
+    }
+
+    .assigned-section-item.share-3 .assigned-section-name,
+    .assigned-section-item.share-3 .assigned-faculty-name,
+    .assigned-section-item.share-4 .assigned-section-name,
+    .assigned-section-item.share-4 .assigned-faculty-name {
+        color: #fff;
+    }
+
+    .assigned-section-item.share-4 {
+        background: #6b0f1a;
+        border-color: #4a0a12;
+        color: #fff;
+    }
+
     .assigned-section-name {
         font-size: 0.8rem;
         font-weight: 600;
@@ -726,6 +1443,9 @@
         font-size: 0.75rem;
         color: #6b0f1a;
         font-weight: 500;
+        text-align: right;
+        max-width: 60%;
+        line-height: 1.35;
     }
 
     /* Faculty Modal */
@@ -770,6 +1490,19 @@
         animation: slideUp 0.3s ease;
         display: flex;
         flex-direction: column;
+    }
+
+    .share-section-modal-content {
+        max-width: 440px;
+    }
+
+    .share-section-modal-content .faculty-modal-header {
+        padding-bottom: 8px;
+    }
+
+    .share-section-modal-content .faculty-modal-info p {
+        line-height: 1.45;
+        color: #4b5563;
     }
 
     @keyframes slideUp {
@@ -913,7 +1646,40 @@
     .faculty-modal-course-item:hover {
         border-color: #6b0f1a;
         background: #fef2f2;
-        transform: translateX(4px);
+    }
+
+    .faculty-modal-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .faculty-modal-units-field {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 4px 8px;
+    }
+
+    .faculty-modal-units-field input {
+        width: 52px;
+        border: none;
+        background: transparent;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #111827;
+        text-align: right;
+        outline: none;
+    }
+
+    .faculty-modal-units-field span {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #6b7280;
     }
 
     .faculty-modal-course-info {
@@ -1036,13 +1802,20 @@
             height: auto;
         }
 
-        .courses-container,
-        .faculty-container {
-            min-height: 400px;
+        .courses-side {
+            height: auto;
         }
 
-        .faculty-grid {
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        .courses-container,
+        .courses-side .faculty-container,
+        .courses-side .offering-container {
+            min-height: 280px;
+            height: auto;
+            flex: none;
+        }
+
+        .courses-page .faculty-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         }
     }
 </style>
@@ -1050,20 +1823,440 @@
 <script>
     let selectedFacultyId = null;
     let selectedFacultyName = null;
-    let coursesData = []; // Store full course data with available_sections
-    let courseSectionAssignments = {}; // { 'CERP 101': ['T', 'U'], ... }
-    let assignedCourseSections = new Set(); // Set of 'COURSE-SECTION' strings already assigned
-    let facultyData = []; // Store faculty members with their courses
-    let courseConfigs = {}; // Store course configurations { course_id: { selected_sections: ['T', 'U'] } }
+    let coursesData = [];
+    let facultyData = [];
+    let courseConfigs = {};
 
-    // All possible sections
-    const ALL_SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+    const _defaultSY = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
+    let currentSchoolYear = localStorage.getItem('cerp_schoolYear') || _defaultSY;
+    let currentSemester = localStorage.getItem('cerp_semester') || '1';
+
+    let termOfferings = {};          // course_id -> [section]
+    let eligibilityRows = [];        // {faculty_id, course_id, course_code, ...}
+    let termAssignments = [];        // regular global {faculty_id, course_id, course_code, section, ...}
+    let customBlocks = [];           // global extra staging blocks
+    let assignedCourseSections = new Set();
+    let assignmentOwners = {};       // 'CERP 101-A' -> [faculty_id, ...]
+    let pendingShareSection = null;  // { courseCode, section }
+    let assignInFlight = false;
+    let selectedEligibility = new Set(); // course codes this faculty may teach
+    let selectedSections = {};       // course_code -> [sections] for this term
+    let openCourseCodes = new Set(); // courses expanded in Faculty Assignment
+
+    // Built-in sections, plus anything added from Add Course, Section & Room
+    const LETTER_SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+    let customSections = [];   // [{ id, name }]
+    let customRooms = [];      // [{ id, name }]
+    let defaultRooms = [];
+    let ALL_SECTIONS = [...LETTER_SECTIONS];
+
+    function refreshAllSections() {
+        ALL_SECTIONS = [...LETTER_SECTIONS, ...customSections.map(s => s.name)];
+    }
+
+    // Section names are free text, so they cannot go straight into element ids
+    const sectionSlug = section => String(section).replace(/[^A-Za-z0-9_-]/g, '_');
+
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+
+    function renderSetupNotice(container, hint) {
+        container.innerHTML = `<div class="resource-setup">
+            Not set up yet. Run <code>sql/rooms_and_sections.sql</code> in the Supabase SQL editor,
+            then reload this page. ${escapeHtml(hint || '')}
+        </div>`;
+    }
+
+    function renderResourceList(container, items, onRemove, emptyText) {
+        if (!items.length) {
+            container.innerHTML = `<div class="resource-empty">${emptyText}</div>`;
+            return;
+        }
+        container.innerHTML = items.map(item => `
+            <span class="resource-item">
+                ${escapeHtml(item.name)}
+                <button class="resource-remove" title="Remove ${escapeHtml(item.name)}"
+                        onclick="${onRemove}('${item.id}')">&times;</button>
+            </span>
+        `).join('');
+    }
+
+    async function loadCustomSections() {
+        const container = document.getElementById('custom-sections-list');
+        try {
+            const response = await fetch('/api/sections');
+            const data = await response.json();
+
+            if (data.available === false) {
+                customSections = [];
+                refreshAllSections();
+                if (container) container.innerHTML = '';
+                return;
+            }
+
+            customSections = data.sections || [];
+            refreshAllSections();
+            if (container) container.innerHTML = '';
+            populateOfferingSelects();
+        } catch (error) {
+            console.error('Error loading sections:', error);
+            if (container) container.innerHTML =
+                '<div class="resource-empty">Could not load sections.</div>';
+        }
+    }
+
+    async function removeCustomSection(sectionId) {
+        const name = (customSections.find(s => s.id === sectionId) || {}).name || 'this section';
+        if (!confirm(`Remove section ${name}? Courses already configured for it keep their sections.`)) return;
+
+        try {
+            const response = await fetch(`/api/sections/${sectionId}`, { method: 'DELETE' });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to remove section');
+
+            await loadCustomSections();
+            if (document.getElementById('config-content').style.display !== 'none') {
+                loadCourseConfigurations();
+            }
+            showToast(`Section ${name} removed`, 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    async function loadRooms() {
+        const container = document.getElementById('rooms-list');
+        try {
+            const response = await fetch('/api/rooms');
+            const data = await response.json();
+            defaultRooms = data.default_rooms || [];
+
+            if (!container) {
+                populateOfferingSelects();
+                return;
+            }
+            if (data.available === false) {
+                customRooms = [];
+                container.innerHTML = '';
+                populateOfferingSelects();
+                return;
+            }
+            customRooms = data.rooms || [];
+            container.innerHTML = '';
+            populateOfferingSelects();
+        } catch (error) {
+            console.error('Error loading rooms:', error);
+            if (container) container.innerHTML =
+                '<div class="resource-empty">Could not load rooms.</div>';
+        }
+    }
+
+    async function removeRoom(roomId) {
+        const name = (customRooms.find(r => r.id === roomId) || {}).name || 'this room';
+        if (!confirm(`Remove ${name} from the room pool? Existing schedules keep it.`)) return;
+
+        try {
+            const response = await fetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to remove room');
+
+            await loadRooms();
+            showToast(`${name} removed`, 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    function populateAllocationYears() {
+        const select = document.getElementById('alloc-schoolyear');
+        if (!select) return;
+        select.innerHTML = '';
+        const currentYear = new Date().getFullYear();
+        for (let year = 2024; year <= currentYear + 5; year++) {
+            const value = year + '-' + (year + 1);
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = 'SY ' + value;
+            if (value === currentSchoolYear) option.selected = true;
+            select.appendChild(option);
+        }
+        select.value = currentSchoolYear;
+        const sem = document.getElementById('alloc-semester');
+        if (sem) sem.value = currentSemester;
+    }
+
+    function courseKey(courseCode, section) {
+        return `${courseCode}-${section}`;
+    }
+
+    function offeredSectionsFor(course) {
+        if (!course) return [];
+        const sections = [];
+        if (termOfferings[course.id] && termOfferings[course.id].length) {
+            sections.push(...termOfferings[course.id]);
+        } else if (course.available_sections && course.available_sections.length) {
+            sections.push(...course.available_sections);
+        }
+        customBlocks.forEach(block => {
+            const sameCourse = block.course_id === course.id || block.course_code === course.course_code;
+            if (sameCourse && block.section && !sections.includes(block.section)) {
+                sections.push(block.section);
+            }
+        });
+        return sections;
+    }
+
+    function facultyNameById(facultyId) {
+        const member = facultyData.find(f => f.id === facultyId);
+        return member ? (member.fullName || `${member.first || ''} ${member.last || ''}`.trim()) : 'Another faculty';
+    }
+
+    function ownersFor(key) {
+        const owners = assignmentOwners[key];
+        if (!owners) return [];
+        return Array.isArray(owners) ? owners.filter(Boolean) : [owners];
+    }
+
+    function formatOwnerNames(ids) {
+        const names = (ids || []).map(facultyNameById);
+        if (names.length === 0) return 'another faculty';
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return `${names[0]} and ${names[1]}`;
+        return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+    }
+
+    function shareCountLabel(nextCount) {
+        if (nextCount === 2) return 'twice';
+        if (nextCount === 3) return 'a third time';
+        if (nextCount === 4) return 'a fourth time';
+        return `to ${nextCount} faculty`;
+    }
+
+    function addOwner(key, facultyId) {
+        if (!key || !facultyId) return;
+        if (!assignmentOwners[key]) assignmentOwners[key] = [];
+        if (!assignmentOwners[key].includes(facultyId)) {
+            assignmentOwners[key].push(facultyId);
+        }
+    }
+
+    function rebuildAssignmentIndex() {
+        assignmentOwners = {};
+        assignedCourseSections = new Set();
+        termAssignments.forEach(a => {
+            if (a.course_code && a.section) {
+                const key = courseKey(a.course_code, a.section);
+                addOwner(key, a.faculty_id);
+                assignedCourseSections.add(key);
+            }
+        });
+        customBlocks.forEach(a => {
+            if (a.course_code && a.section) {
+                const key = courseKey(a.course_code, a.section);
+                addOwner(key, a.faculty_id);
+                assignedCourseSections.add(key);
+            }
+        });
+    }
+
+    function snapshotAssignments() {
+        return {
+            termAssignments: termAssignments.map(a => ({ ...a })),
+            assignmentOwners: Object.fromEntries(
+                Object.entries(assignmentOwners).map(([key, ids]) => [key, ids.slice()])
+            ),
+            assignedCourseSections: new Set(assignedCourseSections)
+        };
+    }
+
+    function restoreAssignments(snapshot) {
+        termAssignments = snapshot.termAssignments;
+        assignmentOwners = snapshot.assignmentOwners;
+        assignedCourseSections = snapshot.assignedCourseSections;
+    }
+
+    function applyLocalAssignments(facultyId, assignments) {
+        termAssignments = termAssignments.filter(a => a.faculty_id !== facultyId);
+        assignments.forEach(a => {
+            const course = coursesData.find(c => c.course_code === a.course_code);
+            termAssignments.push({
+                faculty_id: facultyId,
+                course_id: course?.id,
+                course_code: a.course_code,
+                course_name: course?.course_name || a.course_code,
+                section: a.section,
+                units: a.units ?? course?.units ?? 3
+            });
+        });
+        rebuildAssignmentIndex();
+    }
+
+    function shareLevel(count) {
+        return Math.min(Math.max(count, 0), 4);
+    }
+
+    function setAssignButtonLoading(loading) {
+        const btn = document.getElementById('btn-assign-courses');
+        if (!btn) return;
+        btn.classList.toggle('is-loading', loading);
+        btn.disabled = loading;
+        btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    }
+
+    function eligibleFacultyForCourse(courseId) {
+        return eligibilityRows.filter(e => e.course_id === courseId).map(e => e.faculty_id);
+    }
+
+    function applyAllocationPayload(data) {
+        termOfferings = data.offerings || {};
+        eligibilityRows = data.eligibility || [];
+        termAssignments = data.assignments || [];
+        customBlocks = data.custom_blocks || [];
+        rebuildAssignmentIndex();
+        renderCustomBlocksList();
+
+        const banner = document.getElementById('alloc-setup-banner');
+        if (banner) banner.style.display = 'none';
+    }
+
+    function customBlocksFor(courseCode, section) {
+        return customBlocks.filter(b => b.course_code === courseCode && b.section === section);
+    }
+
+    function customBlockFor(courseCode, section, facultyId) {
+        const id = facultyId === undefined ? selectedFacultyId : facultyId;
+        return customBlocks.find(b =>
+            b.course_code === courseCode &&
+            b.section === section &&
+            (!id || b.faculty_id === id)
+        );
+    }
+
+    function renderCustomBlocksList() {
+        const container = document.getElementById('custom-blocks-list');
+        if (!container) return;
+        if (!selectedFacultyId) {
+            container.innerHTML = '<li class="custom-blocks-empty">Select a faculty card to see their custom blocks.</li>';
+            return;
+        }
+        const mine = customBlocks.filter(block => block.faculty_id === selectedFacultyId);
+        if (!mine.length) {
+            container.innerHTML = '<li class="custom-blocks-empty">No custom blocks for this faculty.</li>';
+            return;
+        }
+        container.innerHTML = mine.map(block => {
+            const room = block.room ? ` · ${block.room}` : '';
+            return `<li>
+                <div class="custom-block-row">
+                    <span>${escapeHtml(block.course_code)} · ${escapeHtml(block.section)}${escapeHtml(room)} · ${escapeHtml(String(block.units || 3))}u</span>
+                    <button class="resource-remove" title="Remove this custom block"
+                            onclick="removeCustomBlock('${block.id}')">&times;</button>
+                </div>
+            </li>`;
+        }).join('');
+    }
+
+    async function removeCustomBlock(blockId) {
+        if (!confirm('Remove this custom block?')) return;
+        try {
+            const response = await fetch(`/api/allocation/offering/${blockId}`, { method: 'DELETE' });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to remove block');
+            await loadAllocationState();
+            if (selectedFacultyId) hydrateSelectionFromFaculty(selectedFacultyId);
+            renderAllCourseCategories();
+            facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+            const modal = document.getElementById('faculty-modal');
+            if (modal && modal.classList.contains('active') && selectedFacultyId) {
+                fillFacultyModal(selectedFacultyId);
+            }
+            showToast('Custom block removed', 'success');
+        } catch (error) {
+            showToast(error.message || 'Failed to remove block', 'error');
+        }
+    }
+
+    async function loadAllocationState() {
+        const response = await fetch(
+            `/api/allocation?school_year=${encodeURIComponent(currentSchoolYear)}&semester=${encodeURIComponent(currentSemester)}`
+        );
+        const data = await response.json();
+        applyAllocationPayload(data);
+    }
+
+    function renderAllCourseCategories() {
+        const cerpCourses = coursesData.filter(c => c.course_code.startsWith('CERP'));
+        const humeCourses = coursesData.filter(c => c.course_code.startsWith('HUME'));
+        const nstpCourses = coursesData.filter(c => c.course_code.startsWith('NSTP'));
+        const otherCourses = coursesData.filter(c => {
+            const code = c.course_code || '';
+            return !code.startsWith('CERP') && !code.startsWith('HUME') && !code.startsWith('NSTP');
+        });
+        renderCourseCategory('cerp-courses', cerpCourses);
+        renderCourseCategory('hume-courses', humeCourses);
+        renderCourseCategory('nstp-courses', nstpCourses);
+        const otherSection = document.getElementById('other-courses-section');
+        if (otherSection) otherSection.style.display = otherCourses.length ? '' : 'none';
+        renderCourseCategory('other-courses', otherCourses);
+    }
+
+    async function onAllocationTermChange() {
+        const yearEl = document.getElementById('alloc-schoolyear');
+        const semEl = document.getElementById('alloc-semester');
+        if (yearEl) currentSchoolYear = yearEl.value;
+        if (semEl) currentSemester = semEl.value;
+        localStorage.setItem('cerp_schoolYear', currentSchoolYear);
+        localStorage.setItem('cerp_semester', currentSemester);
+        await loadAllocationState();
+        populateOfferingSelects();
+        facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+        if (selectedFacultyId) hydrateSelectionFromFaculty(selectedFacultyId);
+        renderAllCourseCategories();
+    }
+
+    function hydrateSelectionFromFaculty(facultyId) {
+        selectedEligibility = new Set(
+            eligibilityRows.filter(e => e.faculty_id === facultyId).map(e => e.course_code)
+        );
+        selectedSections = {};
+        openCourseCodes = new Set();
+        const mine = [
+            ...termAssignments.filter(a => a.faculty_id === facultyId),
+            ...customBlocks.filter(a => a.faculty_id === facultyId)
+        ];
+        mine.forEach(a => {
+            if (!a.course_code || !a.section) return;
+            if (!selectedSections[a.course_code]) selectedSections[a.course_code] = [];
+            if (!selectedSections[a.course_code].includes(a.section)) {
+                selectedSections[a.course_code].push(a.section);
+            }
+            openCourseCodes.add(a.course_code);
+            selectedEligibility.add(a.course_code);
+        });
+    }
 
     // Load courses and faculty on page load
     (function () {
-        loadAllCourses();
-        loadFaculty();
-        loadAssignedCourseSections();
+        populateAllocationYears();
+        Promise.all([
+            loadCustomSections().then(loadAllocationState).then(loadAllCourses),
+            loadFaculty()
+        ]).then(() => {
+            facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+            renderAllCourseCategories();
+        });
+        loadRooms();
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.faculty-dropdown') && !event.target.closest('.faculty-dropdown-panel')) {
+                closeAllFacultyDropdowns();
+            }
+        });
+        window.addEventListener('scroll', (event) => {
+            if (event.target.closest && event.target.closest('.faculty-dropdown-panel')) return;
+            repositionOpenFacultyDropdown();
+        }, true);
+        window.addEventListener('resize', repositionOpenFacultyDropdown);
     })();
 
     function toggleConfigSection() {
@@ -1073,11 +2266,471 @@
         if (content.style.display === 'none') {
             content.style.display = 'block';
             toggle.classList.add('open');
-            // Load course configs when opened
             loadCourseConfigurations();
         } else {
             content.style.display = 'none';
             toggle.classList.remove('open');
+        }
+    }
+
+    function toggleCourseAssignSection() {
+        const content = document.getElementById('course-assign-content');
+        const toggle = document.getElementById('course-assign-toggle');
+
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            toggle.classList.add('open');
+            loadCourseAssignments();
+        } else {
+            content.style.display = 'none';
+            toggle.classList.remove('open');
+        }
+    }
+
+    function fillSelectOptions(select, options, placeholder, newLabel) {
+        if (!select) return;
+        const previous = select.value;
+        select.innerHTML = '';
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = placeholder;
+        select.appendChild(empty);
+        if (newLabel) {
+            const create = document.createElement('option');
+            create.value = '__new__';
+            create.textContent = newLabel;
+            select.appendChild(create);
+        }
+        options.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.value;
+            option.textContent = item.label;
+            select.appendChild(option);
+        });
+        if ([...select.options].some(o => o.value === previous)) {
+            select.value = previous;
+        }
+    }
+
+    function populateOfferingSelects() {
+        const courseSelect = document.getElementById('offering-course');
+        const sectionSelect = document.getElementById('offering-section');
+        const roomSelect = document.getElementById('offering-room');
+        const facultySelect = document.getElementById('offering-faculty');
+
+        fillSelectOptions(
+            courseSelect,
+            coursesData.map(c => ({
+                value: c.id,
+                label: c.course_name
+                    ? `${c.course_code} — ${c.course_name}`
+                    : c.course_code
+            })),
+            'Select a course',
+            '+ New course…'
+        );
+        fillSelectOptions(
+            sectionSelect,
+            ALL_SECTIONS.map(name => ({ value: name, label: name })),
+            'Select a section',
+            '+ New section…'
+        );
+        const roomNames = [...defaultRooms];
+        customRooms.forEach(room => {
+            if (!roomNames.some(name => name.toLowerCase() === (room.name || '').toLowerCase())) {
+                roomNames.push(room.name);
+            }
+        });
+        fillSelectOptions(
+            roomSelect,
+            roomNames.map(name => ({ value: name, label: name })),
+            'Select a room',
+            '+ New room…'
+        );
+        fillSelectOptions(
+            facultySelect,
+            facultyData.map(member => ({
+                value: member.id,
+                label: member.fullName || `${member.first || ''} ${member.last || ''}`.trim()
+            })),
+            'Who handles this course+section'
+        );
+        if (selectedFacultyId && facultySelect) {
+            facultySelect.value = selectedFacultyId;
+        }
+        onOfferingCourseChange();
+        onOfferingSectionChange();
+        onOfferingRoomChange();
+    }
+
+    function preselectOfferingFaculty() {
+        const faculty = document.getElementById('offering-faculty');
+        if (faculty && selectedFacultyId) {
+            faculty.value = selectedFacultyId;
+        }
+    }
+
+    function openCustomBlockForm() {
+        if (!selectedFacultyId) {
+            showToast('Select a faculty card first', 'warning');
+            return;
+        }
+        populateOfferingSelects();
+        resetOfferingForm();
+        preselectOfferingFaculty();
+        const modal = document.getElementById('offering-modal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function closeCustomBlockForm(event) {
+        if (event && event.target && event.target.id && event.target.id !== 'offering-modal') return;
+        const modal = document.getElementById('offering-modal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    function onOfferingCourseChange() {
+        const select = document.getElementById('offering-course');
+        const extra = document.getElementById('offering-course-new');
+        if (extra) extra.style.display = select && select.value === '__new__' ? 'flex' : 'none';
+    }
+
+    function onOfferingSectionChange() {
+        const select = document.getElementById('offering-section');
+        const extra = document.getElementById('offering-section-new');
+        if (extra) extra.style.display = select && select.value === '__new__' ? '' : 'none';
+    }
+
+    function onOfferingRoomChange() {
+        const select = document.getElementById('offering-room');
+        const extra = document.getElementById('offering-room-new');
+        if (extra) extra.style.display = select && select.value === '__new__' ? '' : 'none';
+    }
+
+    function resetOfferingForm() {
+        const course = document.getElementById('offering-course');
+        const section = document.getElementById('offering-section');
+        const room = document.getElementById('offering-room');
+        const faculty = document.getElementById('offering-faculty');
+        if (course) course.value = '';
+        if (section) section.value = '';
+        if (room) room.value = '';
+        if (faculty) faculty.value = selectedFacultyId || '';
+        ['offering-course-code', 'offering-course-name', 'offering-section-new', 'offering-room-new']
+            .forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        const courseUnits = document.getElementById('offering-course-units');
+        if (courseUnits) courseUnits.value = '3';
+        const blockUnits = document.getElementById('offering-units');
+        if (blockUnits) blockUnits.value = '3';
+        onOfferingCourseChange();
+        onOfferingSectionChange();
+        onOfferingRoomChange();
+    }
+
+    async function submitOffering() {
+        const courseSelect = document.getElementById('offering-course');
+        const sectionSelect = document.getElementById('offering-section');
+        const roomSelect = document.getElementById('offering-room');
+        const facultySelect = document.getElementById('offering-faculty');
+        const btn = document.getElementById('offering-submit-btn');
+
+        const courseChoice = courseSelect ? courseSelect.value : '';
+        const sectionChoice = sectionSelect ? sectionSelect.value : '';
+        const roomChoice = roomSelect ? roomSelect.value : '';
+        const facultyId = facultySelect ? facultySelect.value : '';
+
+        const payload = {
+            school_year: currentSchoolYear,
+            semester: currentSemester,
+            faculty_id: facultyId
+        };
+
+        if (!courseChoice) {
+            showToast('Pick an existing course or add a new one', 'warning');
+            return;
+        }
+        if (courseChoice === '__new__') {
+            const code = (document.getElementById('offering-course-code').value || '').trim();
+            if (!code) {
+                showToast('Enter a course code', 'warning');
+                return;
+            }
+            payload.course = {
+                course_code: code,
+                course_name: (document.getElementById('offering-course-name').value || '').trim(),
+                units: Number(document.getElementById('offering-course-units').value) || 3
+            };
+        } else {
+            payload.course_id = courseChoice;
+        }
+
+        if (!sectionChoice) {
+            showToast('Pick an existing section or add a new one', 'warning');
+            return;
+        }
+        payload.section = sectionChoice === '__new__'
+            ? (document.getElementById('offering-section-new').value || '').trim()
+            : sectionChoice;
+        if (!payload.section) {
+            showToast('Enter the new section name', 'warning');
+            return;
+        }
+
+        if (!roomChoice) {
+            showToast('Pick an existing room or add a new one', 'warning');
+            return;
+        }
+        payload.room = roomChoice === '__new__'
+            ? (document.getElementById('offering-room-new').value || '').trim()
+            : roomChoice;
+        if (!payload.room) {
+            showToast('Enter the new room name', 'warning');
+            return;
+        }
+
+        if (!facultyId) {
+            showToast('Choose which faculty will handle this course+section', 'warning');
+            return;
+        }
+
+        payload.units = Number(document.getElementById('offering-units').value) || 3;
+
+        if (btn) btn.disabled = true;
+        try {
+            const response = await fetch('/api/allocation/offering', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to add offering');
+
+            await Promise.all([
+                loadCustomSections(),
+                loadRooms(),
+                loadAllCourses(),
+                loadAllocationState()
+            ]);
+            if (selectedFacultyId) hydrateSelectionFromFaculty(selectedFacultyId);
+            renderAllCourseCategories();
+            facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+            if (document.getElementById('config-content').style.display !== 'none') {
+                loadCourseConfigurations();
+            }
+            if (document.getElementById('course-assign-content').style.display !== 'none') {
+                loadCourseAssignments();
+            }
+            populateOfferingSelects();
+            resetOfferingForm();
+            closeCustomBlockForm();
+
+            const code = (result.course && result.course.course_code) || 'Course';
+            const facultyName = facultyNameById(facultyId);
+            showToast(`${code} · Section ${result.section} added as a custom block for ${facultyName}`, 'success');
+        } catch (error) {
+            showToast(error.message || 'Failed to add offering', 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function loadCourseAssignments() {
+        const container = document.getElementById('course-assign-list');
+        if (!container) return;
+
+        if (coursesData.length === 0) {
+            await loadAllCourses();
+        }
+        if (facultyData.length === 0) {
+            await loadFaculty();
+        }
+
+        if (!facultyData.length) {
+            container.innerHTML = '<p class="config-subtitle">No faculty members found. Mark teaching personnel in Manage first.</p>';
+            return;
+        }
+
+        const facultyBySurname = [...facultyData].sort((a, b) =>
+            facultySurname(a).localeCompare(facultySurname(b), undefined, { sensitivity: 'base' })
+        );
+
+        container.innerHTML = coursesData.map(course => {
+            const assignedIds = new Set(eligibleFacultyForCourse(course.id));
+            const isSaved = assignedIds.size > 0;
+            const selectedNames = facultyBySurname
+                .filter(member => assignedIds.has(member.id))
+                .map(facultySurname);
+            const buttonLabel = facultyDropdownLabel(selectedNames);
+
+            return `
+                <div class="course-config-item ${isSaved ? 'config-saved' : ''}" data-assign-course-id="${course.id}">
+                    <div class="course-config-info">
+                        <div class="course-config-code">${escapeHtml(course.course_code)}</div>
+                        <div class="course-config-name">${escapeHtml(course.course_name)}</div>
+                    </div>
+                    <div class="faculty-dropdown" id="faculty-dropdown-${course.id}">
+                        <button type="button" class="faculty-dropdown-btn"
+                                id="faculty-dropdown-btn-${course.id}"
+                                ${isSaved ? 'disabled' : ''}
+                                onclick="toggleFacultyDropdown('${course.id}', event)">
+                            <span id="faculty-dropdown-label-${course.id}">${escapeHtml(buttonLabel)}</span>
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div class="faculty-dropdown-panel" id="faculty-checkboxes-${course.id}">
+                            ${facultyBySurname.map(member => {
+                                const surname = facultySurname(member);
+                                const fullName = member.fullName || `${member.first || ''} ${member.last || ''}`.trim();
+                                const boxId = `elig-${course.id}-${member.id}`;
+                                return `
+                                <div class="section-checkbox-item">
+                                    <input type="checkbox"
+                                           id="${boxId}"
+                                           value="${member.id}"
+                                           data-eligible-course-id="${course.id}"
+                                           data-surname="${escapeHtml(surname)}"
+                                           ${assignedIds.has(member.id) ? 'checked' : ''}
+                                           ${isSaved ? 'disabled' : ''}
+                                           onchange="updateFacultyDropdownLabel('${course.id}')"
+                                           title="${escapeHtml(fullName)}">
+                                    <label for="${boxId}" title="${escapeHtml(fullName)}">${escapeHtml(surname)}</label>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                    <button class="config-save-btn"
+                            id="elig-save-btn-${course.id}"
+                            onclick="${isSaved ? 'editCourseAssignment' : 'saveCourseAssignment'}('${course.id}', '${course.course_code}')">
+                        ${isSaved ? 'Edit' : 'Save'}
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function facultySurname(member) {
+        return (member.last || member.fullName || member.first || 'Unknown').trim();
+    }
+
+    function facultyDropdownLabel(surnames) {
+        if (!surnames.length) return 'Select faculty';
+        if (surnames.length <= 2) return surnames.join(', ');
+        return `${surnames.length} faculty`;
+    }
+
+    function closeAllFacultyDropdowns() {
+        document.querySelectorAll('.faculty-dropdown').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.faculty-dropdown-panel').forEach(panel => {
+            panel.classList.remove('open');
+            panel.style.left = '';
+            panel.style.top = '';
+            panel.style.bottom = '';
+            panel.style.width = '';
+        });
+    }
+
+    function repositionOpenFacultyDropdown() {
+        const open = document.querySelector('.faculty-dropdown.open');
+        if (!open) return;
+        positionFacultyDropdown(open.id.replace('faculty-dropdown-', ''));
+    }
+
+    function positionFacultyDropdown(courseId) {
+        const btn = document.getElementById(`faculty-dropdown-btn-${courseId}`);
+        const panel = document.getElementById(`faculty-checkboxes-${courseId}`);
+        if (!btn || !panel) return;
+        const rect = btn.getBoundingClientRect();
+        const width = Math.max(rect.width, 200);
+        panel.style.width = width + 'px';
+        panel.style.left = Math.min(rect.left, window.innerWidth - width - 8) + 'px';
+        const spaceBelow = window.innerHeight - rect.bottom;
+        if (spaceBelow < 200 && rect.top > spaceBelow) {
+            panel.style.top = 'auto';
+            panel.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        } else {
+            panel.style.bottom = 'auto';
+            panel.style.top = (rect.bottom + 4) + 'px';
+        }
+    }
+
+    function toggleFacultyDropdown(courseId, event) {
+        event.stopPropagation();
+        const wrap = document.getElementById(`faculty-dropdown-${courseId}`);
+        const panel = document.getElementById(`faculty-checkboxes-${courseId}`);
+        const alreadyOpen = wrap && wrap.classList.contains('open');
+        closeAllFacultyDropdowns();
+        if (alreadyOpen || !wrap || !panel) return;
+        wrap.classList.add('open');
+        panel.classList.add('open');
+        positionFacultyDropdown(courseId);
+    }
+
+    function updateFacultyDropdownLabel(courseId) {
+        const label = document.getElementById(`faculty-dropdown-label-${courseId}`);
+        if (!label) return;
+        const names = Array.from(
+            document.querySelectorAll(`#faculty-checkboxes-${courseId} input:checked`)
+        ).map(cb => cb.dataset.surname || '');
+        label.textContent = facultyDropdownLabel(names);
+    }
+
+    function editCourseAssignment(courseId, courseCode) {
+        document.querySelectorAll(`#faculty-checkboxes-${courseId} input`).forEach(cb => {
+            cb.disabled = false;
+        });
+        const dropBtn = document.getElementById(`faculty-dropdown-btn-${courseId}`);
+        if (dropBtn) dropBtn.disabled = false;
+        const btn = document.getElementById(`elig-save-btn-${courseId}`);
+        btn.textContent = 'Save';
+        btn.onclick = () => saveCourseAssignment(courseId, courseCode);
+        const item = document.querySelector(`.course-config-item[data-assign-course-id="${courseId}"]`);
+        if (item) item.classList.remove('config-saved');
+    }
+
+    async function saveCourseAssignment(courseId, courseCode) {
+        const facultyIds = Array.from(
+            document.querySelectorAll(`#faculty-checkboxes-${courseId} input:checked`)
+        ).map(cb => cb.value);
+
+        if (facultyIds.length === 0) {
+            showToast('Select at least one faculty member who can teach this course', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/courses/${courseId}/eligible-faculty`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ faculty_ids: facultyIds })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to save course assignment');
+
+            await loadAllocationState();
+            facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+            if (selectedFacultyId) hydrateSelectionFromFaculty(selectedFacultyId);
+            renderAllCourseCategories();
+
+            document.querySelectorAll(`#faculty-checkboxes-${courseId} input`).forEach(cb => {
+                cb.disabled = true;
+            });
+            const dropBtn = document.getElementById(`faculty-dropdown-btn-${courseId}`);
+            if (dropBtn) dropBtn.disabled = true;
+            closeAllFacultyDropdowns();
+            updateFacultyDropdownLabel(courseId);
+            const btn = document.getElementById(`elig-save-btn-${courseId}`);
+            btn.textContent = 'Edit';
+            btn.onclick = () => editCourseAssignment(courseId, courseCode);
+            const item = document.querySelector(`.course-config-item[data-assign-course-id="${courseId}"]`);
+            if (item) item.classList.add('config-saved');
+
+            showToast(`${courseCode}: ${facultyIds.length} faculty can teach this course`, 'success');
+        } catch (error) {
+            console.error('Error saving course assignment:', error);
+            showToast(error.message || 'Failed to save course assignment', 'error');
         }
     }
 
@@ -1089,7 +2742,7 @@
         }
 
         container.innerHTML = coursesData.map(course => {
-            const availableSections = course.available_sections || [];
+            const availableSections = offeredSectionsFor(course);
             const isSaved = availableSections.length > 0;
 
             return `
@@ -1099,21 +2752,35 @@
                         <div class="course-config-name">${course.course_name}</div>
                     </div>
                     <div class="section-checkboxes" id="checkboxes-${course.id}">
-                        ${ALL_SECTIONS.map(section => `
+                        ${LETTER_SECTIONS.map(section => `
                             <div class="section-checkbox-item">
                                 <input type="checkbox" 
-                                       id="config-${course.course_code.replace(/\s/g, '-')}-${section}"
+                                       id="config-${course.course_code.replace(/\s/g, '-')}-${sectionSlug(section)}"
                                        value="${section}"
                                        data-course-id="${course.id}"
                                        data-course-code="${course.course_code}"
                                        ${availableSections.includes(section) ? 'checked' : ''}
                                        ${isSaved ? 'disabled' : ''}
                                        onchange="updateCourseConfig('${course.id}', '${course.course_code}')">
-                                <label for="config-${course.course_code.replace(/\s/g, '-')}-${section}">
+                                <label for="config-${course.course_code.replace(/\s/g, '-')}-${sectionSlug(section)}">
                                     ${section}
                                 </label>
                             </div>
                         `).join('')}
+                        ${extraSectionsForCourse(availableSections).map(section => extraSectionCheckboxHtml(course, section, true, isSaved)).join('')}
+                        <div class="section-custom-add">
+                            <input type="text"
+                                   class="section-custom-input"
+                                   maxlength="20"
+                                   placeholder="Add section e.g. X1"
+                                   ${isSaved ? 'disabled' : ''}
+                                   onclick="event.stopPropagation()"
+                                   onkeydown="if (event.key === 'Enter') { event.preventDefault(); addCustomCourseSection('${course.id}', '${course.course_code}'); }">
+                            <button type="button"
+                                    class="section-custom-add-btn"
+                                    ${isSaved ? 'disabled' : ''}
+                                    onclick="addCustomCourseSection('${course.id}', '${course.course_code}')">Add</button>
+                        </div>
                     </div>
                     <button class="config-save-btn" 
                             id="save-btn-${course.id}"
@@ -1126,9 +2793,9 @@
     }
 
     function editCourseConfig(courseId, courseCode) {
-        // Enable checkboxes
-        const checkboxes = document.querySelectorAll(`input[data-course-id="${courseId}"]`);
-        checkboxes.forEach(cb => cb.disabled = false);
+        document.querySelectorAll(`#checkboxes-${courseId} input, #checkboxes-${courseId} button`).forEach(el => {
+            el.disabled = false;
+        });
 
         // Change button to Save
         const btn = document.getElementById(`save-btn-${courseId}`);
@@ -1140,31 +2807,100 @@
         item.classList.remove('config-saved');
     }
 
-    function updateCourseConfig(courseId, courseCode) {
-        // Track which sections are selected for this course
-        const checkboxes = document.querySelectorAll(`input[data-course-id="${courseId}"]:checked`);
-        const selectedSections = Array.from(checkboxes).map(cb => cb.value);
+    function extraSectionsForCourse(availableSections) {
+        return [...new Set((availableSections || []).filter(section => !LETTER_SECTIONS.includes(section)))];
+    }
 
+    function extraSectionCheckboxHtml(course, section, checked, disabled) {
+        const boxId = `config-${course.course_code.replace(/\s/g, '-')}-${sectionSlug(section)}`;
+        return `
+            <div class="section-checkbox-item">
+                <input type="checkbox"
+                       id="${boxId}"
+                       value="${escapeHtml(section)}"
+                       data-course-id="${course.id}"
+                       data-course-code="${course.course_code}"
+                       ${checked ? 'checked' : ''}
+                       ${disabled ? 'disabled' : ''}
+                       onchange="updateCourseConfig('${course.id}', '${course.course_code}')">
+                <label for="${boxId}">${escapeHtml(section)}</label>
+            </div>`;
+    }
+
+    function addCustomCourseSection(courseId, courseCode) {
+        const wrap = document.getElementById(`checkboxes-${courseId}`);
+        const input = wrap && wrap.querySelector('.section-custom-input');
+        const name = (input?.value || '').trim();
+        if (!name) {
+            showToast('Type a section name such as X1, W2, or UPLB1', 'warning');
+            input?.focus();
+            return;
+        }
+        const existing = Array.from(wrap.querySelectorAll('input[type="checkbox"]'))
+            .map(cb => cb.value.toLowerCase());
+        if (existing.includes(name.toLowerCase())) {
+            showToast(`${name} is already listed for this course`, 'warning');
+            return;
+        }
+        const course = coursesData.find(c => c.id === courseId) || { id: courseId, course_code: courseCode };
+        const addBar = wrap.querySelector('.section-custom-add');
+        addBar.insertAdjacentHTML('beforebegin', extraSectionCheckboxHtml(course, name, true, false));
+        input.value = '';
+        input.focus();
+        updateCourseConfig(courseId, courseCode);
+    }
+
+    function collectSelectedSections(courseId) {
+        return Array.from(
+            document.querySelectorAll(`#checkboxes-${courseId} input[type="checkbox"]:checked`)
+        ).map(cb => cb.value);
+    }
+
+    function updateCourseConfig(courseId, courseCode) {
         courseConfigs[courseId] = {
             course_code: courseCode,
-            selected_sections: selectedSections
+            selected_sections: collectSelectedSections(courseId)
         };
     }
 
     async function saveCourseConfig(courseId, courseCode) {
-        const checkboxes = document.querySelectorAll(`input[data-course-id="${courseId}"]:checked`);
-        const selectedSections = Array.from(checkboxes).map(cb => cb.value);
+        const pendingInput = document.querySelector(`#checkboxes-${courseId} .section-custom-input`);
+        if (pendingInput && pendingInput.value.trim()) {
+            addCustomCourseSection(courseId, courseCode);
+        }
 
-        if (selectedSections.length === 0) {
+        const selectedForCourse = collectSelectedSections(courseId);
+
+        if (selectedForCourse.length === 0) {
             showToast('Please select at least one section', 'warning');
             return;
+        }
+
+        const extras = selectedForCourse.filter(section => !LETTER_SECTIONS.includes(section));
+        for (const extra of extras) {
+            try {
+                await fetch('/api/sections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: extra })
+                });
+            } catch (err) {
+                console.warn('Could not store extra section name:', extra, err);
+            }
+        }
+        if (extras.length) {
+            await loadCustomSections();
         }
 
         try {
             const response = await fetch(`/api/courses/${courseId}/sections`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ available_sections: selectedSections })
+                body: JSON.stringify({
+                    available_sections: selectedForCourse,
+                    school_year: currentSchoolYear,
+                    semester: currentSemester
+                })
             });
 
             const result = await response.json();
@@ -1173,19 +2909,14 @@
                 throw new Error(result.error || 'Failed to save configuration');
             }
 
-            // Update local data
             const course = coursesData.find(c => c.id === courseId);
             if (course) {
-                course.available_sections = selectedSections;
+                course.available_sections = selectedForCourse;
+                termOfferings[courseId] = selectedForCourse;
             }
 
-            // Disable checkboxes
-            checkboxes.forEach(cb => {
-                const checkbox = document.getElementById(cb.id);
-                if (checkbox) checkbox.disabled = true;
-            });
-            document.querySelectorAll(`input[data-course-id="${courseId}"]:not(:checked)`).forEach(cb => {
-                cb.disabled = true;
+            document.querySelectorAll(`#checkboxes-${courseId} input, #checkboxes-${courseId} button`).forEach(el => {
+                el.disabled = true;
             });
 
             // Change button to Edit
@@ -1197,16 +2928,10 @@
             const item = document.querySelector(`.course-config-item[data-course-id="${courseId}"]`);
             item.classList.add('config-saved');
 
-            // Reload course checklist to reflect new sections
-            const cerpCourses = coursesData.filter(c => c.course_code.startsWith('CERP'));
-            const humeCourses = coursesData.filter(c => c.course_code.startsWith('HUME'));
-            const nstpCourses = coursesData.filter(c => c.course_code.startsWith('NSTP'));
+            renderAllCourseCategories();
+            loadCourseConfigurations();
 
-            renderCourseCategory('cerp-courses', cerpCourses);
-            renderCourseCategory('hume-courses', humeCourses);
-            renderCourseCategory('nstp-courses', nstpCourses);
-
-            showToast(`${courseCode} sections updated successfully`, 'success');
+            showToast(`${courseCode} sections updated`, 'success');
         } catch (error) {
             console.error('Error saving course config:', error);
             showToast(error.message || 'Failed to save configuration', 'error');
@@ -1224,23 +2949,14 @@
             const data = await response.json();
 
             if (!data || !data.courses || data.courses.length === 0) {
-                console.error('No courses available');
+                coursesData = [];
+                populateOfferingSelects();
                 return;
             }
 
             coursesData = data.courses;
-
-            // Separate courses by category
-            const cerpCourses = coursesData.filter(c => c.course_code.startsWith('CERP'));
-            const humeCourses = coursesData.filter(c => c.course_code.startsWith('HUME'));
-            const nstpCourses = coursesData.filter(c => c.course_code.startsWith('NSTP'));
-
-            // Render CERP courses
-            renderCourseCategory('cerp-courses', cerpCourses);
-            // Render HUME courses
-            renderCourseCategory('hume-courses', humeCourses);
-            // Render NSTP courses
-            renderCourseCategory('nstp-courses', nstpCourses);
+            renderAllCourseCategories();
+            populateOfferingSelects();
 
         } catch (error) {
             console.error('Error loading courses:', error);
@@ -1248,21 +2964,8 @@
     }
 
     async function loadAssignedCourseSections() {
-        try {
-            const response = await fetch('/api/assigned-course-sections');
-            const data = await response.json();
-
-            console.log('🔍 Assigned course-sections API response:', data);
-            console.log('🔍 Number of assigned:', data.assigned?.length || 0);
-
-            if (data.assigned) {
-                assignedCourseSections = new Set(data.assigned);
-                console.log('✅ Assigned course-sections loaded:', assignedCourseSections.size, 'total');
-                console.log('📋 Sample assigned:', Array.from(assignedCourseSections).slice(0, 5));
-            }
-        } catch (error) {
-            console.error('Error loading assigned course-sections:', error);
-        }
+        await loadAllocationState();
+        renderAllCourseCategories();
     }
 
     function renderCourseCategory(containerId, courses) {
@@ -1274,78 +2977,77 @@
             return;
         }
 
-        container.innerHTML = courses.map(course => {
-            const courseId = course.course_code.replace(/\s/g, '-');
-            const availableSections = course.available_sections || [];
+        const facultySelected = Boolean(selectedFacultyId);
+        const customCodes = new Set(customBlocks.map(b => b.course_code));
+        const visibleCourses = facultySelected
+            ? courses.filter(c => selectedEligibility.has(c.course_code) || customCodes.has(c.course_code))
+            : courses;
 
-            // Filter out sections that are already assigned to any faculty
-            const unassignedSections = availableSections.filter(section => {
-                // Normalize course code: ensure space between letters and numbers
-                const normalizedCode = course.course_code.replace(/([A-Z]+)(\d)/, '$1 $2');
-                const key = `${normalizedCode}-${section}`;
-                const isAssigned = assignedCourseSections.has(key);
-                return !isAssigned;
-            });
+        if (facultySelected && visibleCourses.length === 0) {
+            container.innerHTML = '<p class="no-sections-msg">This faculty is not assigned to any of these courses yet. Use Course Assignment above first.</p>';
+            return;
+        }
 
-            // Check if all sections are assigned (course fully assigned)
-            const isFullyAssigned = availableSections.length > 0 && unassignedSections.length === 0;
+        container.innerHTML = visibleCourses.map(course => {
+            const courseDomId = course.course_code.replace(/\s/g, '-');
+            const availableSections = offeredSectionsFor(course);
+            const mySections = selectedSections[course.course_code] || [];
+            const isChecked = openCourseCodes.has(course.course_code);
 
-            // Debug logging for first few courses
-            if (container.children.length < 3) {
-                const normalizedCode = course.course_code.replace(/([A-Z]+)(\d)/, '$1 $2');
-                console.log(`📚 Course: ${course.course_code} (normalized: ${normalizedCode})`);
-                console.log(`   Available sections:`, availableSections);
-                console.log(`   Unassigned sections:`, unassignedSections);
-                console.log(`   Is fully assigned?`, isFullyAssigned);
-                console.log(`   Sample key:`, `${normalizedCode}-${availableSections[0]}`);
-            }
+            const sectionButtons = availableSections.length === 0
+                ? '<p class="no-sections-msg">No sections offered this term. Set them in Section Assignment.</p>'
+                : `<div class="section-buttons-grid">${availableSections.map(section => {
+                    const key = courseKey(course.course_code, section);
+                    const owners = ownersFor(key);
+                    const mine = mySections.includes(section);
+                    const isCustom = customBlocksFor(course.course_code, section).length > 0;
+                    const ownerLabel = owners.length ? formatOwnerNames(owners) : '';
+                    const title = ownerLabel
+                        ? `title="${escapeHtml(section)} · ${escapeHtml(ownerLabel)}${isCustom ? ' (custom)' : ''}"`
+                        : `title="Section ${escapeHtml(section)}"`;
+                    const assignedCount = owners.length;
+                    const shareCls = assignedCount
+                        ? `assigned share-${shareLevel(assignedCount)}`
+                        : '';
+                    const cls = ['section-btn', mine ? 'mine selected' : '', shareCls]
+                        .filter(Boolean).join(' ');
+                    const locked = Boolean(customBlockFor(course.course_code, section, selectedFacultyId));
+                    const disabled = locked ? 'disabled' : '';
+                    const handler = locked
+                        ? ''
+                        : `onclick="toggleSectionSelection('${course.course_code}', '${section}', this)"`;
+                    return `<button type="button" class="${cls}" ${disabled} ${handler} ${title}
+                            data-course-code="${course.course_code}" data-section="${section}">${escapeHtml(section)}</button>`;
+                }).join('')}</div>`;
+
+            const viewRows = availableSections.map(section => {
+                const key = courseKey(course.course_code, section);
+                const owners = ownersFor(key);
+                const owner = owners.length ? formatOwnerNames(owners) : 'Unassigned';
+                const shareCls = owners.length ? `share-${shareLevel(owners.length)}` : '';
+                return `<div class="assigned-section-item ${shareCls}">
+                    <span class="assigned-section-name">Section ${escapeHtml(section)}</span>
+                    <span class="assigned-faculty-name">${escapeHtml(owner)}</span>
+                </div>`;
+            }).join('');
 
             return `
-                <div class="course-checkbox-item ${isFullyAssigned ? 'config-saved' : ''}" data-course-code="${course.course_code}">
-                    <!-- Main checkbox -->
+                <div class="course-checkbox-item" data-course-code="${course.course_code}">
                     <div class="course-checkbox-row">
-                        <input type="checkbox" 
-                               id="course-${courseId}" 
+                        <input type="checkbox"
+                               id="course-${courseDomId}"
                                value="${course.course_code}"
-                               ${isFullyAssigned ? 'disabled' : ''}
-                               onchange="${isFullyAssigned ? 'toggleFullyAssignedView' : 'toggleCourseSelection'}(this)">
-                        <label class="course-checkbox-label" for="course-${courseId}" onclick="${isFullyAssigned ? 'toggleFullyAssignedView(document.getElementById(\'course-' + courseId + '\'))' : ''}" style="${isFullyAssigned ? 'cursor: pointer;' : ''}">
-                            <span class="course-code-label">${course.course_code}</span>
-                            ${isFullyAssigned ? '<span style="font-size: 0.65rem; color: #9ca3af; margin-left: 6px;">(Fully assigned - click to view)</span>' : ''}
+                               ${facultySelected ? '' : 'disabled'}
+                               ${isChecked ? 'checked' : ''}
+                               onchange="toggleCourseSelection(this)">
+                        <label class="course-checkbox-label" for="course-${courseDomId}">
+                            <span class="course-code-label">${escapeHtml(course.course_code)}</span>
                         </label>
                     </div>
-                    
-                    <!-- Section buttons (hidden until checked) -->
-                    <div class="section-selector" id="section-selector-${courseId}" style="display: none;">
-                        ${isFullyAssigned ?
-                    '<div class="assigned-sections-view">' +
-                    availableSections.map(section => {
-                        const key = course.course_code + '-' + section;
-                        return '<div class="assigned-section-item" data-course-section="' + key + '">' +
-                            '<span class="assigned-section-name">Section ' + section + '</span>' +
-                            '<span class="assigned-faculty-name" id="assigned-' + courseId + '-' + section + '">Loading...</span>' +
-                            '</div>';
-                    }).join('') +
-                    '</div>'
-                    : unassignedSections.length > 0 ? `
-                            <div class="section-buttons-grid">
-                                ${unassignedSections.map(section => `
-                                    <button class="section-btn" 
-                                            data-course-code="${course.course_code}"
-                                            data-section="${section}"
-                                            onclick="toggleSectionSelection('${course.course_code}', '${section}', this)">
-                                        ${section}
-                                    </button>
-                                `).join('')}
-                            </div>
-                        ` : availableSections.length === 0 ? `
-                            <p class="no-sections-msg">No sections configured. Please configure sections in the panel above.</p>
-                        ` : `
-                            <p class="no-sections-msg">All sections have been assigned.</p>
-                        `}
-                        
-                        <!-- Selected sections chips -->
-                        <div class="selected-sections" id="selected-sections-${courseId}"></div>
+                    <div class="section-selector" id="section-selector-${courseDomId}"
+                         style="display: ${!facultySelected || isChecked ? 'block' : 'none'};">
+                        ${facultySelected ? sectionButtons : `<div class="assigned-sections-view">${viewRows || '<p class="no-sections-msg">No sections offered this term.</p>'}</div>`}
+                        <div class="selected-sections" id="selected-sections-${courseDomId}"></div>
                     </div>
                 </div>
             `;
@@ -1370,6 +3072,7 @@
                 ...member,
                 fullName: `${member.first || ''} ${member.last || ''}`.trim()
             }));
+            populateOfferingSelects();
 
             if (!Array.isArray(faculty)) {
                 console.error('Invalid data structure:', faculty);
@@ -1414,18 +3117,14 @@
                         `<div class="faculty-avatar">${initials}</div>`
                     }
                         <div class="faculty-info">
-                            <div class="faculty-name">${fullName}</div>
+                            <div class="faculty-name" title="${fullName}">${fullName}</div>
                             <div class="faculty-units" id="faculty-units-${member.id}">0 units</div>
-                        </div>
                         </div>
                     </div>
                 `;
             }).join('');
 
-            // Load faculty courses and store them
-            for (const member of faculty) {
-                await loadFacultyCourses(member.id);
-            }
+            facultyData.forEach(member => updateFacultyLoadLabel(member.id));
 
         } catch (error) {
             console.error('Error loading faculty:', error);
@@ -1433,60 +3132,69 @@
         }
     }
 
-    async function loadFacultyCourses(facultyId) {
-        try {
-            const response = await fetch(`/api/faculty/${facultyId}/courses`);
-            const data = await response.json();
-
-            // Store courses in faculty data
-            const facultyMember = facultyData.find(f => f.id === facultyId);
-            if (facultyMember) {
-                facultyMember.courses = data.courses || [];
-            }
-
-            const unitsElement = document.getElementById(`faculty-units-${facultyId}`);
-            if (!unitsElement) return;
-
-            if (data.courses && data.courses.length > 0) {
-                const totalUnits = data.courses.length * 3; // Each course-section = 3 units
-                unitsElement.textContent = `${totalUnits} units`;
-            } else {
-                unitsElement.textContent = '0 units';
-            }
-        } catch (error) {
-            console.error('Error loading faculty courses:', error);
+    function updateFacultyLoadLabel(facultyId) {
+        const unitsElement = document.getElementById(`faculty-units-${facultyId}`);
+        if (!unitsElement) return;
+        const assigned = termAssignments.filter(a => a.faculty_id === facultyId);
+        const custom = customBlocks.filter(a => a.faculty_id === facultyId);
+        const units = [...assigned, ...custom].reduce((sum, a) => sum + Number(a.units || 3), 0);
+        unitsElement.textContent = `${units} units`;
+        const member = facultyData.find(f => f.id === facultyId);
+        if (member) {
+            member.courses = assigned.map(a => ({
+                course_code: a.course_code,
+                course_name: a.course_name,
+                units: a.units,
+                section: a.section
+            }));
         }
     }
 
-    function selectFaculty(facultyId, facultyName, event) {
-        // Prevent right-click from triggering this
-        if (event.button === 2) return;
+    async function loadFacultyCourses(facultyId) {
+        updateFacultyLoadLabel(facultyId);
+    }
 
-        // Remove selection from all cards
+    function clearFacultySelection() {
         document.querySelectorAll('.faculty-card').forEach(card => {
             card.classList.remove('selected');
         });
+        selectedFacultyId = null;
+        selectedFacultyName = null;
+        selectedEligibility = new Set();
+        selectedSections = {};
+        openCourseCodes = new Set();
+        const actionsEl = document.getElementById('assignment-actions');
+        if (actionsEl) actionsEl.style.display = 'none';
+        renderAllCourseCategories();
+        renderCustomBlocksList();
+    }
 
-        // Select current card
+    function selectFaculty(facultyId, facultyName, event) {
+        if (event.button === 2) return;
+
+        if (selectedFacultyId === facultyId) {
+            clearFacultySelection();
+            return;
+        }
+
+        document.querySelectorAll('.faculty-card').forEach(card => {
+            card.classList.remove('selected');
+        });
         event.currentTarget.classList.add('selected');
 
-        // Update selected faculty
         selectedFacultyId = facultyId;
         selectedFacultyName = facultyName;
+        hydrateSelectionFromFaculty(facultyId);
 
-        // Show assignment actions
         const actionsEl = document.getElementById('assignment-actions');
         const nameDisplay = document.getElementById('selected-faculty-name');
-
         if (actionsEl && nameDisplay) {
             actionsEl.style.display = 'flex';
             nameDisplay.textContent = facultyName;
         }
 
-        // Uncheck all course checkboxes
-        document.querySelectorAll('.course-checkbox-item input[type="checkbox"]').forEach(checkbox => {
-            checkbox.checked = false;
-        });
+        renderAllCourseCategories();
+        renderCustomBlocksList();
     }
 
     async function openFacultyModal(facultyId, facultyName, event) {
@@ -1497,7 +3205,6 @@
         const nameEl = document.getElementById('faculty-modal-name');
         const idEl = document.getElementById('faculty-modal-id');
         const photoContainer = document.getElementById('faculty-modal-photo-container');
-        const courseListEl = document.getElementById('faculty-modal-course-list');
 
         // Set faculty info
         nameEl.textContent = facultyName;
@@ -1514,42 +3221,54 @@
             photoContainer.innerHTML = `<div class="faculty-modal-avatar">${avatar.textContent}</div>`;
         }
 
-        // Load courses
-        try {
-            const response = await fetch(`/api/faculty/${facultyId}/courses`);
-            const data = await response.json();
-
-            const totalUnitsEl = document.getElementById('faculty-modal-total-units');
-            const courseCountEl = document.getElementById('faculty-modal-course-count');
-
-            if (data.courses && data.courses.length > 0) {
-                const totalUnits = data.courses.length * 3;
-                totalUnitsEl.textContent = totalUnits;
-                courseCountEl.textContent = data.courses.length;
-
-                courseListEl.innerHTML = data.courses.map(course =>
-                    '<div class="faculty-modal-course-item">' +
-                    '<div class="faculty-modal-course-info">' +
-                    '<div class="faculty-modal-course-name">' + course.course_code + ' - Section ' + course.section + '</div>' +
-                    '<div class="faculty-modal-course-units">3 units</div>' +
-                    '</div>' +
-                    '<button class="faculty-modal-delete-btn" onclick="deleteFacultyCourse(\'' + facultyId + '\', \'' + course.course_code + '\', \'' + course.section + '\')">' +
-                    'Remove' +
-                    '</button>' +
-                    '</div>'
-                ).join('');
-            } else {
-                totalUnitsEl.textContent = '0';
-                courseCountEl.textContent = '0';
-                courseListEl.innerHTML = '<div class="faculty-modal-empty"><svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg><p>No courses assigned</p></div>';
-            }
-        } catch (error) {
-            console.error('Error loading faculty courses:', error);
-            courseListEl.innerHTML = '<div class="faculty-modal-empty"><p>Error loading courses</p></div>';
-        }
+        fillFacultyModal(facultyId);
 
         // Show modal
         modal.classList.add('active');
+    }
+
+    function fillFacultyModal(facultyId) {
+        const courseListEl = document.getElementById('faculty-modal-course-list');
+        const totalUnitsEl = document.getElementById('faculty-modal-total-units');
+        const courseCountEl = document.getElementById('faculty-modal-course-count');
+        const assigned = [
+            ...termAssignments.filter(a => a.faculty_id === facultyId),
+            ...customBlocks.filter(a => a.faculty_id === facultyId)
+        ];
+        const eligible = eligibilityRows.filter(e => e.faculty_id === facultyId);
+        const units = assigned.reduce((sum, a) => sum + Number(a.units || 3), 0);
+        totalUnitsEl.textContent = units;
+        courseCountEl.textContent = eligible.length;
+
+        if (!eligible.length && !assigned.length) {
+            courseListEl.innerHTML = '<div class="faculty-modal-empty"><p>Not assigned to any course yet</p></div>';
+            return;
+        }
+
+        const rows = assigned.length
+            ? assigned.map(row => {
+                const custom = Boolean(row.is_custom || customBlockFor(row.course_code, row.section, facultyId));
+                const removeFn = custom
+                    ? `removeCustomBlock('${row.id}')`
+                    : `deleteFacultyCourse('${facultyId}', '${row.course_code}', '${row.section}')`;
+                return `<div class="faculty-modal-course-item">
+                    <div class="faculty-modal-course-info">
+                        <div class="faculty-modal-course-name">${escapeHtml(row.course_code)} — Section ${escapeHtml(row.section)}${custom ? ' · Custom' : ''}</div>
+                    </div>
+                    <div class="faculty-modal-actions">
+                        <label class="faculty-modal-units-field" title="Contact hours for this faculty's course+section">
+                            <input type="number" min="0.5" max="12" step="0.5"
+                                   value="${escapeHtml(String(row.units || 3))}"
+                                   onclick="event.stopPropagation()"
+                                   onchange="updateAssignedCourseUnits('${facultyId}', '${row.id || ''}', '${row.course_code}', '${row.section}', this.value, ${custom ? 'true' : 'false'})">
+                            <span>u</span>
+                        </label>
+                        <button class="faculty-modal-delete-btn" onclick="${removeFn}">Remove</button>
+                    </div>
+                </div>`;
+            }).join('')
+            : '<div class="faculty-modal-empty"><p>Eligible for ' + eligible.length + ' course(s), no section this term</p></div>';
+        courseListEl.innerHTML = rows;
     }
 
     function closeFacultyModal(event) {
@@ -1557,198 +3276,161 @@
         document.getElementById('faculty-modal').classList.remove('active');
     }
 
+    async function updateAssignedCourseUnits(facultyId, rowId, courseCode, section, unitsValue, isCustom) {
+        const units = Number(unitsValue);
+        if (!units || units < 0.5 || units > 12) {
+            showToast('Units must be between 0.5 and 12', 'warning');
+            fillFacultyModal(facultyId);
+            return;
+        }
+        try {
+            const response = await fetch('/api/allocation/assignment-units', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: rowId,
+                    faculty_id: facultyId,
+                    course_code: courseCode,
+                    section,
+                    units,
+                    is_custom: Boolean(isCustom),
+                    school_year: currentSchoolYear,
+                    semester: currentSemester
+                })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to update units');
+
+            await loadAllocationState();
+            updateFacultyLoadLabel(facultyId);
+            if (selectedFacultyId === facultyId) {
+                hydrateSelectionFromFaculty(facultyId);
+            }
+            renderAllCourseCategories();
+            fillFacultyModal(facultyId);
+            showToast(`${courseCode} Section ${section}: ${units} units`, 'success');
+        } catch (error) {
+            showToast(error.message || 'Failed to update units', 'error');
+            fillFacultyModal(facultyId);
+        }
+    }
+
     async function deleteFacultyCourse(facultyId, courseCode, section) {
-        if (!confirm(`Remove ${courseCode}-${section} from this faculty member?`)) {
+        if (!confirm(`Remove ${courseCode} section ${section}? They stay assigned to the course.`)) {
             return;
         }
 
         try {
-            // Get current assignments
-            const response = await fetch(`/api/faculty/${facultyId}/courses`);
-            const data = await response.json();
+            const remaining = termAssignments
+                .filter(a => a.faculty_id === facultyId && !(a.course_code === courseCode && a.section === section))
+                .map(a => ({ course_code: a.course_code, section: a.section, units: a.units }));
+            const eligibility = eligibilityRows
+                .filter(e => e.faculty_id === facultyId)
+                .map(e => e.course_code);
 
-            // Filter out the course to delete
-            const remainingCourses = data.courses.filter(c =>
-                !(c.course_code === courseCode && c.section === section)
-            );
-
-            // Build assignments array (can be empty - backend handles it)
-            const assignments = remainingCourses.map(c => ({
-                course_code: c.course_code,
-                section: c.section
-            }));
-
-            // Update assignments (empty array is now allowed)
             const updateResponse = await fetch(`/api/faculty/${facultyId}/courses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assignments: assignments })
+                body: JSON.stringify({
+                    school_year: currentSchoolYear,
+                    semester: currentSemester,
+                    eligibility,
+                    assignments: remaining
+                })
             });
-
             const result = await updateResponse.json();
-
             if (!updateResponse.ok) {
                 throw new Error(result.error || 'Failed to update assignments');
             }
 
-            showToast(`Removed ${courseCode}-${section}`, 'success');
-
-            // Remove from assignedCourseSections set
-            const key = `${courseCode}-${section}`;
-            assignedCourseSections.delete(key);
-
-            // Reload course lists to show the section as available again
-            await loadAllCourses();
-
-            // Update the faculty card units
-            await loadFacultyCourses(facultyId);
-
-            // Refresh modal
-            const modal = document.getElementById('faculty-modal');
-            const totalUnitsEl = document.getElementById('faculty-modal-total-units');
-            const courseCountEl = document.getElementById('faculty-modal-course-count');
-            const courseListEl = document.getElementById('faculty-modal-course-list');
-
-            if (remainingCourses.length > 0) {
-                const totalUnits = remainingCourses.length * 3;
-                totalUnitsEl.textContent = totalUnits;
-                courseCountEl.textContent = remainingCourses.length;
-
-                courseListEl.innerHTML = remainingCourses.map(course =>
-                    '<div class="faculty-modal-course-item">' +
-                    '<div class="faculty-modal-course-info">' +
-                    '<div class="faculty-modal-course-name">' + course.course_code + ' - Section ' + course.section + '</div>' +
-                    '<div class="faculty-modal-course-units">3 units</div>' +
-                    '</div>' +
-                    '<button class="faculty-modal-delete-btn" onclick="deleteFacultyCourse(\'' + facultyId + '\', \'' + course.course_code + '\', \'' + course.section + '\')">' +
-                    'Remove' +
-                    '</button>' +
-                    '</div>'
-                ).join('');
-            } else {
-                totalUnitsEl.textContent = '0';
-                courseCountEl.textContent = '0';
-                courseListEl.innerHTML = '<div class="faculty-modal-empty"><svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg><p>No courses assigned</p></div>';
+            await loadAllocationState();
+            updateFacultyLoadLabel(facultyId);
+            if (selectedFacultyId === facultyId) {
+                hydrateSelectionFromFaculty(facultyId);
             }
-
+            renderAllCourseCategories();
+            fillFacultyModal(facultyId);
+            showToast(`Removed ${courseCode}-${section}`, 'success');
         } catch (error) {
             console.error('Error deleting course:', error);
-            showToast(error.message || 'Failed to remove course', 'error');
-        }
-    }
-
-    function toggleFullyAssignedView(checkbox) {
-        const courseCode = checkbox.value;
-        const courseId = courseCode.replace(/\s/g, '-');
-        const selector = document.getElementById(`section-selector-${courseId}`);
-
-        if (!selector) return;
-
-        // Toggle visibility
-        if (selector.style.display === 'none') {
-            selector.style.display = 'block';
-
-            // Load faculty names for each section
-            const course = coursesData.find(c => c.course_code === courseCode);
-            if (!course) return;
-
-            const availableSections = course.available_sections || [];
-
-            availableSections.forEach(section => {
-                const key = `${courseCode}-${section}`;
-                const spanEl = document.getElementById(`assigned-${courseId}-${section}`);
-
-                if (spanEl) {
-                    // Check if this course-section is in the assignedCourseSections Set
-                    if (assignedCourseSections.has(key)) {
-                        // Find which faculty has this course-section from faculty data
-                        const facultyMember = facultyData.find(faculty => {
-                            // Check if faculty has this specific course-section
-                            return faculty.courses && faculty.courses.some(c => 
-                                `${c.course_code}-${c.section}` === key
-                            );
-                        });
-
-                        if (facultyMember) {
-                            spanEl.textContent = facultyMember.fullName || facultyMember.name || 'Unknown';
-                            spanEl.style.color = '#6b0f1a';
-                        } else {
-                            spanEl.textContent = 'Assigned (loading...)';
-                            spanEl.style.color = '#9ca3af';
-                        }
-                    } else {
-                        spanEl.textContent = 'Not assigned';
-                        spanEl.style.color = '#9ca3af';
-                    }
-                }
-            });
-        } else {
-            selector.style.display = 'none';
+            showToast(error.message || 'Failed to remove section', 'error');
         }
     }
 
     async function assignSelectedCourses() {
+        if (assignInFlight) return;
         if (!selectedFacultyId) {
             showToast('Please select a faculty member first', 'warning');
             return;
         }
 
-        // Build array of course-section assignments
+        if (selectedEligibility.size === 0) {
+            showToast('Assign this faculty to a course in Course Assignment first', 'warning');
+            return;
+        }
+
         const assignments = [];
-
-        for (const [courseCode, sections] of Object.entries(courseSectionAssignments)) {
-            if (sections.length === 0) {
-                showToast(`Please add at least one section for ${courseCode}`, 'warning');
-                return;
-            }
-
-            sections.forEach(section => {
-                assignments.push({
-                    course_code: courseCode,
-                    section: section
-                });
+        for (const [code, sections] of Object.entries(selectedSections)) {
+            (sections || []).forEach(section => {
+                if (!customBlockFor(code, section)) {
+                    const existing = termAssignments.find(a =>
+                        a.faculty_id === selectedFacultyId &&
+                        a.course_code === code && a.section === section
+                    );
+                    const course = coursesData.find(c => c.course_code === code);
+                    assignments.push({
+                        course_code: code,
+                        section,
+                        units: existing?.units ?? course?.units ?? 3
+                    });
+                }
             });
         }
 
         if (assignments.length === 0) {
-            showToast('Please select courses and add sections', 'warning');
+            showToast('Custom blocks are already assigned. Pick another course+section, or add a new custom block.', 'info');
             return;
         }
+
+        assignInFlight = true;
+        setAssignButtonLoading(true);
+        const startedAt = Date.now();
+        const snapshot = snapshotAssignments();
+        applyLocalAssignments(selectedFacultyId, assignments);
+        facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+        renderAllCourseCategories();
 
         try {
             const response = await fetch(`/api/faculty/${selectedFacultyId}/courses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assignments: assignments })
+                body: JSON.stringify({
+                    school_year: currentSchoolYear,
+                    semester: currentSemester,
+                    assignments
+                })
             });
-
             const result = await response.json();
-
             if (!response.ok) {
-                throw new Error(result.error || 'Failed to assign courses');
+                throw new Error(result.error || 'Failed to save assignment');
             }
 
-            // Reload assigned course-sections list
-            await loadAssignedCourseSections();
+            const remaining = Math.max(0, 400 - (Date.now() - startedAt));
+            if (remaining) {
+                await new Promise(resolve => setTimeout(resolve, remaining));
+            }
 
-            // Reload course lists to update available sections
-            await loadAllCourses();
-
-            // Reload faculty courses display
-            await loadFacultyCourses(selectedFacultyId);
-
-            showToast(`${result.assigned_count} course-section(s) assigned to ${selectedFacultyName}`, 'success');
-
-            // Clear selections
-            courseSectionAssignments = {};
-            document.querySelectorAll('.course-checkbox-item input[type="checkbox"]').forEach(checkbox => {
-                checkbox.checked = false;
-                toggleCourseSelection(checkbox);
-            });
-
+            showToast(`Assigned ${result.assigned_count} course+section(s) to ${selectedFacultyName}`, 'success');
         } catch (error) {
             console.error('Error assigning courses:', error);
-            showToast(error.message || 'Failed to assign courses', 'error');
+            restoreAssignments(snapshot);
+            rebuildAssignmentIndex();
+            facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+            renderAllCourseCategories();
+            showToast(error.message || 'Failed to save assignment', 'error');
+        } finally {
+            assignInFlight = false;
+            setAssignButtonLoading(false);
         }
     }
 
@@ -1780,89 +3462,154 @@
     }
 
     function toggleCourseSelection(checkbox) {
-        const courseCode = checkbox.value;
-        const courseId = courseCode.replace(/\s/g, '-');
-        const selector = document.getElementById(`section-selector-${courseId}`);
-
-        if (checkbox.checked) {
-            // Show section selector
-            selector.style.display = 'block';
-            // Initialize empty array for this course
-            if (!courseSectionAssignments[courseCode]) {
-                courseSectionAssignments[courseCode] = [];
-            }
-        } else {
-            // Hide section selector and clear selections
-            selector.style.display = 'none';
-            delete courseSectionAssignments[courseCode];
-            clearSectionChips(courseCode);
-        }
-    }
-
-    function toggleSectionSelection(courseCode, section, buttonEl) {
-        // Check if already assigned to another faculty
-        const courseSectionKey = `${courseCode}-${section}`;
-        if (assignedCourseSections.has(courseSectionKey)) {
-            showToast(`${courseCode} Section ${section} is already assigned to another faculty`, 'error');
+        if (!selectedFacultyId) {
+            checkbox.checked = false;
+            showToast('Select a faculty member first', 'warning');
             return;
         }
 
-        // Initialize array if needed
-        if (!courseSectionAssignments[courseCode]) {
-            courseSectionAssignments[courseCode] = [];
+        const courseCode = checkbox.value;
+        const courseDomId = courseCode.replace(/\s/g, '-');
+        const selector = document.getElementById(`section-selector-${courseDomId}`);
+        const hasCustom = customBlocks.some(b =>
+            b.faculty_id === selectedFacultyId && b.course_code === courseCode
+        );
+
+        if (!checkbox.checked && hasCustom) {
+            checkbox.checked = true;
+            showToast('Custom blocks stay assigned. Remove them from the list to unassign.', 'info');
+            return;
         }
 
-        // Toggle selection
-        if (courseSectionAssignments[courseCode].includes(section)) {
-            // Remove section
-            courseSectionAssignments[courseCode] = courseSectionAssignments[courseCode].filter(s => s !== section);
-            buttonEl.classList.remove('selected');
+        if (checkbox.checked) {
+            openCourseCodes.add(courseCode);
+            if (!selectedSections[courseCode]) selectedSections[courseCode] = [];
+            if (selector) selector.style.display = 'block';
         } else {
-            // Add section
-            courseSectionAssignments[courseCode].push(section);
-            buttonEl.classList.add('selected');
+            openCourseCodes.delete(courseCode);
+            delete selectedSections[courseCode];
+            if (selector) selector.style.display = 'none';
+        }
+        renderAllCourseCategories();
+    }
+
+    function toggleSectionSelection(courseCode, section, buttonEl) {
+        if (!selectedFacultyId) {
+            showToast('Select a faculty member first', 'warning');
+            return;
+        }
+        if (!selectedEligibility.has(courseCode) && !customBlocksFor(courseCode, section).length) {
+            showToast(`Assign this faculty to ${courseCode} in Course Assignment first`, 'warning');
+            return;
         }
 
-        // Update chips display
-        renderSectionChips(courseCode);
+        if (customBlockFor(courseCode, section, selectedFacultyId)) {
+            showToast('This custom block is already assigned. Remove it from the list to unassign.', 'info');
+            return;
+        }
+
+        const key = courseKey(courseCode, section);
+        const current = selectedSections[courseCode] || [];
+        if (current.includes(section)) {
+            selectedSections[courseCode] = current.filter(s => s !== section);
+            renderAllCourseCategories();
+            return;
+        }
+
+        const otherOwners = ownersFor(key).filter(id => id !== selectedFacultyId);
+        const otherCustom = customBlocksFor(courseCode, section)
+            .filter(b => b.faculty_id !== selectedFacultyId);
+        if (otherOwners.length || otherCustom.length) {
+            const shareOwners = otherOwners.length
+                ? otherOwners
+                : otherCustom.map(b => b.faculty_id);
+            openShareSectionModal(courseCode, section, shareOwners, otherCustom.length > 0);
+            return;
+        }
+
+        addSectionToSelection(courseCode, section);
+    }
+
+    function addSectionToSelection(courseCode, section) {
+        const current = selectedSections[courseCode] || [];
+        if (!current.includes(section)) {
+            selectedSections[courseCode] = current.concat(section);
+        }
+        openCourseCodes.add(courseCode);
+        renderAllCourseCategories();
+    }
+
+    function openShareSectionModal(courseCode, section, otherOwners, isCustom) {
+        pendingShareSection = { courseCode, section, isCustom: Boolean(isCustom) };
+        const nextCount = otherOwners.length + 1;
+        const titleEl = document.getElementById('share-section-title');
+        const textEl = document.getElementById('share-section-text');
+        const confirmEl = document.getElementById('share-section-confirm');
+        if (titleEl) titleEl.textContent = `Assign this section ${shareCountLabel(nextCount)}?`;
+        if (textEl) {
+            const facultyName = selectedFacultyName || 'this faculty';
+            textEl.textContent = `${courseCode} Section ${section} is already assigned to ${formatOwnerNames(otherOwners)}. Assign it ${shareCountLabel(nextCount)} so ${facultyName} also teaches it at a different time?`;
+        }
+        if (confirmEl) confirmEl.textContent = nextCount === 2 ? 'Assign twice' : (nextCount === 3 ? 'Assign thrice' : 'Assign anyway');
+        document.getElementById('share-section-modal').classList.add('active');
+    }
+
+    function closeShareSectionModal(event) {
+        if (event && event.target.id !== 'share-section-modal') return;
+        pendingShareSection = null;
+        const modal = document.getElementById('share-section-modal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    async function confirmShareSection() {
+        if (!pendingShareSection) {
+            closeShareSectionModal();
+            return;
+        }
+        const { courseCode, section, isCustom } = pendingShareSection;
+        pendingShareSection = null;
+        const modal = document.getElementById('share-section-modal');
+        if (modal) modal.classList.remove('active');
+        if (isCustom) {
+            await shareCustomBlock(courseCode, section);
+            return;
+        }
+        addSectionToSelection(courseCode, section);
+    }
+
+    async function shareCustomBlock(courseCode, section) {
+        if (!selectedFacultyId) return;
+        const source = customBlocksFor(courseCode, section)[0];
+        const course = coursesData.find(c => c.course_code === courseCode);
+        try {
+            const response = await fetch('/api/allocation/offering', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    school_year: currentSchoolYear,
+                    semester: currentSemester,
+                    faculty_id: selectedFacultyId,
+                    course_id: source?.course_id || course?.id,
+                    section,
+                    room: source?.room || '',
+                    units: course?.units || 3
+                })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to share custom block');
+            await loadAllocationState();
+            hydrateSelectionFromFaculty(selectedFacultyId);
+            renderAllCourseCategories();
+            facultyData.forEach(f => updateFacultyLoadLabel(f.id));
+            showToast(`${courseCode} Section ${section} shared with ${selectedFacultyName}`, 'success');
+        } catch (error) {
+            showToast(error.message || 'Failed to share custom block', 'error');
+        }
     }
 
     function getAvailableSections(courseCode) {
         const course = coursesData.find(c => c.course_code === courseCode);
-        return course ? course.available_sections : [];
-    }
-
-    function renderSectionChips(courseCode) {
-        const courseId = courseCode.replace(/\s/g, '-');
-        const container = document.getElementById(`selected-sections-${courseId}`);
-
-        const sections = courseSectionAssignments[courseCode] || [];
-
-        container.innerHTML = sections.map(section => `
-<span class="section-chip">
-    ${section}
-    <button class="chip-remove" onclick="removeSectionFromCourse('${courseCode}', '${section}')">
-        ×
-    </button>
-</span>
-`).join('');
-    }
-
-    function removeSectionFromCourse(courseCode, section) {
-        if (courseSectionAssignments[courseCode]) {
-            courseSectionAssignments[courseCode] =
-                courseSectionAssignments[courseCode].filter(s => s !== section);
-
-            renderSectionChips(courseCode);
-        }
-    }
-
-    function clearSectionChips(courseCode) {
-        const courseId = courseCode.replace(/\s/g, '-');
-        const container = document.getElementById(`selected-sections-${courseId}`);
-        if (container) {
-            container.innerHTML = '';
-        }
+        return offeredSectionsFor(course);
     }
 
 </script>

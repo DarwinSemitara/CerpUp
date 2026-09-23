@@ -780,6 +780,17 @@
         opacity: 0.9;
     }
 
+    .draggable-subject .subj-custom {
+        margin-left: 6px;
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: rgba(255, 255, 255, 0.28);
+        padding: 1px 5px;
+        border-radius: 999px;
+    }
+
     /* Unit Configuration Form */
     .unit-config-form {
         padding: 20px;
@@ -2927,7 +2938,7 @@
             var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             var SLOT_H = 28;
             var START_H = 7;
-            var END_H = 18;
+            var END_H = 21;
             var TOTAL_SLOTS = (END_H - START_H) * 2;
 
             var slots = [];
@@ -3089,38 +3100,32 @@
                     unitConfigSaved = Object.keys(subjectUnits).length > 0;
                     console.log(`📥 Loaded ${Object.keys(subjectUnits).length} configured subject-sections for ${selectedProf}:`, subjectUnits);
 
-                    // FALLBACK: If no configured subjects, load from faculty_courses
-                    if (!unitConfigSaved) {
-                        console.log('⚠️ No configured subjects found, falling back to faculty_courses...');
-                        try {
-                            var fcRes = await fetch(`/api/faculty/by-name/${encodeURIComponent(selectedProf)}/courses`);
-                            if (fcRes.ok) {
-                                var fcData = await fcRes.json();
-                                var assignments = fcData.courses || [];
+                    try {
+                        var fcRes = await fetch(`/api/faculty/by-name/${encodeURIComponent(selectedProf)}/courses?school_year=${encodeURIComponent(currentSchoolYear)}&semester=${encodeURIComponent(currentSemester)}`);
+                        if (fcRes.ok) {
+                            var fcData = await fcRes.json();
+                            var assignments = fcData.courses || [];
 
-                                assignments.forEach(function (assign) {
-                                    // Handle different field names
-                                    var courseCode = assign.course_code || assign.courseCode || assign.subjCode;
-                                    var section = assign.section;
+                            assignments.forEach(function (assign) {
+                                var courseCode = assign.course_code || assign.courseCode || assign.subjCode;
+                                var section = assign.section;
 
-                                    if (courseCode && section) {
-                                        var key = courseCode + '-' + section;
-                                        subjectUnits[key] = {
-                                            configured: 3,  // Default 3 units
-                                            allocated: 0,
-                                            section: section,
-                                            subjCode: courseCode
-                                        };
-                                        console.log(`  ✅ Fallback added: ${key} with 3 units`);
-                                    }
-                                });
+                                if (courseCode && section) {
+                                    var key = courseCode + '-' + section;
+                                    subjectUnits[key] = {
+                                        configured: Number(assign.units) || 3,
+                                        allocated: (subjectUnits[key] && subjectUnits[key].allocated) || 0,
+                                        section: section,
+                                        subjCode: courseCode,
+                                        isCustom: !!assign.is_custom
+                                    };
+                                }
+                            });
 
-                                unitConfigSaved = Object.keys(subjectUnits).length > 0;
-                                console.log(`✅ Loaded ${Object.keys(subjectUnits).length} courses from faculty_courses:`, subjectUnits);
-                            }
-                        } catch (err) {
-                            console.error('Failed to load faculty_courses fallback:', err);
+                            unitConfigSaved = Object.keys(subjectUnits).length > 0;
                         }
+                    } catch (err) {
+                        console.error('Failed to load faculty_courses:', err);
                     }
 
                     // Update button text if config exists
@@ -3640,7 +3645,7 @@
 
                 try {
                     // Fetch faculty course assignments by professor name
-                    var response = await fetch(`/api/faculty/by-name/${encodeURIComponent(selectedFacultyId)}/courses`);
+                    var response = await fetch(`/api/faculty/by-name/${encodeURIComponent(selectedFacultyId)}/courses?school_year=${encodeURIComponent(currentSchoolYear)}&semester=${encodeURIComponent(currentSemester)}`);
                     if (!response.ok) {
                         throw new Error('Failed to fetch faculty courses');
                     }
@@ -3699,9 +3704,9 @@
                             }
                         });
 
-                        // Default: 3 units per course-section
-                        var totalUnits = 3;
+                        var totalUnits = Number(assignment.units) || 3;
                         var remaining = totalUnits - allocatedUnits;
+                        var isCustom = !!assignment.is_custom;
 
                         console.log('  ', key, '- Total:', totalUnits, 'Allocated:', allocatedUnits, 'Remaining:', remaining);
 
@@ -3716,7 +3721,8 @@
                                 subjName: subjName,
                                 section: section,
                                 remaining: remaining,
-                                hasAllocation: allocatedUnits > 0
+                                hasAllocation: allocatedUnits > 0,
+                                isCustom: isCustom
                             });
                         }
                     });
@@ -3740,7 +3746,9 @@
                     var html = '';
                     blocksToRender.forEach(function (block) {
                         var classNames = block.hasAllocation ? '' : 'incomplete';
+                        if (block.isCustom) classNames += ' custom-block';
                         var color = colorFor(block.subjCode, currentSchoolYear, currentSemester);
+                        var customMark = block.isCustom ? '<span class="subj-custom">custom</span>' : '';
 
                         html += `
                             <div class="draggable-subject ${classNames}" 
@@ -3748,8 +3756,10 @@
                                 data-subject-code="${block.subjCode}"
                                 data-subject-name="${block.subjName}"
                                 data-section="${block.section}"
+                                data-custom="${block.isCustom ? '1' : '0'}"
+                                data-units="${block.remaining}"
                                 style="background-color: ${color};">
-                                <span class="subj-code">${block.subjCode} - ${block.section}</span>
+                                <span class="subj-code">${block.subjCode} - ${block.section}${customMark}</span>
                                 <span class="subj-units">${block.remaining.toFixed(1)}h</span>
                             </div>
                         `;
@@ -3812,13 +3822,22 @@
             // ═══ Drag and Drop Handlers (Updated for Trash Area) ═══
             var draggedSubject = null;
 
+            function meetingDurationSlots(isCustom, remainingHours) {
+                var hours = Number(remainingHours);
+                if (!(hours > 0)) hours = 3;
+                if (isCustom) return Math.max(1, Math.round(hours * 2));
+                return Math.max(1, Math.round(hours));
+            }
+
             function handleDragStart(event) {
                 // This is for staging blocks (dragging TO timetable)
-                var target = event.target;
+                var target = event.target.closest('.draggable-subject') || event.target;
                 draggedSubject = {
                     code: target.dataset.subjectCode,
                     name: target.dataset.subjectName,
-                    section: target.dataset.section // Single section from this block
+                    section: target.dataset.section,
+                    isCustom: target.dataset.custom === '1',
+                    units: Number(target.dataset.units) || 3
                 };
                 target.classList.add('dragging');
 
@@ -3872,7 +3891,7 @@
                     var dualPlotToggle = document.getElementById('dual-plot-toggle');
                     var dualPlotEnabled = dualPlotToggle ? dualPlotToggle.checked : false;
 
-                    if (dualPlotEnabled) {
+                    if (dualPlotEnabled && !(draggedSubject && draggedSubject.isCustom)) {
                         // Get current cell info
                         var day = cell.dataset.day;
                         var slot = cell.dataset.slot;
@@ -3946,8 +3965,10 @@
                     return;
                 }
 
-                // Don't allow drop on occupied cells (check for sched-block, not sched-cell)
-                if (cell.querySelector('.sched-block')) {
+                // Saturday custom seminars may share a slot; other drops need an empty cell
+                var dropDay = cell.dataset.day;
+                var dropIsCustom = !!(draggedSubject && draggedSubject.isCustom);
+                if (cell.querySelector('.sched-block') && !(dropDay === 'Saturday' && dropIsCustom)) {
                     showConflictModal('This time slot is already occupied. Please choose an empty slot.');
                     return;
                 }
@@ -3955,11 +3976,16 @@
                 // Get day and time from cell - use data attributes which are correct
                 var day = cell.dataset.day;
                 var startSlot = parseInt(cell.dataset.slot);
-                var endSlot = startSlot + 2; // Default 1 hour (2 slots of 30min each)
+                var durationSlots = meetingDurationSlots(
+                    draggedSubject && draggedSubject.isCustom,
+                    draggedSubject && draggedSubject.units
+                );
+                var endSlot = startSlot + durationSlots;
 
                 var start = slots[startSlot];
                 var end = slots[Math.min(endSlot, slots.length - 1)];
 
+                window._pendingCustomBlock = !!(draggedSubject && draggedSubject.isCustom);
                 console.log('📍 Dropped on:', day, start, '-', end, 'Subject:', draggedSubject.code);
 
                 // FIRST: Need to get the professor from subject config to validate
@@ -4565,10 +4591,31 @@
             window.loadSchedules = loadSchedules;
 
             // Validation function for schedule conflicts and unit limits
-            function validateSchedule(prof, day, start, end, excludeId) {
+            function isCustomSchedulePlacement(isCustomFlag, excludeId) {
+                if (isCustomFlag === true) return true;
+                if (window._pendingCustomBlock) return true;
+                if (typeof draggedSubject !== 'undefined' && draggedSubject && draggedSubject.isCustom) {
+                    return true;
+                }
+                if (excludeId != null && typeof schedules !== 'undefined') {
+                    var row = schedules.find(function (s) { return String(s.id) === String(excludeId); });
+                    if (row && (row.isCustom || row.is_custom || row.day === 'Saturday')) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            function validateSchedule(prof, day, start, end, excludeId, isCustom) {
                 console.log('%c🔍 validateSchedule called', 'color: #f59e0b; font-weight: bold');
                 console.log('  Prof:', prof, '| Day:', day, '| Time:', start, '-', end, '| Exclude ID:', excludeId);
                 console.log('  Current filters - Year:', currentSchoolYear, '| Semester:', currentSemester);
+                if (day === 'Saturday' && !isCustomSchedulePlacement(isCustom, excludeId)) {
+                    return {
+                        valid: false,
+                        message: 'Saturday is only for custom blocks.\n\nRegular course+sections stay on Monday–Friday.'
+                    };
+                }
                 // Normalize professor name (remove suffix if present)
                 var profNormalized = prof;
                 if (profNormalized.indexOf(',') > -1) {
@@ -4585,11 +4632,15 @@
                 });
 
                 if (faculty && faculty.availability && faculty.availability.length > 0) {
-                    if (faculty.availability.indexOf(day) === -1) {
+                    var availDays = faculty.availability.slice();
+                    if (availDays.indexOf('Saturday') === -1) {
+                        availDays.push('Saturday');
+                    }
+                    if (availDays.indexOf(day) === -1) {
                         return {
                             valid: false,
                             message: prof + ' is not available on ' + day + '.\n\n' +
-                                'Available days: ' + faculty.availability.join(', ') + '\n\n' +
+                                'Available days: ' + availDays.join(', ') + '\n\n' +
                                 'Please choose a different day or faculty member.'
                         };
                     }
@@ -4652,7 +4703,9 @@
                     return { valid: false, message: msg };
                 }
 
-                // Check unit limits (6-12 units per semester)
+                // Teaching load is decided by the course-section allocation on the
+                // courses page, so no unit ceiling is enforced here. The totals are
+                // still worked out so a long day can be flagged.
                 var profSchedules = schedules.filter(function (s) {
                     var sProfName = s.prof || '';
                     if (sProfName.indexOf(',') > -1) {
@@ -4690,21 +4743,34 @@
                 console.log('  New block units:', newUnits.toFixed(1));
                 console.log('  Total would be:', totalUnits.toFixed(1));
 
-                if (totalUnits > 12) {
-                    return {
-                        valid: false,
-                        message: prof + ' would have ' + totalUnits.toFixed(1) + ' units (max: 12).\n\n' +
-                            'Current units: ' + currentUnits.toFixed(1) + '\n' +
-                            'New block: ' + newUnits.toFixed(1) + ' units\n\n' +
-                            'Please reduce the block duration or choose a different faculty member.'
-                    };
+                // No faculty may teach more than 8 hours straight
+                var daySlots = {};
+                profSchedules.forEach(function (s) {
+                    if (s.day !== day) return;
+                    for (var i = slotIdx(s.start); i < slotIdx(s.end); i++) {
+                        daySlots[i] = true;
+                    }
+                });
+                for (var n = newStart; n < newEnd; n++) {
+                    daySlots[n] = true;
                 }
 
-                if (totalUnits < 6 && excludeId) {
-                    // Only warn when editing (not adding new)
+                var ordered = Object.keys(daySlots).map(Number).sort(function (a, b) {
+                    return a - b;
+                });
+                var run = ordered.length ? 1 : 0;
+                var longestRun = run;
+                for (var k = 1; k < ordered.length; k++) {
+                    run = ordered[k] === ordered[k - 1] + 1 ? run + 1 : 1;
+                    longestRun = Math.max(longestRun, run);
+                }
+
+                if (longestRun > 16) {
                     return {
-                        valid: true,
-                        warning: prof + ' will have ' + totalUnits.toFixed(1) + ' units (min recommended: 6)'
+                        valid: false,
+                        message: prof + ' would teach ' + (longestRun / 2).toFixed(1) +
+                            ' hours straight on ' + day + ' (maximum 8).\n\n' +
+                            'Leave a break, or move this block to another day.'
                     };
                 }
 
@@ -6055,14 +6121,19 @@
                     }
                     for (var i = si; i < ei; i++) {
                         if (!grid[s.day][i]) {
-                            grid[s.day][i] = Object.assign({}, s, { span: ei - si, isFirst: i === si });
+                            grid[s.day][i] = Object.assign({}, s, { span: ei - si, isFirst: i === si, stack: [] });
                         } else if (i === si) {
-                            // Conflict: another schedule already occupies this slot
                             var existing = grid[s.day][i];
-                            console.warn('⚠️ TIME CONFLICT DETECTED - Only one will render!');
-                            console.warn('  Slot:', s.day, 'at', slots[i]);
-                            console.warn('  Existing:', existing.subjCode, existing.prof);
-                            console.warn('  Dropped:', s.subjCode, s.prof);
+                            var satShare = s.day === 'Saturday';
+                            if (satShare) {
+                                existing.stack = existing.stack || [];
+                                existing.stack.push(s);
+                            } else {
+                                console.warn('⚠️ TIME CONFLICT DETECTED - Only one will render!');
+                                console.warn('  Slot:', s.day, 'at', slots[i]);
+                                console.warn('  Existing:', existing.subjCode, existing.prof);
+                                console.warn('  Dropped:', s.subjCode, s.prof);
+                            }
                         }
                     }
                 });
@@ -6080,27 +6151,29 @@
                         var entry = grid[day][si];
                         if (entry && entry.isFirst) {
                             var span = entry.span;
-                            // Use schoolYear if available, fallback to year for backward compatibility
-                            var yearOrSchoolYear = entry.schoolYear || entry.year;
-                            var bg = colorFor(entry.subjCode, yearOrSchoolYear, entry.semester);
+                            var stacked = [entry].concat(entry.stack || []);
+                            var blockH = Math.max(18, Math.floor((span * SLOT_H - 3) / stacked.length) - 1);
                             for (var k = 1; k < span; k++) covered[day + '-' + (si + k)] = true;
-                            rows += '<td rowspan="' + span + '" data-day="' + day + '" data-slot="' + si + '" data-id="' + entry.id + '" style="padding:0;position:relative;">'
-                                + '<div class="sched-block" id="blk-' + entry.id + '" data-id="' + entry.id + '" style="background:' + bg + ';height:' + (span * SLOT_H - 3) + 'px;">'
-                                + '<span class="sb-del" onclick="deleteEntry(\'' + entry.id + '\',event)">&#x2715;</span>'
-                                + '<span class="sb-subj">' + entry.subjCode + '</span>'
-                                + '<span class="sb-prof">' + (function () {
-                                    var profName = entry.prof || '';
-                                    if (profName.indexOf(',') > -1) {
-                                        profName = profName.split(',')[0].trim();
-                                    }
-                                    // Get last 2 words for surnames like "De Mesa", "De La Cruz"
-                                    var nameParts = profName.split(' ');
-                                    return nameParts.slice(-2).join(' ');
-                                })() + '</span>'
-                                + '<span class="sb-room">' + entry.room + '</span>'
-                                + '<span class="sb-section">' + (entry.section || '') + '</span>'
-                                + '<div class="sb-resize" data-id="' + entry.id + '"></div>'
-                                + '</div></td>';
+                            rows += '<td rowspan="' + span + '" data-day="' + day + '" data-slot="' + si + '" data-id="' + entry.id + '" style="padding:0;position:relative;">';
+                            stacked.forEach(function (item) {
+                                var yearOrSchoolYear = item.schoolYear || item.year;
+                                var bg = colorFor(item.subjCode, yearOrSchoolYear, item.semester);
+                                var profName = item.prof || '';
+                                if (profName.indexOf(',') > -1) {
+                                    profName = profName.split(',')[0].trim();
+                                }
+                                var nameParts = profName.split(' ');
+                                var shortProf = nameParts.slice(-2).join(' ');
+                                rows += '<div class="sched-block" id="blk-' + item.id + '" data-id="' + item.id + '" style="background:' + bg + ';height:' + blockH + 'px;">'
+                                    + '<span class="sb-del" onclick="deleteEntry(\'' + item.id + '\',event)">&#x2715;</span>'
+                                    + '<span class="sb-subj">' + item.subjCode + '</span>'
+                                    + '<span class="sb-prof">' + shortProf + '</span>'
+                                    + '<span class="sb-room">' + (item.room || '') + '</span>'
+                                    + '<span class="sb-section">' + (item.section || '') + '</span>'
+                                    + '<div class="sb-resize" data-id="' + item.id + '"></div>'
+                                    + '</div>';
+                            });
+                            rows += '</td>';
                         } else {
                             rows += '<td data-day="' + day + '" data-slot="' + si + '"></td>';
                         }
@@ -7188,6 +7261,7 @@
                 // Get dual-plot setting
                 var dualPlotToggle = document.getElementById('dual-plot-toggle');
                 var dualPlotEnabled = dualPlotToggle ? dualPlotToggle.checked : false;
+                if (window._pendingCustomBlock) dualPlotEnabled = false;
                 var pairedDay = null;
 
                 console.log('🔍 Dual-Plot Toggle Element:', dualPlotToggle);
@@ -8858,14 +8932,14 @@
 
             tbody.innerHTML = '';
 
-            // Generate time slots from 7:00 AM to 5:00 PM (30-minute intervals)
+            // Generate time slots from 7:00 AM to 9:00 PM (30-minute intervals)
             var startHour = 7;
-            var endHour = 17;
+            var endHour = 21;
             var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
             for (var hour = startHour; hour <= endHour; hour++) {
                 for (var minute = 0; minute < 60; minute += 30) {
-                    // Skip 5:30 PM - we only want up to 5:00 PM
+                    // Last label is 9:00 PM
                     if (hour === endHour && minute > 0) break;
 
                     var tr = document.createElement('tr');
@@ -9034,6 +9108,59 @@
                 console.error('❌ Error in populateRoomSchedule:', err);
             }
         };
+
+        // Custom rooms from the courses page stay in the new-block picker only.
+        // The Rooms tab lists built-in classrooms.
+        (function loadExtraRooms() {
+            fetch('/api/rooms')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var extra = (data.rooms || []).map(function (room) {
+                        return String(room.name).replace(/(\w+)-(\d+)/, '$1 - $2');
+                    });
+                    if (!extra.length) return;
+
+                    ['nbm-room'].forEach(function (id) {
+                        var select = document.getElementById(id);
+                        if (!select) return;
+                        var known = Array.prototype.map.call(
+                            select.options, function (o) { return o.value; });
+                        extra.forEach(function (name) {
+                            if (known.indexOf(name) !== -1) return;
+                            var option = document.createElement('option');
+                            option.value = name;
+                            option.textContent = name;
+                            select.appendChild(option);
+                        });
+                    });
+                })
+                .catch(function (err) {
+                    console.warn('Could not load additional rooms:', err);
+                });
+
+            fetch('/api/sections')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var extra = (data.sections || []).map(function (s) { return s.name; });
+                    if (!extra.length) return;
+                    ['section-select', 'config-section-select', 'nbm-section'].forEach(function (id) {
+                        var select = document.getElementById(id);
+                        if (!select) return;
+                        var known = Array.prototype.map.call(
+                            select.options, function (o) { return o.value; });
+                        extra.forEach(function (name) {
+                            if (known.indexOf(name) !== -1) return;
+                            var option = document.createElement('option');
+                            option.value = name;
+                            option.textContent = 'Section ' + name;
+                            select.appendChild(option);
+                        });
+                    });
+                })
+                .catch(function (err) {
+                    console.warn('Could not load additional sections:', err);
+                });
+        })();
 
         // Attach event listener to room filter
         setTimeout(function () {
@@ -10351,15 +10478,21 @@
             var conflicts = (progress.hard_viols || 0) + (progress.soft_viols || 0);
             
             // If status is completed, animate to 100% regardless of generation count
+            // Otherwise track the time budget, since the GA nearly always stops on time
             var percentage;
             if (progress.status === 'completed') {
                 percentage = 100;
+            } else if (progress.time_limit_seconds > 0) {
+                percentage = Math.min(99, ((progress.time_elapsed || 0) / progress.time_limit_seconds) * 100);
             } else {
                 percentage = maxGen > 0 ? Math.min(100, (gen / maxGen) * 100) : 0;
             }
 
             document.getElementById('progress-message').textContent = message;
-            document.getElementById('progress-gen').textContent = gen + '/' + maxGen;
+            document.getElementById('progress-gen').textContent = progress.time_limit_seconds > 0
+                ? gen + ' (' + Math.round(progress.time_elapsed || 0) + 's / '
+                + Math.round(progress.time_limit_seconds) + 's)'
+                : gen + '/' + maxGen;
             document.getElementById('progress-fitness').textContent = fitness;
             document.getElementById('progress-conflicts').textContent = conflicts;
             
@@ -10393,17 +10526,71 @@
         }
 
         function pollGenerationProgress() {
-            // IMMEDIATE TEST: Try loading schedules once at start (for debugging)
-            setTimeout(function() {
-                console.log('🧪 TEST: Calling loadGeneratedSchedules 5 seconds after poll start');
-                loadGeneratedSchedules();
-            }, 5000);
-            
+            // Watchdog state: keep polling as long as the server reports work,
+            // instead of cutting off at a fixed wall-clock time.
+            var POLL_HARD_CAP_MS = 15 * 60 * 1000;   // absolute safety net
+            var POLL_STALL_MS = 4 * 60 * 1000;       // no change at all
+            var pollStartedAt = Date.now();
+            var lastActivityAt = Date.now();
+            var lastSignature = '';
+            var idleTicks = 0;
+
+            function stopPolling() {
+                if (progressPollInterval) {
+                    clearInterval(progressPollInterval);
+                    progressPollInterval = null;
+                }
+            }
+
             progressPollInterval = setInterval(function () {
                 fetch('/api/schedule/generate-progress')
                     .then(function (res) { return res.json(); })
                     .then(function (progress) {
                         updateProgressWidget(progress);
+
+                        // Track whether the backend is still making progress
+                        var signature = [progress.status, progress.generation,
+                            progress.message].join('|');
+                        if (signature !== lastSignature) {
+                            lastSignature = signature;
+                            lastActivityAt = Date.now();
+                        }
+
+                        var finished = progress.status === 'completed' || progress.status === 'failed';
+
+                        // Server no longer running the GA but never reported a result
+                        // (e.g. the dev server reloaded and killed the worker thread)
+                        if (!finished && progress.running === false && progress.status !== 'starting') {
+                            idleTicks++;
+                            if (idleTicks > 10) {
+                                stopPolling();
+                                hideGenerationProgress();
+                                showScheduleAIMessage(
+                                    'Generation stopped before finishing. The server may have restarted. ' +
+                                    'Nothing was saved, please try generating again.', true);
+                                return;
+                            }
+                        } else {
+                            idleTicks = 0;
+                        }
+
+                        if (!finished && Date.now() - lastActivityAt > POLL_STALL_MS) {
+                            stopPolling();
+                            hideGenerationProgress();
+                            showScheduleAIMessage(
+                                'Generation has not reported progress for several minutes, so I stopped watching it. ' +
+                                'Check the server logs before trying again.', true);
+                            return;
+                        }
+
+                        if (!finished && Date.now() - pollStartedAt > POLL_HARD_CAP_MS) {
+                            stopPolling();
+                            hideGenerationProgress();
+                            showScheduleAIMessage(
+                                'Generation is taking unusually long, so I stopped watching it. ' +
+                                'Reload the page to see whether schedules were saved.', true);
+                            return;
+                        }
 
                         if (progress.status === 'completed') {
                             // Prevent duplicate completion messages
@@ -10412,10 +10599,9 @@
                                 return;
                             }
                             generationCompletionShown = true;
-                            
-                            clearInterval(progressPollInterval);
-                            progressPollInterval = null;  // Prevent re-entry
-                            
+
+                            stopPolling();
+
                             hideGenerationProgress();
 
                             // Ask CHE if user is satisfied with the generated schedule
@@ -10433,7 +10619,7 @@
                             // Reload schedules without page refresh (loads into generated_schedules view)
                             loadGeneratedSchedules();
                         } else if (progress.status === 'failed') {
-                            clearInterval(progressPollInterval);
+                            stopPolling();
                             hideGenerationProgress();
                             showScheduleAIMessage('Generation failed: ' + (progress.message || 'Unknown error'), true);
                         }
@@ -10443,17 +10629,6 @@
                         // Don't stop polling on fetch errors, the server might be busy
                     });
             }, 500);  // Poll every 500ms
-            
-            // FALLBACK: After 90 seconds, try loading schedules even if we didn't detect completion
-            // This handles cases where the polling misses the completion status
-            setTimeout(function() {
-                if (progressPollInterval) {
-                    console.log('⏰ 90s timeout reached, attempting to load generated schedules as fallback');
-                    clearInterval(progressPollInterval);
-                    hideGenerationProgress();
-                    loadGeneratedSchedules();
-                }
-            }, 90000);  // 90 second fallback
         }
 
         function displayGeneratedSchedules(schedules) {

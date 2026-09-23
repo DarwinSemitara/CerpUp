@@ -1,9 +1,11 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, make_response
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, send_file, make_response
 from dotenv import load_dotenv
 from services.supabase_service import verify_access_token as verify_id_token, db, supabase
 from services.cloudinary_service import upload_member_photo, delete_member_photo
 from datetime import datetime, timezone
 import os
+import re
+import json
 import uuid
 import logging
 import threading
@@ -85,11 +87,18 @@ ga_progress_lock = threading.Lock()
 
 
 def update_ga_progress(generation=None, best_fitness=None, status=None,
-                       message=None, hard_viols=None, soft_viols=None, schedules=None):
+                       message=None, hard_viols=None, soft_viols=None, schedules=None,
+                       time_elapsed=None, max_generations=None, time_limit_seconds=None):
     """Thread-safe progress update for GA."""
     with ga_progress_lock:
         if generation is not None:
             ga_progress['generation'] = generation
+        if time_elapsed is not None:
+            ga_progress['time_elapsed'] = time_elapsed
+        if max_generations is not None:
+            ga_progress['max_generations'] = max_generations
+        if time_limit_seconds is not None:
+            ga_progress['time_limit_seconds'] = time_limit_seconds
         if best_fitness is not None:
             ga_progress['best_fitness'] = best_fitness
         if status:
@@ -784,21 +793,7 @@ def section_instructions():
 @app.route('/other/')
 @login_required
 def section_other():
-    return redirect(url_for('section_che'))
-
-
-@app.route('/che/')
-@login_required
-def section_che():
-    if is_partial():
-        return render_template('partials/che.html')
-    email = session.get('email', '')
-    initial = email[0].upper() if email else 'A'
-    return render_template('pages/che.html',
-                           email=email,
-                           initial=initial,
-                           page_title='CHE Assistant',
-                           active_page='che')
+    return redirect(url_for('dashboard'))
 
 
 # ── CHE Conversation History API ─────────────────────────────
@@ -1003,21 +998,14 @@ def che_chat():
         # Always inject schedule context for scheduling awareness
         context_data = {}
         
-        # Add hardcoded room list to context for CHE awareness
-        context_data['available_rooms'] = [
-            'CERP AVR',
-            'DCERP Conference Room',
-            'CLH',
-            'Geomatics Room',
-            'TCC-01',
-            'TCC-02',
-            'TCC-03',
-            'TCC-04',
-            'TCC-10',
-            'TCC-11',
-            'CHE REC'
-        ]
-        
+        # Room list for CHE awareness, including rooms added on the courses page
+        try:
+            context_data['available_rooms'] = get_all_rooms()
+        except Exception as room_err:
+            logger.warning(f"CHE room context fetch: {room_err}")
+            context_data['available_rooms'] = list(DEFAULT_ROOMS)
+
+
         try:
             # Schedules (always loaded for GA awareness) - FROM SUPABASE
             result = supabase.table('schedules').select('*').execute()
@@ -1252,6 +1240,8 @@ def che_execute_action():
                         weekly_hours=float(
                             s.get('weekly_hours', s.get('units', 3))),
                         allocated_professors=s.get('professors', []),
+                        is_custom=bool(s.get('is_custom')),
+                        preferred_room=s.get('preferred_room') or s.get('room'),
                     ))
 
                 config = FullGAConfig(
@@ -3424,145 +3414,1177 @@ def get_all_courses():
         return jsonify({'courses': [], 'error': str(e)}), 200
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CUSTOM SECTIONS & ROOMS
+# Managed from the courses page. Both tables are optional: until sql/
+# rooms_and_sections.sql has been run the app falls back to the A-Z sections
+# and the built-in room list.
+# ══════════════════════════════════════════════════════════════════════════════
+
+DEFAULT_ROOMS = [
+    'CERP AVR',
+    'DCERP Conference Room',
+    'CLH',
+    'Geomatics Room',
+    'TCC-01',
+    'TCC-02',
+    'TCC-03',
+    'TCC-04',
+    'TCC-10',
+    'TCC-11',
+    'CHE REC',
+]
+
+
+def _table_is_missing(error) -> bool:
+    """True when Supabase reports the table itself does not exist."""
+    message = str(error)
+    return 'PGRST205' in message or 'Could not find the table' in message
+
+
+def _fetch_named_rows(table: str):
+    """Rows of an optional (id, name) table; None when the table is absent."""
+    try:
+        result = supabase.table(table).select(
+            'id, name').order('name').execute()
+        return result.data or []
+    except Exception as e:
+        if _table_is_missing(e):
+            return None
+        raise
+
+
+def get_custom_sections() -> list:
+    """Section names added on top of A-Z."""
+    rows = _fetch_named_rows('sections')
+    return [r['name'] for r in rows] if rows else []
+
+
+def get_all_rooms() -> list:
+    """Built-in rooms plus any room added from the courses page."""
+    rooms = list(DEFAULT_ROOMS)
+    rows = _fetch_named_rows('rooms')
+    for row in rows or []:
+        if row['name'] not in rooms:
+            rooms.append(row['name'])
+    return rooms
+
+
+def _named_table_list(table: str, label: str):
+    rows = _fetch_named_rows(table)
+    if rows is None:
+        return jsonify({
+            'available': False,
+            label: [],
+            'setup_hint': 'Run sql/rooms_and_sections.sql in the Supabase SQL editor to enable this.',
+        })
+    return jsonify({'available': True, label: rows})
+
+
+# Names end up in schedule rows, element ids and course-section keys, so keep
+# them to characters that are safe everywhere.
+NAME_PATTERN = re.compile(r'^[A-Za-z0-9][A-Za-z0-9 ._/-]*$')
+
+
+def _named_table_add(table: str, reserved: list, kind: str):
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+
+    if not name:
+        return jsonify({'error': f'{kind} name is required'}), 400
+    if len(name) > 40:
+        return jsonify({'error': f'{kind} name must be 40 characters or fewer'}), 400
+    if not NAME_PATTERN.match(name):
+        return jsonify({
+            'error': f'{kind} name may only use letters, numbers, spaces and . _ - /'
+        }), 400
+    if any(name.lower() == r.lower() for r in reserved):
+        return jsonify({'error': f'{name} already exists'}), 409
+
+    existing = _fetch_named_rows(table)
+    if existing is None:
+        return jsonify({
+            'error': 'Storage is not set up yet.',
+            'setup_hint': 'Run sql/rooms_and_sections.sql in the Supabase SQL editor.',
+        }), 503
+    if any(row['name'].lower() == name.lower() for row in existing):
+        return jsonify({'error': f'{name} already exists'}), 409
+
+    try:
+        result = supabase.table(table).insert({'name': name}).execute()
+    except Exception as e:
+        logger.error(f"Error adding {kind.lower()} {name}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+    logger.info(f"Added {kind.lower()}: {name}")
+    return jsonify({'status': 'ok', 'item': result.data[0]}), 201
+
+
+def _named_table_delete(table: str, item_id: str, kind: str):
+    try:
+        result = supabase.table(table).delete().eq('id', item_id).execute()
+    except Exception as e:
+        logger.error(f"Error deleting {kind.lower()} {item_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+    if not result.data:
+        return jsonify({'error': f'{kind} not found'}), 404
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/sections', methods=['GET'])
+@login_required
+def list_custom_sections():
+    """Sections available on top of the built-in A-Z list."""
+    return _named_table_list('sections', 'sections')
+
+
+@app.route('/api/sections', methods=['POST'])
+@login_required
+def add_custom_section():
+    """Add a section name that courses can then be offered for."""
+    letters = [chr(c) for c in range(ord('A'), ord('Z') + 1)]
+    return _named_table_add('sections', letters, 'Section')
+
+
+@app.route('/api/sections/<section_id>', methods=['DELETE'])
+@login_required
+def delete_custom_section(section_id):
+    """
+    Remove a custom section.
+
+    Courses already configured for it keep their configuration, so nothing
+    that is allocated or scheduled is touched.
+    """
+    return _named_table_delete('sections', section_id, 'Section')
+
+
+@app.route('/api/rooms', methods=['GET'])
+@login_required
+def list_rooms():
+    """Rooms added from the courses page, plus the built-in list for reference."""
+    rows = _fetch_named_rows('rooms')
+    payload = {'default_rooms': DEFAULT_ROOMS}
+    if rows is None:
+        payload.update({
+            'available': False,
+            'rooms': [],
+            'setup_hint': 'Run sql/rooms_and_sections.sql in the Supabase SQL editor to enable this.',
+        })
+    else:
+        payload.update({'available': True, 'rooms': rows})
+    return jsonify(payload)
+
+
+@app.route('/api/rooms', methods=['POST'])
+@login_required
+def add_room():
+    """Add a room the scheduler can place classes in."""
+    return _named_table_add('rooms', DEFAULT_ROOMS, 'Room')
+
+
+@app.route('/api/rooms/<room_id>', methods=['DELETE'])
+@login_required
+def delete_room(room_id):
+    """Remove a room. Existing schedules keep their room assignment."""
+    return _named_table_delete('rooms', room_id, 'Room')
+
+
+def _letter_sections():
+    return [chr(c) for c in range(ord('A'), ord('Z') + 1)]
+
+
+def _validate_new_name(name: str, kind: str):
+    name = (name or '').strip()
+    if not name:
+        raise ValueError(f'{kind} name is required')
+    if len(name) > 40:
+        raise ValueError(f'{kind} name must be 40 characters or fewer')
+    if not NAME_PATTERN.match(name):
+        raise ValueError(
+            f'{kind} name may only use letters, numbers, spaces and . _ - /')
+    return name
+
+
+def _ensure_named_resource(table: str, name: str, reserved: list, kind: str):
+    """Return (canonical name, created?). Inserts the name when it is new."""
+    name = _validate_new_name(name, kind)
+    for reserved_name in reserved:
+        if reserved_name.lower() == name.lower():
+            return reserved_name, False
+    existing = _fetch_named_rows(table)
+    if existing:
+        for row in existing:
+            if (row.get('name') or '').lower() == name.lower():
+                return row['name'], False
+    if existing is None:
+        raise RuntimeError(
+            f'{kind} storage is not set up yet. Run sql/rooms_and_sections.sql.')
+    supabase.table(table).insert({'name': name}).execute()
+    logger.info(f"Added {kind.lower()}: {name}")
+    return name, True
+
+
+def _find_course_by_code(course_code: str):
+    want = normalize_course_code((course_code or '').strip()).upper()
+    if not want:
+        return None
+    for course in _course_catalog().values():
+        have = normalize_course_code(course.get('course_code') or '').upper()
+        if have == want:
+            return course
+    return None
+
+
+def _create_course(course_code: str, course_name: str, units: int, section: str):
+    code = normalize_course_code((course_code or '').strip())
+    if not code:
+        raise ValueError('Course code is required')
+    if len(code) > 40:
+        raise ValueError('Course code must be 40 characters or fewer')
+    if not NAME_PATTERN.match(code):
+        raise ValueError(
+            'Course code may only use letters, numbers, spaces and . _ - /')
+    existing = _find_course_by_code(code)
+    if existing:
+        return existing, False
+
+    name = (course_name or '').strip() or code
+    try:
+        units = int(units)
+    except (TypeError, ValueError):
+        units = 3
+    if units < 1 or units > 12:
+        raise ValueError('Units must be between 1 and 12')
+
+    payload = {
+        'course_code': code,
+        'course_name': name,
+        'units': units,
+        'available_sections': [section] if section else [],
+    }
+    try:
+        result = supabase.table('courses').insert(payload).execute()
+    except Exception as e:
+        logger.warning(f"Course insert with sections failed, retrying: {e}")
+        payload.pop('available_sections', None)
+        result = supabase.table('courses').insert(payload).execute()
+    if not result.data:
+        raise RuntimeError('Could not create the course')
+    logger.info(f"Created course {code}")
+    return result.data[0], True
+
+
+def _as_section_list(value):
+    if not value:
+        return []
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except Exception:
+            return [value]
+    return list(value) if isinstance(value, list) else [value]
+
+
+def _offer_section(course_id: str, section: str, school_year: str, semester: str):
+    course = supabase.table('courses').select(
+        'id, available_sections').eq('id', course_id).execute()
+    if not course.data:
+        raise ValueError('Course not found')
+    current = _as_section_list(course.data[0].get('available_sections'))
+    if section not in current:
+        current.append(section)
+        supabase.table('courses').update(
+            {'available_sections': current}).eq('id', course_id).execute()
+
+    caps = allocation_capabilities()
+    if not (caps['term_offerings_table'] and school_year and semester):
+        return current
+
+    existing = supabase.table('course_term_offerings')\
+        .select('id, available_sections')\
+        .eq('course_id', course_id)\
+        .eq('school_year', school_year)\
+        .eq('semester', semester)\
+        .execute()
+    offered = _as_section_list(
+        existing.data[0].get('available_sections') if existing.data else current
+    )
+    if section not in offered:
+        offered.append(section)
+    payload = {
+        'course_id': course_id,
+        'school_year': school_year,
+        'semester': semester,
+        'available_sections': offered,
+        'updated_at': datetime.now(timezone.utc).isoformat(),
+    }
+    if existing.data:
+        supabase.table('course_term_offerings')\
+            .update({'available_sections': offered,
+                     'updated_at': payload['updated_at']})\
+            .eq('id', existing.data[0]['id'])\
+            .execute()
+    else:
+        supabase.table('course_term_offerings').insert(payload).execute()
+    return offered
+
+
+@app.route('/api/allocation/offering', methods=['POST'])
+@login_required
+def add_allocation_offering():
+    """
+    Add a course+section+room combo for this term and assign one faculty.
+
+    Each of course, section, and room can be an existing value or a new one.
+    A new course can reuse an existing section and room, and vice versa.
+    The same custom course+section may be assigned to more than one faculty.
+    """
+    try:
+        data = request.get_json() or {}
+        default_year, default_sem = current_default_term()
+        school_year = (data.get('school_year') or '').strip() or default_year
+        semester = (data.get('semester') or '').strip() or default_sem
+        faculty_id = (data.get('faculty_id') or '').strip()
+        section_in = (data.get('section') or '').strip()
+        room_in = (data.get('room') or '').strip()
+        course_id = (data.get('course_id') or '').strip()
+        course_payload = data.get('course') or {}
+
+        if not faculty_id:
+            return jsonify({'error': 'Choose which faculty will handle this course+section'}), 400
+        if not section_in:
+            return jsonify({'error': 'Section is required'}), 400
+
+        created = {'course': False, 'section': False, 'room': False}
+
+        try:
+            section, created['section'] = _ensure_named_resource(
+                'sections', section_in, _letter_sections(), 'Section')
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except RuntimeError as e:
+            if section_in.upper() in _letter_sections():
+                section = section_in.upper()
+                created['section'] = False
+            else:
+                return jsonify({'error': str(e)}), 503
+
+        room = None
+        if room_in:
+            try:
+                room, created['room'] = _ensure_named_resource(
+                    'rooms', room_in, DEFAULT_ROOMS, 'Room')
+            except ValueError as e:
+                return jsonify({'error': str(e)}), 400
+            except RuntimeError as e:
+                match = next(
+                    (r for r in DEFAULT_ROOMS if r.lower() == room_in.lower()),
+                    None,
+                )
+                if match:
+                    room = match
+                    created['room'] = False
+                else:
+                    return jsonify({'error': str(e)}), 503
+
+        course = None
+        if course_id:
+            course = _course_catalog().get(course_id)
+            if not course:
+                return jsonify({'error': 'Course not found'}), 404
+        else:
+            try:
+                course, created['course'] = _create_course(
+                    course_payload.get('course_code'),
+                    course_payload.get('course_name'),
+                    course_payload.get('units', 3),
+                    section,
+                )
+            except ValueError as e:
+                return jsonify({'error': str(e)}), 400
+
+        _offer_section(course['id'], section, school_year, semester)
+
+        units = data.get('units', course.get('units') or 3)
+        try:
+            block, created_block = _save_custom_block(
+                faculty_id, course, section, units, room, school_year, semester)
+        except ValueError as e:
+            return jsonify({
+                'error': str(e),
+                'created': created,
+                'course': course,
+                'section': section,
+                'room': room,
+            }), 409
+
+        return jsonify({
+            'status': 'ok',
+            'created': created,
+            'assigned': created_block,
+            'is_custom': True,
+            'course': {
+                'id': course['id'],
+                'course_code': course.get('course_code'),
+                'course_name': course.get('course_name'),
+                'units': block.get('units') or units,
+            },
+            'section': section,
+            'room': room,
+            'faculty_id': faculty_id,
+            'school_year': school_year,
+            'semester': semester,
+        }), 201 if created_block or created['course'] else 200
+    except Exception as e:
+        logger.error(f"Error adding offering: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/allocation/offering/<block_id>', methods=['DELETE'])
+@login_required
+def delete_allocation_offering(block_id):
+    """Remove a custom staging block."""
+    try:
+        if not _delete_custom_block(block_id):
+            return jsonify({'error': 'Custom block not found'}), 404
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        logger.error(f"Error deleting custom block: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/allocation/assignment-units', methods=['PUT'])
+@login_required
+def update_allocation_assignment_units():
+    """Set contact-hour units for one assigned course+section."""
+    try:
+        data = request.get_json() or {}
+        units = _parse_assignment_units(data.get('units'))
+        is_custom = bool(data.get('is_custom'))
+        block_id = (data.get('id') or data.get('block_id') or '').strip()
+        faculty_id = (data.get('faculty_id') or '').strip()
+        course_code = (data.get('course_code') or '').strip()
+        section = (data.get('section') or '').strip()
+
+        if is_custom:
+            row = _update_custom_block_units(
+                block_id,
+                units,
+                faculty_id=faculty_id,
+                course_code=course_code,
+                section=section,
+                school_year=(data.get('school_year') or '').strip() or None,
+                semester=(data.get('semester') or '').strip() or None,
+            )
+        else:
+            if not faculty_id or not course_code or not section:
+                return jsonify({
+                    'error': 'faculty_id, course_code, and section are required'
+                }), 400
+            row = _update_regular_assignment_units(
+                faculty_id, course_code, section, units, block_id or None)
+
+        return jsonify({'status': 'ok', 'units': units, 'row': row})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error updating assignment units: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COURSE ALLOCATION (eligibility + term-specific sections)
+# Faculty are assigned to a course first. Which section they teach is stored
+# per school year / semester. Custom sections from the courses page are valid.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def normalize_course_code(code: str) -> str:
+    """CERP101 -> CERP 101 so keys match the frontend."""
+    return re.sub(r'([A-Z]+)(\d)', r'\1 \2', code or '')
+
+
+def _column_is_missing(error) -> bool:
+    message = str(error)
+    return (
+        'PGRST204' in message
+        or '42703' in message
+        or 'schema cache' in message.lower()
+        or 'does not exist' in message.lower()
+    )
+
+
+_ALLOC_CAPS = None
+
+
+def _set_alloc_cap(key, value):
+    global _ALLOC_CAPS
+    if _ALLOC_CAPS is None:
+        _ALLOC_CAPS = {}
+    _ALLOC_CAPS[key] = value
+
+
+def allocation_capabilities():
+    """Which optional tables/columns exist. Recheck any that are still missing."""
+    global _ALLOC_CAPS
+    if _ALLOC_CAPS is not None and all(_ALLOC_CAPS.values()):
+        return _ALLOC_CAPS
+
+    caps = dict(_ALLOC_CAPS) if _ALLOC_CAPS else {
+        'eligibility_table': False,
+        'term_offerings_table': False,
+        'term_columns': False,
+        'custom_blocks_table': False,
+        'faculty_courses_units': False,
+    }
+
+    if not caps.get('eligibility_table'):
+        try:
+            supabase.table('faculty_eligible_courses').select('id').limit(1).execute()
+            caps['eligibility_table'] = True
+        except Exception as e:
+            if not _table_is_missing(e):
+                logger.warning(f"eligibility table probe: {e}")
+
+    if not caps.get('term_offerings_table'):
+        try:
+            supabase.table('course_term_offerings').select('id').limit(1).execute()
+            caps['term_offerings_table'] = True
+        except Exception as e:
+            if not _table_is_missing(e):
+                logger.warning(f"term offerings table probe: {e}")
+
+    if not caps.get('term_columns'):
+        try:
+            supabase.table('faculty_courses').select(
+                'id, school_year, semester').limit(1).execute()
+            caps['term_columns'] = True
+        except Exception as e:
+            if not (_column_is_missing(e) or _table_is_missing(e)):
+                logger.warning(f"faculty_courses term columns probe: {e}")
+
+    if not caps.get('custom_blocks_table'):
+        try:
+            supabase.table('custom_term_blocks').select('id').limit(1).execute()
+            caps['custom_blocks_table'] = True
+        except Exception as e:
+            if not _table_is_missing(e):
+                logger.warning(f"custom_term_blocks probe: {e}")
+
+    if not caps.get('faculty_courses_units'):
+        try:
+            supabase.table('faculty_courses').select('id, units').limit(1).execute()
+            caps['faculty_courses_units'] = True
+        except Exception as e:
+            if not (_column_is_missing(e) or _table_is_missing(e)):
+                logger.warning(f"faculty_courses units probe: {e}")
+
+    _ALLOC_CAPS = caps
+    return caps
+
+
+def current_default_term():
+    year = datetime.now().year
+    return f"{year}-{year + 1}", '1'
+
+
+def _course_catalog() -> dict:
+    """id -> course row. Used instead of PostgREST embeds when no FK exists."""
+    rows = supabase.table('courses').select(
+        'id, course_code, course_name, units, available_sections').execute()
+    return {c['id']: c for c in (rows.data or [])}
+
+
+def _with_course_fields(row: dict, catalog: dict) -> dict:
+    course = catalog.get(row.get('course_id')) or {}
+    assigned_units = row.get('units')
+    return {
+        **row,
+        'course_code': course.get('course_code'),
+        'course_name': course.get('course_name'),
+        'units': assigned_units if assigned_units is not None else course.get('units'),
+    }
+
+
+def fetch_term_offerings(school_year: str = None, semester: str = None) -> dict:
+    """course_id -> [section names]. Regular section lists are global."""
+    catalog = _course_catalog()
+    return {
+        course_id: _as_section_list(course.get('available_sections'))
+        for course_id, course in catalog.items()
+    }
+
+
+def fetch_eligibility_rows():
+    """[{faculty_id, course_id, course_code, course_name, units}]"""
+    caps = allocation_capabilities()
+    catalog = _course_catalog()
+
+    if caps['eligibility_table']:
+        result = supabase.table('faculty_eligible_courses')\
+            .select('faculty_id, course_id')\
+            .execute()
+        source = result.data or []
+    else:
+        result = supabase.table('faculty_courses')\
+            .select('faculty_id, course_id')\
+            .execute()
+        source = result.data or []
+
+    seen = set()
+    rows = []
+    for item in source:
+        key = (item['faculty_id'], item['course_id'])
+        if key in seen:
+            continue
+        seen.add(key)
+        decorated = _with_course_fields(item, catalog)
+        if not decorated.get('course_code'):
+            continue
+        rows.append({
+            'faculty_id': decorated['faculty_id'],
+            'course_id': decorated['course_id'],
+            'course_code': decorated['course_code'],
+            'course_name': decorated['course_name'],
+            'units': decorated['units'],
+        })
+    return rows
+
+
+def fetch_section_assignments(school_year=None, semester=None):
+    """Regular faculty_courses rows. Term args are ignored — allocation is global."""
+    catalog = _course_catalog()
+    caps = allocation_capabilities()
+    columns = 'id, faculty_id, course_id, section, units' if caps.get(
+        'faculty_courses_units') else 'id, faculty_id, course_id, section'
+    result = supabase.table('faculty_courses').select(columns).execute()
+    rows = []
+    for item in result.data or []:
+        if not item.get('section'):
+            continue
+        decorated = _with_course_fields(item, catalog)
+        if not decorated.get('course_code'):
+            continue
+        rows.append({
+            'id': decorated.get('id'),
+            'faculty_id': decorated['faculty_id'],
+            'course_id': decorated['course_id'],
+            'section': decorated['section'],
+            'course_code': decorated['course_code'],
+            'course_name': decorated['course_name'],
+            'units': decorated.get('units') or 3,
+            'is_custom': False,
+        })
+    return rows
+
+
+def _faculty_display_name(faculty_id: str) -> str:
+    result = supabase.table('members').select(
+        'first, last, suffix').eq('id', faculty_id).execute()
+    if not result.data:
+        return ''
+    member = result.data[0]
+    name = f"{member.get('first', '')} {member.get('last', '')}".strip()
+    if member.get('suffix'):
+        name += f", {member['suffix']}"
+    return name
+
+
+def _dedupe_custom_blocks(rows: list) -> list:
+    """One row per faculty + course + section; later rows win."""
+    unique = {}
+    for row in rows:
+        key = (
+            row.get('faculty_id'),
+            row.get('course_id'),
+            row.get('section'),
+        )
+        unique[key] = row
+    return list(unique.values())
+
+
+def fetch_custom_blocks(school_year: str = None, semester: str = None) -> list:
+    """All custom course+section+faculty blocks. Year/semester are not filtered."""
+    catalog = _course_catalog()
+    caps = allocation_capabilities()
+    rows = []
+
+    if caps.get('custom_blocks_table'):
+        result = supabase.table('custom_term_blocks')\
+            .select('id, faculty_id, course_id, section, units, room, school_year, semester')\
+            .execute()
+        for item in result.data or []:
+            custom_units = item.get('units')
+            decorated = _with_course_fields(item, catalog)
+            if not decorated.get('course_code'):
+                continue
+            rows.append({
+                'id': decorated.get('id'),
+                'faculty_id': decorated['faculty_id'],
+                'course_id': decorated['course_id'],
+                'section': decorated['section'],
+                'course_code': decorated['course_code'],
+                'course_name': decorated['course_name'],
+                'units': custom_units if custom_units is not None else (decorated.get('units') or 3),
+                'room': decorated.get('room'),
+                'school_year': decorated.get('school_year'),
+                'semester': decorated.get('semester'),
+                'is_custom': True,
+            })
+        return _dedupe_custom_blocks(rows)
+
+    try:
+        query = supabase.table('configured_subjects').select('*')
+        if school_year:
+            query = query.eq('school_year', school_year)
+        if semester:
+            query = query.eq('semester', semester)
+        result = query.execute()
+    except Exception as e:
+        if _table_is_missing(e):
+            return []
+        raise
+
+    members = supabase.table('members').select('id, first, last, suffix').execute()
+    name_to_id = {}
+    for member in members.data or []:
+        full = f"{member.get('first', '')} {member.get('last', '')}".strip()
+        name_to_id[full] = member['id']
+        if member.get('suffix'):
+            name_to_id[f"{full}, {member['suffix']}"] = member['id']
+
+    course_by_code = {
+        normalize_course_code(c.get('course_code') or '').upper(): c
+        for c in catalog.values()
+    }
+    for item in result.data or []:
+        code = normalize_course_code(item.get('subj_code') or '')
+        course = course_by_code.get(code.upper())
+        faculty_id = name_to_id.get((item.get('prof') or '').strip())
+        if not course or not faculty_id or not item.get('section'):
+            continue
+        rows.append({
+            'id': item.get('id'),
+            'faculty_id': faculty_id,
+            'course_id': course['id'],
+            'section': item.get('section'),
+            'course_code': course.get('course_code'),
+            'course_name': item.get('subj_name') or course.get('course_name'),
+            'units': item.get('units') or course.get('units') or 3,
+            'room': None,
+            'school_year': item.get('school_year') or school_year,
+            'semester': item.get('semester') or semester,
+            'is_custom': True,
+        })
+    return _dedupe_custom_blocks(rows)
+
+
+def _save_custom_block(faculty_id, course, section, units, room, school_year, semester):
+    """Insert a custom block. Same faculty+course+section is global, not per term."""
+    caps = allocation_capabilities()
+    existing_regular = [
+        a for a in fetch_section_assignments()
+        if a['course_id'] == course['id']
+        and a['section'] == section
+        and a['faculty_id'] == faculty_id
+    ]
+    if existing_regular:
+        raise ValueError(
+            f"{course.get('course_code')} Section {section} is already in "
+            'Faculty Assignment for this faculty. Custom blocks are extras, '
+            'not replacements.'
+        )
+
+    try:
+        units = float(units)
+    except (TypeError, ValueError):
+        units = float(course.get('units') or 3)
+    if units < 0.5 or units > 12:
+        raise ValueError('Units must be between 0.5 and 12')
+
+    for other in fetch_custom_blocks():
+        if (other['course_id'] == course['id']
+                and other['section'] == section
+                and other['faculty_id'] == faculty_id):
+            if other.get('id') and caps.get('custom_blocks_table'):
+                supabase.table('custom_term_blocks').update({
+                    'units': units,
+                    'room': room,
+                }).eq('id', other['id']).eq('faculty_id', faculty_id).execute()
+            other = dict(other)
+            other['units'] = units
+            other['room'] = room
+            return other, False
+
+    if caps.get('custom_blocks_table'):
+        try:
+            result = supabase.table('custom_term_blocks').insert({
+                'faculty_id': faculty_id,
+                'course_id': course['id'],
+                'section': section,
+                'units': units,
+                'room': room,
+                'school_year': school_year,
+                'semester': semester,
+            }).execute()
+        except Exception as e:
+            message = str(e)
+            if '23505' in message or 'unique' in message.lower():
+                raise ValueError(
+                    'This custom course+section is already assigned to another '
+                    'faculty. Run sql/shared_custom_blocks.sql in the Supabase '
+                    'SQL editor to allow sharing.'
+                ) from e
+            raise
+        row = (result.data or [{}])[0]
+        return {
+            'id': row.get('id'),
+            'faculty_id': faculty_id,
+            'course_id': course['id'],
+            'section': section,
+            'course_code': course.get('course_code'),
+            'course_name': course.get('course_name'),
+            'units': units,
+            'room': room,
+            'is_custom': True,
+        }, True
+
+    prof = _faculty_display_name(faculty_id)
+    result = supabase.table('configured_subjects').insert({
+        'subj_code': course.get('course_code'),
+        'subj_name': course.get('course_name') or course.get('course_code'),
+        'prof': prof,
+        'section': section,
+        'units': units,
+        'school_year': school_year,
+        'semester': semester,
+    }).execute()
+    row = (result.data or [{}])[0]
+    return {
+        'id': row.get('id'),
+        'faculty_id': faculty_id,
+        'course_id': course['id'],
+        'section': section,
+        'course_code': course.get('course_code'),
+        'course_name': course.get('course_name'),
+        'units': units,
+        'room': room,
+        'is_custom': True,
+    }, True
+
+
+def _delete_custom_block(block_id: str):
+    caps = allocation_capabilities()
+    if caps.get('custom_blocks_table'):
+        result = supabase.table('custom_term_blocks').delete().eq(
+            'id', block_id).execute()
+        return bool(result.data)
+    result = supabase.table('configured_subjects').delete().eq(
+        'id', block_id).execute()
+    return bool(result.data)
+
+
+def _parse_assignment_units(value):
+    try:
+        units = float(value)
+    except (TypeError, ValueError):
+        raise ValueError('Units must be a number')
+    if units < 0.5 or units > 12:
+        raise ValueError('Units must be between 0.5 and 12')
+    return units
+
+
+def _update_regular_assignment_units(faculty_id, course_code, section, units, row_id=None):
+    catalog = _course_catalog()
+    course = next(
+        (c for c in catalog.values() if c.get('course_code') == course_code),
+        None
+    )
+    if not course:
+        raise ValueError(f'Course {course_code} not found')
+    query = supabase.table('faculty_courses').update({'units': units})
+    if row_id:
+        query = query.eq('id', row_id)
+    else:
+        query = query.eq('faculty_id', faculty_id)\
+            .eq('course_id', course['id'])\
+            .eq('section', section)
+    try:
+        result = query.execute()
+    except Exception as e:
+        if _column_is_missing(e):
+            raise ValueError(
+                'The units column is not visible to the API yet. '
+                'In the Supabase SQL editor run: NOTIFY pgrst, \'reload schema\';'
+            ) from e
+        raise
+    if not result.data:
+        raise ValueError(f'{course_code} Section {section} is not assigned to this faculty')
+    _set_alloc_cap('faculty_courses_units', True)
+    return result.data[0]
+
+
+def _update_custom_block_units(block_id, units, faculty_id=None,
+                               course_code=None, section=None,
+                               school_year=None, semester=None):
+    """Update units for one faculty's custom block only."""
+    caps = allocation_capabilities()
+    if caps.get('custom_blocks_table'):
+        query = supabase.table('custom_term_blocks').update({'units': units})
+        if block_id:
+            query = query.eq('id', block_id)
+            if faculty_id:
+                query = query.eq('faculty_id', faculty_id)
+        elif faculty_id and course_code and section:
+            catalog = _course_catalog()
+            course = next(
+                (c for c in catalog.values() if c.get('course_code') == course_code),
+                None
+            )
+            if not course:
+                raise ValueError(f'Course {course_code} not found')
+            query = query.eq('faculty_id', faculty_id)\
+                .eq('course_id', course['id'])\
+                .eq('section', section)
+        else:
+            raise ValueError('Custom block id or faculty + course + section is required')
+        result = query.execute()
+        if not result.data:
+            raise ValueError('Custom block not found for this faculty')
+        return result.data[0]
+    if not block_id:
+        raise ValueError('Custom block id is required')
+    result = supabase.table('configured_subjects').update(
+        {'units': units}).eq('id', block_id).execute()
+    if not result.data:
+        raise ValueError('Custom block not found')
+    return result.data[0]
+
+
+def replace_faculty_eligibility(faculty_id, course_ids):
+    caps = allocation_capabilities()
+    if not caps['eligibility_table']:
+        return False
+    supabase.table('faculty_eligible_courses')\
+        .delete().eq('faculty_id', faculty_id).execute()
+    if course_ids:
+        supabase.table('faculty_eligible_courses').insert([
+            {'faculty_id': faculty_id, 'course_id': cid} for cid in course_ids
+        ]).execute()
+    return True
+
+
+def _assignment_key(course_code, section) -> str:
+    return f"{normalize_course_code(course_code)}-{section}"
+
+
+@app.route('/api/allocation', methods=['GET'])
+@login_required
+def get_allocation_state():
+    """Regular allocation and custom blocks are both global."""
+    try:
+        school_year = request.args.get('school_year') or current_default_term()[0]
+        semester = request.args.get('semester') or current_default_term()[1]
+        caps = allocation_capabilities()
+
+        offerings = fetch_term_offerings()
+        eligibility = fetch_eligibility_rows()
+        assignments = fetch_section_assignments()
+        custom_blocks = fetch_custom_blocks()
+
+        assigned = [_assignment_key(a['course_code'], a['section'])
+                    for a in assignments + custom_blocks if a.get('course_code')]
+
+        return jsonify({
+            'school_year': school_year,
+            'semester': semester,
+            'setup': caps,
+            'setup_complete': caps.get('eligibility_table', False),
+            'setup_hint': None,
+            'offerings': offerings,
+            'eligibility': eligibility,
+            'assignments': assignments,
+            'custom_blocks': custom_blocks,
+            'assigned': assigned,
+        })
+    except Exception as e:
+        logger.error(f"Error fetching allocation state: {e}", exc_info=True)
+        caps = allocation_capabilities()
+        return jsonify({
+            'setup': caps,
+            'setup_complete': caps.get('eligibility_table', False),
+            'setup_hint': None,
+            'offerings': {},
+            'eligibility': [],
+            'assignments': [],
+            'custom_blocks': [],
+            'assigned': [],
+            'error': str(e),
+        }), 200
+
+
+@app.route('/api/assigned-course-sections', methods=['GET'])
+@login_required
+def get_assigned_course_sections():
+    """Assigned course-section keys for a term (or all rows in legacy mode)."""
+    try:
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
+        assignments = fetch_section_assignments()
+        custom = fetch_custom_blocks()
+        assigned = [_assignment_key(a['course_code'], a['section'])
+                    for a in assignments + custom if a.get('course_code')]
+        return jsonify({'assigned': assigned})
+    except Exception as e:
+        logger.error(f"Error fetching assigned course-sections: {e}")
+        return jsonify({'assigned': [], 'error': str(e)}), 200
+
+
 @app.route('/api/courses/<course_id>/sections', methods=['PUT'])
 @login_required
 def update_course_sections(course_id):
-    """Update available sections for a specific course."""
+    """Offer a course for a set of sections. Term-specific when the table exists."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         available_sections = data.get('available_sections', [])
+        school_year = data.get('school_year')
+        semester = data.get('semester')
 
         if not available_sections:
             return jsonify({'error': 'At least one section must be provided'}), 400
 
-        logger.info(
-            f"Updating course {course_id} with sections: {available_sections}")
-
-        # Update the course
         result = supabase.table('courses')\
             .update({'available_sections': available_sections})\
             .eq('id', course_id)\
             .execute()
-
         if not result.data:
             return jsonify({'error': 'Course not found'}), 404
 
-        logger.info(f"Successfully updated course {course_id}")
         return jsonify({'status': 'ok', 'course': result.data[0]})
     except Exception as e:
         logger.error(f"Error updating course sections: {e}")
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/assigned-course-sections', methods=['GET'])
+@app.route('/api/courses/<course_id>/eligible-faculty', methods=['PUT'])
 @login_required
-def get_assigned_course_sections():
-    """Get all currently assigned course-section combinations (to prevent duplicates)."""
+def update_course_eligible_faculty(course_id):
+    """Set which faculty may teach this course. Does not assign a section."""
     try:
-        logger.info("Fetching assigned course-sections")
+        data = request.get_json() or {}
+        faculty_ids = list({fid for fid in (data.get('faculty_ids') or []) if fid})
+        caps = allocation_capabilities()
+        if not caps['eligibility_table']:
+            return jsonify({
+                'error': 'Course assignment is not set up yet.',
+                'setup_hint': 'Run sql/term_assignments.sql in the Supabase SQL editor.',
+            }), 503
 
-        # Query faculty_courses with course details with retry logic
-        result = retry_supabase_query(
-            lambda: supabase.table('faculty_courses').select(
-                'section, courses!inner(course_code)')
-        )
+        existing = supabase.table('faculty_eligible_courses')\
+            .select('faculty_id')\
+            .eq('course_id', course_id)\
+            .execute()
+        previous = {row['faculty_id'] for row in (existing.data or [])}
+        incoming = set(faculty_ids)
 
-        # Build list of 'COURSE-SECTION' strings
-        # CRITICAL: Normalize course codes to match frontend format (space between letters and numbers)
-        assigned = []
-        for item in result.data:
-            course_code = item['courses']['course_code']
-            # Normalize: CERP101 -> CERP 101
-            import re
-            normalized_code = re.sub(r'([A-Z]+)(\d)', r'\1 \2', course_code)
-            assigned.append(f"{normalized_code}-{item['section']}")
+        supabase.table('faculty_eligible_courses')\
+            .delete().eq('course_id', course_id).execute()
+        if faculty_ids:
+            supabase.table('faculty_eligible_courses').insert([
+                {'faculty_id': fid, 'course_id': course_id} for fid in faculty_ids
+            ]).execute()
 
-        logger.info(f"Found {len(assigned)} assigned course-sections")
-        logger.info(f"Sample assigned (first 3): {assigned[:3] if assigned else []}")
-        return jsonify({'assigned': assigned})
+        # Faculty who lost this course should not keep a section of it.
+        removed = previous - incoming
+        for faculty_id in removed:
+            supabase.table('faculty_courses')\
+                .delete()\
+                .eq('faculty_id', faculty_id)\
+                .eq('course_id', course_id)\
+                .execute()
+
+        logger.info(
+            f"Course {course_id} eligible faculty: {len(faculty_ids)}")
+        return jsonify({'status': 'ok', 'faculty_ids': faculty_ids})
     except Exception as e:
-        logger.error(f"Error fetching assigned course-sections: {e}")
-        # Return empty array instead of error to allow UI to load
-        return jsonify({'assigned': [], 'error': str(e)}), 200
+        logger.error(f"Error updating eligible faculty: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/faculty/<faculty_id>/courses', methods=['GET'])
 @login_required
 def get_faculty_courses(faculty_id):
-    """Get all course-section assignments for a specific faculty member."""
+    """Section assignments for one faculty, optionally limited to a term."""
     try:
-        logger.info(f"Fetching courses for faculty {faculty_id}")
-
-        # Join with courses table to get course details with retry logic
-        result = retry_supabase_query(
-            lambda: supabase.table('faculty_courses')
-            .select('section, courses!inner(course_code, course_name, units)')
-            .eq('faculty_id', faculty_id)
-        )
-
-        courses = []
-        for item in result.data:
-            courses.append({
-                'course_code': item['courses']['course_code'],
-                'course_name': item['courses']['course_name'],
-                'units': item['courses']['units'],
-                'section': item['section']
-            })
-
-        logger.info(f"Found {len(courses)} courses for faculty {faculty_id}")
-        return jsonify({'courses': courses})
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
+        assignments = [
+            a for a in fetch_section_assignments()
+            if a['faculty_id'] == faculty_id
+        ]
+        custom = [
+            a for a in fetch_custom_blocks()
+            if a['faculty_id'] == faculty_id
+        ]
+        eligibility = [
+            e for e in fetch_eligibility_rows()
+            if e['faculty_id'] == faculty_id
+        ]
+        return jsonify({
+            'courses': [{
+                'course_code': a['course_code'],
+                'course_name': a['course_name'],
+                'units': a['units'],
+                'section': a['section'],
+                'is_custom': a.get('is_custom', False),
+                'room': a.get('room'),
+            } for a in assignments + custom],
+            'eligibility': eligibility,
+        })
     except Exception as e:
         logger.error(f"Error fetching faculty courses: {e}")
-        # Return empty courses instead of error
-        return jsonify({'courses': [], 'error': str(e)}), 200
+        return jsonify({'courses': [], 'eligibility': [], 'error': str(e)}), 200
 
 
 @app.route('/api/faculty/by-name/<professor_name>/courses', methods=['GET'])
 @login_required
 def get_faculty_courses_by_name(professor_name):
-    """Get all course-section assignments for a specific faculty member by name."""
+    """Section assignments for a faculty member looked up by display name."""
     try:
-        logger.info(f"Fetching courses for professor: {professor_name}")
-
-        # First, find the faculty member by name with retry logic
-        # Name format in members table: first + ' ' + last
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
         members_result = retry_supabase_query(
             lambda: supabase.table('members').select('id, first, last')
         )
 
         faculty_id = None
-        for member in members_result.data:
-            full_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
-            )
+        for member in members_result.data or []:
+            full_name = f"{member.get('first', '')} {member.get('last', '')}".strip()
             if full_name == professor_name:
                 faculty_id = member['id']
                 break
 
         if not faculty_id:
-            logger.warning(f"No faculty found with name: {professor_name}")
             return jsonify({'courses': []})
 
-        # Now fetch their course assignments with retry logic
-        result = retry_supabase_query(
-            lambda: supabase.table('faculty_courses')
-            .select('section, courses!inner(course_code, course_name, units)')
-            .eq('faculty_id', faculty_id)
-        )
-
-        courses = []
-        for item in result.data:
-            courses.append({
-                'course_code': item['courses']['course_code'],
-                'course_name': item['courses']['course_name'],
-                'units': item['courses']['units'],
-                'section': item['section']
-            })
-
-        logger.info(f"Found {len(courses)} courses for {professor_name}")
-        return jsonify({'courses': courses})
+        assignments = [
+            a for a in fetch_section_assignments()
+            if a['faculty_id'] == faculty_id
+        ]
+        custom = [
+            a for a in fetch_custom_blocks()
+            if a['faculty_id'] == faculty_id
+        ]
+        return jsonify({'courses': [{
+            'course_code': a['course_code'],
+            'course_name': a['course_name'],
+            'units': a['units'],
+            'section': a['section'],
+            'is_custom': a.get('is_custom', False),
+            'room': a.get('room'),
+        } for a in assignments + custom]})
     except Exception as e:
         logger.error(f"Error fetching faculty courses by name: {e}")
-        # Return empty courses instead of error
         return jsonify({'courses': [], 'error': str(e)}), 200
 
 
@@ -3570,99 +4592,159 @@ def get_faculty_courses_by_name(professor_name):
 @login_required
 def assign_faculty_courses(faculty_id):
     """
-    Assign course-section pairs to a faculty member.
-    Replaces all existing assignments for this faculty.
-    Enforces exclusive assignment: one course-section can only belong to one faculty.
-    If assignments is empty, removes all assignments for this faculty.
+    Save this faculty's regular (global) course+section assignments.
+    The same course+section may be saved for more than one faculty.
+
+    Body:
+      assignments: [{course_code, section}, ...]
+      eligibility: [course_code, ...]  — optional
+
+    Regular allocation is not school-year specific. Custom term blocks are
+    added separately via /api/allocation/offering.
+    The same course+section may be shared by more than one faculty.
     """
     try:
-        data = request.get_json()
-        assignments = data.get('assignments', [])
+        data = request.get_json() or {}
+        assignments = data.get('assignments')
+        eligibility_codes = data.get('eligibility')
+        caps = allocation_capabilities()
 
-        # Allow empty assignments to clear all courses
-        if not assignments:
-            logger.info(
-                f"Removing all course assignments for faculty {faculty_id}")
-            # Delete all existing assignments
-            supabase.table('faculty_courses')\
-                .delete()\
-                .eq('faculty_id', faculty_id)\
-                .execute()
-
+        # Manage page still posts {course_id} to mark a faculty eligible.
+        if data.get('course_id') and assignments is None and eligibility_codes is None:
+            if caps['eligibility_table']:
+                existing = supabase.table('faculty_eligible_courses')\
+                    .select('id')\
+                    .eq('faculty_id', faculty_id)\
+                    .eq('course_id', data['course_id'])\
+                    .execute()
+                if not existing.data:
+                    supabase.table('faculty_eligible_courses').insert({
+                        'faculty_id': faculty_id,
+                        'course_id': data['course_id'],
+                    }).execute()
+                return jsonify({'status': 'ok', 'eligible': True})
             return jsonify({
-                'message': 'All assignments removed',
-                'faculty_id': faculty_id,
-                'assigned': []
-            }), 200
+                'error': 'Assign a section on the courses page, or run '
+                         'sql/term_assignments.sql to enable course-only eligibility.'
+            }), 400
 
-        logger.info(
-            f"Assigning {len(assignments)} course-sections to faculty {faculty_id}")
+        courses_result = retry_supabase_query(
+            lambda: supabase.table('courses')
+            .select('id, course_code, available_sections')
+        )
+        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
+        course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
-        # Get course details with available_sections
-        course_codes = list(set(a['course_code'] for a in assignments))
-        courses_result = supabase.table('courses')\
-            .select('id, course_code, available_sections')\
-            .in_('course_code', course_codes)\
-            .execute()
+        if eligibility_codes is not None:
+            course_ids = []
+            for code in eligibility_codes:
+                course = course_by_code.get(code)
+                if not course:
+                    return jsonify({'error': f'Course {code} not found'}), 400
+                course_ids.append(course['id'])
+            if not replace_faculty_eligibility(faculty_id, course_ids):
+                logger.info(
+                    "Eligibility table missing; section rows still record who teaches")
 
-        course_map = {c['course_code']: c for c in courses_result.data}
+        if assignments is None:
+            return jsonify({'status': 'ok', 'assigned_count': 0,
+                            'eligibility_saved': eligibility_codes is not None})
 
-        # Validate each assignment
+        seen_pairs = set()
+        for assignment in assignments:
+            pair = (assignment.get('course_code'), assignment.get('section'))
+            if pair in seen_pairs:
+                return jsonify({
+                    'error': f'{pair[0]} Section {pair[1]} is listed more than once'
+                }), 400
+            seen_pairs.add(pair)
+
+        offerings = fetch_term_offerings()
+        eligible_ids = {
+            e['course_id'] for e in fetch_eligibility_rows()
+            if e['faculty_id'] == faculty_id
+        }
+
         validated_records = []
         for assignment in assignments:
-            course_code = assignment['course_code']
-            section = assignment['section']
+            course_code = assignment.get('course_code')
+            section = (assignment.get('section') or '').strip()
+            if not course_code or not section:
+                return jsonify({'error': 'Each assignment needs a course and a section'}), 400
 
-            if course_code not in course_map:
+            course = course_by_code.get(course_code)
+            if not course:
                 return jsonify({'error': f'Course {course_code} not found'}), 400
 
-            course = course_map[course_code]
-
-            # VALIDATION 1: Check if section is available for this course
-            if section not in course['available_sections']:
+            offered = offerings.get(course['id'])
+            if offered is None:
+                offered = list(course.get('available_sections') or [])
+            if section not in offered:
                 return jsonify({
-                    'error': f'Section {section} is not available for {course_code}. '
-                    f'Available sections: {", ".join(course["available_sections"])}'
+                    'error': f'Section {section} is not offered for {course_code}. '
+                             f'Offered: {", ".join(offered) or "(none)"}'
                 }), 400
 
-            # VALIDATION 2: Check if this course-section is already assigned to ANOTHER faculty
-            existing = supabase.table('faculty_courses')\
-                .select('faculty_id')\
-                .eq('course_id', course['id'])\
-                .eq('section', section)\
-                .execute()
-
-            if existing.data:
-                existing_faculty = existing.data[0]['faculty_id']
-                if existing_faculty != faculty_id:
+            if caps['eligibility_table'] and course['id'] not in eligible_ids:
+                # Saving eligibility in this same request should have added them.
+                if eligibility_codes is None or course_code not in eligibility_codes:
                     return jsonify({
-                        'error': f'{course_code} Section {section} is already assigned to another faculty'
-                    }), 409  # Conflict
+                        'error': f'This faculty is not assigned to {course_code}. '
+                                 'Assign them to the course before picking a section.'
+                    }), 400
 
-            validated_records.append({
+            record = {
                 'faculty_id': faculty_id,
                 'course_id': course['id'],
-                'section': section
+                'section': section,
+            }
+            if caps.get('faculty_courses_units'):
+                try:
+                    record['units'] = float(assignment.get('units')
+                                            if assignment.get('units') is not None
+                                            else (course.get('units') or 3))
+                except (TypeError, ValueError):
+                    record['units'] = float(course.get('units') or 3)
+            validated_records.append(record)
+
+        # Without the eligibility table, an empty assignments list would wipe
+        # every section this faculty already has. Refuse that so "assign to a
+        # course, section later" cannot destroy existing rows.
+        if not validated_records and not caps['eligibility_table']:
+            return jsonify({
+                'status': 'ok',
+                'assigned_count': 0,
+                'warning': 'Pick one section to save this assignment, or run '
+                           'sql/term_assignments.sql so a faculty can be assigned '
+                           'to a course before a section is chosen.'
             })
 
-        # Delete existing assignments for this faculty
-        supabase.table('faculty_courses')\
-            .delete()\
-            .eq('faculty_id', faculty_id)\
-            .execute()
+        retry_supabase_query(
+            lambda: supabase.table('faculty_courses').delete().eq(
+                'faculty_id', faculty_id)
+        )
 
-        # Insert new assignments
         if validated_records:
-            supabase.table('faculty_courses').insert(
-                validated_records).execute()
+            retry_supabase_query(
+                lambda: supabase.table('faculty_courses').insert(validated_records)
+            )
 
         logger.info(
-            f"Successfully assigned {len(validated_records)} course-sections to faculty {faculty_id}")
-        return jsonify({'status': 'ok', 'assigned_count': len(validated_records)})
-
+            f"Assigned {len(validated_records)} section(s) to faculty {faculty_id}")
+        return jsonify({
+            'status': 'ok',
+            'assigned_count': len(validated_records),
+        })
     except Exception as e:
-        logger.error(f"Error assigning courses: {e}")
-        return jsonify({'error': str(e)}), 500
+        message = str(e)
+        if 'faculty_courses_course_id_section_key' in message or '23505' in message:
+            return jsonify({
+                'error': 'This course+section is already assigned to another faculty. '
+                         'Run sql/shared_course_section.sql in the Supabase SQL editor '
+                         'to allow two faculty to share it.'
+            }), 409
+        logger.error(f"Error assigning courses: {e}", exc_info=True)
+        return jsonify({'error': message}), 500
 
 
 @app.route('/api/schedule/generate-full', methods=['POST'])
@@ -3795,22 +4877,19 @@ def api_generate_full_schedule():
                     import traceback
                     logger.warning(traceback.format_exc())
 
-                # Load faculty course-section assignments from Supabase
-                # {faculty_full_name: ["COURSE-SECTION", ...]}
+                # Load faculty course-section assignments from Supabase.
+                # The same course+section may be taught by more than one faculty.
                 faculty_course_assignments = {}
-                course_section_assignments = {}  # {"COURSE-SECTION": faculty_full_name}
+                course_section_assignments = {}  # {"COURSE-SECTION": [faculty names]}
+                course_catalog = {}  # {"COURSE-SECTION::faculty_id": {name, units, faculty}}
                 try:
-                    # Fetch all faculty course assignments
-                    assignments_result = supabase.table('faculty_courses')\
-                        .select('faculty_id, section, courses!inner(course_code)')\
-                        .execute()
+                    term_assignments = fetch_section_assignments()
+                    custom_assignments = fetch_custom_blocks()
 
-                    # Fetch all members to map faculty_id to full name
                     members_result = supabase.table('members')\
                         .select('id, first, last, suffix')\
                         .execute()
 
-                    # Build faculty ID to name mapping
                     faculty_id_to_name = {}
                     for member in members_result.data:
                         full_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
@@ -3819,72 +4898,107 @@ def api_generate_full_schedule():
                             full_name += f", {member['suffix']}"
                         faculty_id_to_name[member['id']] = full_name
 
-                    # Build assignment dictionaries
-                    for assignment in assignments_result.data:
+                    def record_ga_assignment(assignment, is_custom=False):
                         faculty_id = assignment['faculty_id']
-                        course_code = assignment['courses']['course_code']
-                        section = assignment['section']
-                        course_section_key = f"{course_code}-{section}"
-
+                        course_code = assignment.get('course_code')
+                        section = assignment.get('section')
+                        if not course_code or not section:
+                            return
                         faculty_name = faculty_id_to_name.get(faculty_id)
-                        if faculty_name:
-                            # Add to faculty assignments
-                            if faculty_name not in faculty_course_assignments:
-                                faculty_course_assignments[faculty_name] = []
-                            faculty_course_assignments[faculty_name].append(
-                                course_section_key)
+                        if not faculty_name:
+                            return
+                        course_section_key = f"{course_code}-{section}"
+                        faculty_course_assignments.setdefault(
+                            faculty_name, []).append(course_section_key)
+                        names = course_section_assignments.setdefault(
+                            course_section_key, [])
+                        if faculty_name not in names:
+                            names.append(faculty_name)
+                        course_catalog[f"{course_section_key}::{faculty_id}"] = {
+                            'code': course_code,
+                            'section': section,
+                            'name': assignment.get('course_name') or course_code,
+                            'units': float(assignment.get('units') or 3),
+                            'is_custom': is_custom,
+                            'room': assignment.get('room') if is_custom else None,
+                            'faculty_id': faculty_id,
+                            'faculty_name': faculty_name,
+                        }
 
-                            # Add to reverse mapping
-                            course_section_assignments[course_section_key] = faculty_name
+                    for assignment in term_assignments:
+                        record_ga_assignment(assignment, is_custom=False)
+                    for assignment in custom_assignments:
+                        record_ga_assignment(assignment, is_custom=True)
 
                     logger.info(
-                        f"Loaded {len(course_section_assignments)} faculty course-section assignments")
+                        f"Loaded {len(course_catalog)} faculty course-section "
+                        f"assignments ({len(course_section_assignments)} unique "
+                        f"course+sections), including custom blocks")
                 except Exception as e:
                     logger.warning(
                         f"Error loading faculty course assignments: {e}")
                     import traceback
                     traceback.print_exc()
 
-                # Load rooms - ALWAYS use hardcoded list to ensure all rooms are included
-                # (Firestore may not have complete room data)
-                rooms_list = [
-                    'CERP AVR',
-                    'DCERP Conference Room',
-                    'CLH',
-                    'Geomatics Room',
-                    'TCC-01',
-                    'TCC-02',
-                    'TCC-03',
-                    'TCC-04',
-                    'TCC-10',
-                    'TCC-11',
-                    'CHE REC'
-                ]
-                
-                # Optionally merge with Firestore rooms if they exist
+                # Built-in rooms plus anything added on the courses page
                 try:
-                    room_docs = db.collection('rooms').stream()
-                    for d in room_docs:
-                        rd = d.to_dict()
-                        room_name = rd.get('name', d.id)
-                        if room_name not in rooms_list:
-                            rooms_list.append(room_name)
-                except Exception:
-                    pass  # Use hardcoded list only
+                    rooms_list = get_all_rooms()
+                except Exception as e:
+                    logger.warning(f"Falling back to built-in rooms: {e}")
+                    rooms_list = list(DEFAULT_ROOMS)
 
-                # Extract subjects from reference schedules
-                # Deduplicate by course-section, but track day patterns (max 2 days per course)
+                # One GA subject per faculty share of a course+section
                 subjects_dict = {}
-                day_patterns = {}  # Track which days each course-section meets
-                
+                for key, course in course_catalog.items():
+                    faculty_name = course.get('faculty_name')
+                    if not faculty_name:
+                        continue
+                    subjects_dict[key] = {
+                        'code': course['code'],
+                        'name': course['name'],
+                        'section': course['section'],
+                        'units': course['units'],
+                        'weekly_hours': course['units'],
+                        'allocated_professors': [faculty_name],
+                        'is_custom': bool(course.get('is_custom')),
+                        'preferred_room': course.get('room'),
+                    }
+
+                def _faculty_names_match(ref_name, allocated_name):
+                    if not ref_name or not allocated_name:
+                        return False
+                    if ref_name == allocated_name:
+                        return True
+                    return allocated_name.startswith(ref_name) or ref_name in allocated_name
+
+                # Match a reference row to that faculty's share only
+                filtered_reference = []
                 for rs in reference_schedules:
-                    key = f"{rs['subjCode']}-{rs['section']}"
-                    
-                    # Track day pattern (deduplicate by day, max 2 days)
+                    matched = None
+                    for key, subj in subjects_dict.items():
+                        if subj['code'] != rs['subjCode'] or subj['section'] != rs['section']:
+                            continue
+                        if _faculty_names_match(rs.get('prof', ''), subj['allocated_professors'][0]):
+                            matched = key
+                            break
+                    if not matched:
+                        continue
+                    rs = dict(rs)
+                    rs['prof'] = subjects_dict[matched]['allocated_professors'][0]
+                    rs['units'] = subjects_dict[matched]['units']
+                    filtered_reference.append(rs)
+
+                if len(filtered_reference) != len(reference_schedules):
+                    logger.info(
+                        f"Using {len(filtered_reference)} of {len(reference_schedules)} "
+                        "reference rows for continuity (rest are no longer allocated)")
+                reference_schedules = filtered_reference
+
+                day_patterns = {}
+                for rs in reference_schedules:
+                    key = f"{rs['subjCode']}-{rs['section']}::{rs['prof']}"
                     if key not in day_patterns:
                         day_patterns[key] = {}
-                    
-                    # Use day as key to avoid duplicate days, limit to 2 days max
                     day = rs['day']
                     if day not in day_patterns[key] and len(day_patterns[key]) < 2:
                         day_patterns[key][day] = {
@@ -3893,67 +5007,57 @@ def api_generate_full_schedule():
                             'end': rs['end'],
                             'room': rs['room']
                         }
-                    
-                    # Create subject entry (deduplicated)
-                    if key not in subjects_dict:
-                        # CRITICAL: Get professor from faculty_courses allocation, NOT from reference schedule
-                        assigned_prof = course_section_assignments.get(key)
-                        if not assigned_prof:
-                            # Fallback to reference if no current assignment
-                            assigned_prof = rs['prof']
-                            logger.warning(f"No faculty assignment found for {key}, using reference professor: {assigned_prof}")
-                        
-                        subjects_dict[key] = {
-                            'code': rs['subjCode'],
-                            'name': rs['subjName'],
-                            'section': rs['section'],
-                            'units': rs['units'],
-                            'weekly_hours': rs['units'],
-                            'allocated_professors': [assigned_prof]  # Use current faculty allocation
-                        }
-                
-                # Convert day_patterns from dict to list, ensure exactly 2 days
+
                 for key in day_patterns:
-                    days_list = list(day_patterns[key].values())
-                    if len(days_list) < 2:
-                        logger.warning(f"{key} has only {len(days_list)} meeting day(s), expected 2")
-                    day_patterns[key] = days_list[:2]  # Take only first 2 days
+                    day_patterns[key] = list(day_patterns[key].values())[:2]
 
                 subjects = [SubjectInput(**s) for s in subjects_dict.values()]
 
-                logger.info(f"Extracted {len(subjects)} unique course-sections from reference")
-                logger.info(f"Day patterns tracked for {len(day_patterns)} course-sections")
+                allocated_keys = {
+                    f"{c['code']}-{c['section']}::{c.get('faculty_name')}"
+                    for c in course_catalog.values() if c.get('faculty_name')
+                }
+                reference_keys = set(day_patterns)
+                new_this_semester = sorted(allocated_keys - reference_keys)
+                dropped_from_allocation = sorted(reference_keys - allocated_keys)
+
+                logger.info(
+                    f"Scheduling {len(subjects)} allocated course-sections "
+                    f"({len(allocated_keys & reference_keys)} also ran in the reference semester)")
+                if new_this_semester:
+                    logger.info(
+                        f"{len(new_this_semester)} course-section(s) are new this semester "
+                        f"(no continuity reference): {', '.join(new_this_semester[:10])}")
+                if dropped_from_allocation:
+                    logger.info(
+                        f"{len(dropped_from_allocation)} course-section(s) from the reference "
+                        f"are no longer allocated and will not be scheduled: "
+                        f"{', '.join(dropped_from_allocation[:10])}")
 
                 update_ga_progress(
                     status='running', message=f'Building GA config for {len(subjects)} subjects...')
 
-                # Build QualificationMatrix with course-section assignments
                 from services.scheduler_service import QualificationMatrix
                 qualification_matrix = QualificationMatrix()
-
-                # Populate course-section assignments
                 qualification_matrix.course_section_to_faculty = course_section_assignments
                 qualification_matrix.faculty_to_course_sections = faculty_course_assignments
 
-                # Also build course-level mappings (without sections) for backward compatibility
-                for course_section_key, faculty_name in course_section_assignments.items():
-                    course_code = course_section_key.split('-')[0]
-
-                    # Add to course_to_faculty
-                    if course_code not in qualification_matrix.course_to_faculty:
-                        qualification_matrix.course_to_faculty[course_code] = [
-                        ]
-                    if faculty_name not in qualification_matrix.course_to_faculty[course_code]:
-                        qualification_matrix.course_to_faculty[course_code].append(
-                            faculty_name)
-
-                    # Add to faculty_to_courses
-                    if faculty_name not in qualification_matrix.faculty_to_courses:
-                        qualification_matrix.faculty_to_courses[faculty_name] = [
-                        ]
-                    if course_code not in qualification_matrix.faculty_to_courses[faculty_name]:
-                        qualification_matrix.faculty_to_courses[faculty_name].append(
-                            course_code)
+                for course_section_key, faculty_names in course_section_assignments.items():
+                    names = faculty_names if isinstance(faculty_names, list) else [faculty_names]
+                    course_code = course_section_key.rsplit('-', 1)[0]
+                    for faculty_name in names:
+                        if not faculty_name:
+                            continue
+                        qualification_matrix.course_to_faculty.setdefault(
+                            course_code, [])
+                        if faculty_name not in qualification_matrix.course_to_faculty[course_code]:
+                            qualification_matrix.course_to_faculty[course_code].append(
+                                faculty_name)
+                        qualification_matrix.faculty_to_courses.setdefault(
+                            faculty_name, [])
+                        if course_code not in qualification_matrix.faculty_to_courses[faculty_name]:
+                            qualification_matrix.faculty_to_courses[faculty_name].append(
+                                course_code)
 
                 # Build GA config
                 config = FullGAConfig(
@@ -3965,23 +5069,28 @@ def api_generate_full_schedule():
                     qualification_matrix=qualification_matrix,  # ADD QUALIFICATION MATRIX
                     pop_size=100,
                     max_generations=500,
-                    time_limit_seconds=180.0  # 3 minutes - enough time for 100+ courses
+                    time_limit_seconds=240.0
                 )
 
                 # Progress callback
                 def progress_callback(progress):
+                    feasible = 'conflict-free' if progress.is_feasible else \
+                        f'{int(progress.best_hard_penalty // 1000)} conflicts'
                     update_ga_progress(
                         status='running',
                         generation=progress.generation,
                         best_fitness=progress.best_score,
-                        message=f'Gen {progress.generation}: Fitness {progress.best_score:.1f}',
+                        message=f'Gen {progress.generation}: fitness {progress.best_score:.1f} ({feasible})',
                         hard_viols=progress.best_hard_penalty,
-                        soft_viols=progress.best_soft_penalty
+                        soft_viols=progress.best_soft_penalty,
+                        time_elapsed=progress.elapsed_seconds
                     )
 
                 # RUN PHASE 2 GA!
                 update_ga_progress(
-                    status='running', message='🚀 Starting Phase 2 GA...')
+                    status='running', message='Starting schedule optimization...',
+                    max_generations=config.max_generations,
+                    time_limit_seconds=config.time_limit_seconds)
                 
                 logger.info("About to call run_full_ga_v3()")
                 logger.info(f"Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
@@ -4001,73 +5110,39 @@ def api_generate_full_schedule():
                 if result['success']:
                     schedules = result.get('schedules', [])
                     
-                    logger.info(f"GA returned {len(schedules)} schedules")
-                    if schedules:
-                        logger.info(f"First 3 schedules:")
-                        for i, sched in enumerate(schedules[:3]):
-                            logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
-                    
-                    logger.info(f"GA returned {len(schedules)} schedules")
+                    logger.info(f"GA returned {len(schedules)} meeting rows (paired days already expanded)")
 
-                    # EXPAND SCHEDULES BASED ON DAY PATTERNS FROM REFERENCE
-                    # Use the GA's optimized times, but duplicate for all days in the pattern
-                    expanded_schedules = []
-                    for sched in schedules:
-                        key = f"{sched.get('subjCode')}-{sched.get('section')}"
-                        pattern = day_patterns.get(key, [])
-                        
-                        if pattern and len(pattern) >= 2:
-                            # Has a defined pattern from reference (e.g., MW, TTH, WF)
-                            # Create one entry for each day, using GA's time/room but reference days
-                            days_in_pattern = [p['day'] for p in pattern]
-                            for day in days_in_pattern:
-                                entry = sched.copy()
-                                entry['day'] = day
-                                # Keep GA's optimized time and room
-                                expanded_schedules.append(entry)
-                        else:
-                            # No pattern or only one day - keep as is
-                            expanded_schedules.append(sched)
-                    
-                    logger.info(f"Expanded to {len(expanded_schedules)} schedules using reference day patterns")
-                    logger.info(f"Sample expanded:")
-                    for i, sched in enumerate(expanded_schedules[:5]):
-                        logger.info(f"  {i+1}. {sched.get('subjCode')}-{sched.get('section')} | Prof: {sched.get('prof')} | Day: {sched.get('day')} | Time: {sched.get('start')}-{sched.get('end')}")
-                    
-                    logger.info(f"Expanded {len(schedules)} schedules to {len(expanded_schedules)} using reference patterns")
-                    
-                    schedules = expanded_schedules
+                    # Schedules already include both days of MW/TTH/WF pairs.
 
-                    # CRITICAL: Check for conflicts AFTER expansion
-                    # Expansion can create conflicts that didn't exist in the GA output
+                    logger.info("Checking generated rows for exact professor double-bookings")
                     conflict_check = []
+                    leftover_conflicts = []
                     for sched in schedules:
                         prof = sched.get('prof', '')
                         day = sched.get('day', '')
                         start = sched.get('start', '')
                         end = sched.get('end', '')
-                        
-                        # Check if this prof already has a schedule at this time
                         for existing in conflict_check:
-                            if (existing['prof'] == prof and 
+                            if (existing['prof'] == prof and
                                 existing['day'] == day and
                                 existing['start'] == start and
                                 existing['end'] == end):
-                                # CONFLICT FOUND!
-                                error_msg = f"CONFLICT after expansion: {prof} has {sched.get('subjCode')} and {existing['subjCode']} both on {day} at {start}-{end}"
-                                logger.error(error_msg)
-                                
-                                update_ga_progress(status='error', message='Schedule generation failed: Conflicts detected after day pattern expansion')
-                                
-                                with ga_progress_lock:
-                                    ga_progress['running'] = False
-                                
-                                # Return error - do NOT save conflicting schedules
-                                return
-                        
-                        conflict_check.append({'prof': prof, 'day': day, 'start': start, 'end': end, 'subjCode': sched.get('subjCode')})
-                    
-                    logger.info("✅ No conflicts detected after expansion")
+                                leftover_conflicts.append(
+                                    f"{prof}: {sched.get('subjCode')} vs {existing['subjCode']} on {day} {start}-{end}"
+                                )
+                        conflict_check.append({
+                            'prof': prof, 'day': day, 'start': start, 'end': end,
+                            'subjCode': sched.get('subjCode')
+                        })
+
+                    if leftover_conflicts:
+                        logger.warning(
+                            f"{len(leftover_conflicts)} overlapping meeting(s) remain; saving best-effort timetable"
+                        )
+                        for msg in leftover_conflicts[:5]:
+                            logger.warning(f"  {msg}")
+                    else:
+                        logger.info("No exact professor double-bookings in generated rows")
 
                     # Save directly to main schedules table (so users can see and review on timetable)
                     if save_to_db and schedules:
@@ -4152,12 +5227,48 @@ def api_generate_full_schedule():
                             for err in save_errors[:5]:  # Log first 5 errors
                                 logger.error(f"  - {err}")
 
+                        if saved == 0:
+                            update_ga_progress(
+                                status='failed',
+                                message=('Schedule was generated but nothing could be saved: '
+                                         f'{save_errors[0] if save_errors else "database insert returned no rows"}')
+                            )
+                            return
+
+                        requested = result.get('course_sections_requested', 0)
+                        scheduled = result.get('course_sections_scheduled', 0)
+                        summary = (f'Generated {saved} schedule entries for {target_school_year} '
+                                   f'Semester {target_semester}')
+                        if requested:
+                            summary += f' covering {scheduled} of {requested} allocated course-sections'
+                        summary += '. Review them on the timetable.'
+
+                        unscheduled = result.get('unscheduled_course_sections') or []
+                        if unscheduled:
+                            summary += (f' {len(unscheduled)} could not be placed: '
+                                        + ', '.join(unscheduled[:5])
+                                        + (' ...' if len(unscheduled) > 5 else ''))
+                        if save_errors:
+                            summary += f' ({len(save_errors)} batch(es) failed to save — check server logs.)'
+
                         update_ga_progress(
                             status='completed',
-                            message=f'✅ Generated {saved} schedules for {target_school_year} Semester {target_semester}! Review them on the timetable.',
+                            message=summary,
                             hard_viols=result.get('hard_violations', 0),
                             soft_viols=result.get('soft_violations', 0),
                             schedules=schedules  # Include schedules for frontend to display
+                        )
+                    elif not schedules:
+                        update_ga_progress(
+                            status='failed',
+                            message='Generation finished but produced no schedule entries.'
+                        )
+                    else:
+                        update_ga_progress(
+                            status='completed',
+                            message=(f'Generated {len(schedules)} schedule entries. '
+                                     'Saving to the database was turned off for this run.'),
+                            schedules=schedules
                         )
                 else:
                     update_ga_progress(

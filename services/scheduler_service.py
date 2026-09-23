@@ -7,7 +7,7 @@ Advanced version with:
   - Faculty availability & teaching load enforcement
   - Subject-faculty allocation
   - Room conflict avoidance
-  - Professional block spreading
+  - Faculty time clustering (keep each teacher's classes close together)
   - Conflict detection + local-search repair
   - CHE AI integration
   - Smart single-block manipulation (add/move/delete)
@@ -29,6 +29,27 @@ from dataclasses import dataclass, field
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+SATURDAY = 'Saturday'
+
+
+def teaching_days(avail_days: Optional[List[str]], is_custom: bool = False) -> List[str]:
+    """Days a class may meet. Saturday is reserved for custom blocks."""
+    days = list(avail_days) if avail_days else list(WEEKDAYS)
+    if is_custom:
+        if SATURDAY not in days:
+            days.append(SATURDAY)
+        return days
+    stripped = [d for d in days if d != SATURDAY]
+    return stripped or list(WEEKDAYS)
+
+
+def is_saturday_custom(gene) -> bool:
+    """Seminars/workshops on Saturday may share room and section."""
+    if not bool(getattr(gene, 'is_custom', False)):
+        return False
+    if getattr(gene, 'day', None) == SATURDAY:
+        return True
+    return SATURDAY in gene_meeting_days(gene)
 
 # MW/WF/TTH day pairing for 1.5-hour blocks
 DAY_PAIRS = {
@@ -46,7 +67,7 @@ PAIRED_DAYS = [
     ('Tuesday', 'Thursday'),
 ]
 
-SLOTS_PER_DAY = 20        # 30-min slots: 0=7:00 … 19=16:30
+SLOTS_PER_DAY = 28        # 30-min slots: 0=7:00 … 27=20:30 (ends 21:00)
 START_HOUR = 7             # 7:00 AM
 MAX_BLOCK_SLOTS = 6        # 3 hours max per block
 HARD_PENALTY = 1000
@@ -73,6 +94,99 @@ def time_to_slot(t: str) -> int:
 
 def slots_for_duration(hours: float) -> int:
     return max(1, int(hours * 2))
+
+
+def gene_meeting_days(gene) -> List[str]:
+    """Days this gene occupies. A paired MW/TTH/WF class occupies both days."""
+    days = []
+    day = getattr(gene, 'day', None)
+    if day:
+        days.append(day)
+    pair = getattr(gene, 'pair_day', None)
+    if pair and pair not in days:
+        days.append(pair)
+    return days
+
+
+def gene_slot_range(gene) -> range:
+    start = getattr(gene, 'start_slot', 0)
+    duration = getattr(gene, 'duration', 0)
+    return range(start, start + duration)
+
+
+def genes_time_overlap(a, b) -> int:
+    """Overlapping 30-min slots across any shared meeting days."""
+    shared_days = set(gene_meeting_days(a)).intersection(gene_meeting_days(b))
+    if not shared_days:
+        return 0
+    slots_a = set(gene_slot_range(a))
+    slots_b = set(gene_slot_range(b))
+    return len(slots_a.intersection(slots_b)) * len(shared_days)
+
+
+def available_day_pairs(avail_days: List[str]) -> List[Tuple[str, str]]:
+    """Valid MW / WF / TTH pairs given faculty availability."""
+    days = avail_days or WEEKDAYS
+    pairs = []
+    for day1, day2 in PAIRED_DAYS:
+        if day1 in days and day2 in days:
+            pairs.append((day1, day2))
+    return pairs
+
+
+def pick_meeting_days(avail_days: List[str], paired: bool) -> Tuple[str, Optional[str]]:
+    """Choose a single day or a standard pair the faculty can teach."""
+    days = list(avail_days) if avail_days else list(WEEKDAYS)
+    if not days:
+        days = list(WEEKDAYS)
+    if paired:
+        pairs = available_day_pairs(days)
+        if pairs:
+            return random.choice(pairs)
+        if len(days) >= 2:
+            chosen = random.sample(days, 2)
+            return chosen[0], chosen[1]
+    return random.choice(days), None
+
+
+def unique_faculty_units(chromosome: List['Gene']) -> Dict[str, float]:
+    """Teaching load: count each faculty's course-section once, not once per meeting."""
+    seen: Set[Tuple[str, str, str]] = set()
+    loads: Dict[str, float] = {}
+    for g in chromosome:
+        key = (g.subj_code, g.section, g.professor)
+        if key in seen:
+            continue
+        seen.add(key)
+        loads[g.professor] = loads.get(g.professor, 0.0) + float(g.units or 0)
+    return loads
+
+
+def course_section_contact_hours(chromosome: List['Gene'], subj_code: str, section: str) -> float:
+    """Weekly contact hours for a course-section (paired days count twice)."""
+    hours = 0.0
+    for g in chromosome:
+        if g.subj_code == subj_code and g.section == section:
+            hours += (g.duration / 2.0) * max(1, len(gene_meeting_days(g)))
+    return hours
+
+
+def course_section_max_units(gene: 'Gene', config: Optional['FullGAConfig'] = None) -> float:
+    """Allowed contact/units for this faculty's course-section (from subject, else gene.units)."""
+    if config:
+        for subj in config.subjects:
+            if subj.code != gene.subj_code or subj.section != gene.section:
+                continue
+            allocated = getattr(subj, 'allocated_professors', None) or []
+            if gene.professor and allocated and gene.professor not in allocated:
+                continue
+            return float(subj.units or 0) or float(gene.units or 0)
+    return float(gene.units or 0)
+
+
+def apply_meeting_days(gene, day: str, pair_day: Optional[str] = None) -> None:
+    gene.day = day
+    gene.pair_day = pair_day
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -145,11 +259,26 @@ def legacy_config_to_new_format(config):
         Timeslot = globals()['Timeslot']
         config.timeslot_config = Timeslot()
 
+    invalidate_config_caches(config)
     return config
+
+
+def invalidate_config_caches(config) -> None:
+    """Drop memoized lookups after config data changes."""
+    for attr in ('_legacy_cache', '_subject_meta_cache'):
+        if hasattr(config, attr):
+            try:
+                delattr(config, attr)
+            except Exception:
+                pass
 
 
 def extract_legacy_format_from_config(config):
     """Extract legacy format dictionaries from comprehensive config for backward compatibility."""
+    cached = getattr(config, '_legacy_cache', None)
+    if cached is not None:
+        return cached
+
     legacy = {
         'rooms': config.rooms_legacy if config.rooms_legacy else [r.name for r in config.rooms],
         'prof_availability': {},
@@ -171,6 +300,18 @@ def extract_legacy_format_from_config(config):
     legacy['prof_availability'].update(config.prof_availability)
     legacy['teaching_loads'].update(config.teaching_loads)
     legacy['subject_allocations'].update(config.subject_allocations)
+
+    # Every faculty can teach custom blocks on Saturday
+    for name, days in list(legacy['prof_availability'].items()):
+        merged = list(days or WEEKDAYS)
+        if SATURDAY not in merged:
+            merged.append(SATURDAY)
+        legacy['prof_availability'][name] = merged
+
+    try:
+        config._legacy_cache = legacy
+    except Exception:
+        pass
 
     return legacy
 
@@ -239,8 +380,8 @@ class Timeslot:
     """Timeslot configuration."""
     days: List[str] = field(default_factory=lambda: WEEKDAYS.copy())
     start_hour: int = 7
-    end_hour: int = 17
-    slots_per_day: int = 20
+    end_hour: int = 21
+    slots_per_day: int = 28
     break_periods: List[Tuple[int, int]] = field(
         default_factory=list)  # [(start_slot, end_slot)]
 
@@ -257,6 +398,8 @@ class SubjectInput:
     room_type_required: str = 'lecture'
     is_lab: bool = False
     section_student_count: int = 30
+    is_custom: bool = False
+    preferred_room: Optional[str] = None
 
 
 @dataclass
@@ -270,30 +413,34 @@ class QualificationMatrix:
     # NEW: Support for course-section assignments
     faculty_to_course_sections: Dict[str, List[str]] = field(
         default_factory=dict)  # faculty_id -> ["COURSE-SECTION"]
-    course_section_to_faculty: Dict[str, str] = field(
-        default_factory=dict)  # "COURSE-SECTION" -> faculty_id
+    course_section_to_faculty: Dict[str, Any] = field(
+        default_factory=dict)  # "COURSE-SECTION" -> faculty or [faculty]
+
+    def _faculty_for_course_section(self, course_code: str, section: str) -> List[str]:
+        assigned = self.course_section_to_faculty.get(f"{course_code}-{section}")
+        if not assigned:
+            return []
+        if isinstance(assigned, list):
+            return [name for name in assigned if name]
+        return [assigned]
 
     def is_qualified(self, faculty_id: str, course_code: str, section: str = None) -> bool:
         """Check if faculty is qualified to teach a course (and optionally a specific section)."""
         # If section provided, check course-section assignment
         if section:
-            course_section_key = f"{course_code}-{section}"
-            assigned_faculty = self.course_section_to_faculty.get(
-                course_section_key)
+            assigned_faculty = self._faculty_for_course_section(course_code, section)
             if assigned_faculty:
-                return assigned_faculty == faculty_id
+                return faculty_id in assigned_faculty
 
         # Fall back to course-level check
         return course_code in self.faculty_to_courses.get(faculty_id, [])
 
     def get_qualified_faculty(self, course_code: str, section: str = None) -> List[str]:
         """Get all faculty qualified to teach a course (and optionally a specific section)."""
-        # If section provided, return the single assigned faculty
         if section:
-            course_section_key = f"{course_code}-{section}"
-            assigned_faculty = self.course_section_to_faculty.get(
-                course_section_key)
-            return [assigned_faculty] if assigned_faculty else []
+            assigned_faculty = self._faculty_for_course_section(course_code, section)
+            if assigned_faculty:
+                return assigned_faculty
 
         # Fall back to course-level check
         return self.course_to_faculty.get(course_code, [])
@@ -345,8 +492,27 @@ class FullGAConfig:
     weight_min_load_violation: float = 100.0
     weight_max_load_violation: float = 1000.0
     weight_continuity_bonus: float = 5.0
-    weight_load_balance: float = 10.0
+    weight_load_balance: float = 3.0
     weight_gap_penalty: float = 10.0
+    weight_faculty_cluster: float = 18.0
+
+    # Teaching-load limits are managed in the courses page, not by the GA.
+    # The GA always respects the course-section -> faculty allocation.
+    enforce_load_limits: bool = False
+
+    # Shape of a teaching day
+    max_consecutive_hours: float = 8.0     # hard cap on back-to-back teaching
+    comfortable_consecutive_hours: float = 5.0  # prefer a break after a long sitting
+    comfortable_daily_hours: float = 6.0   # dense campus days are preferred
+    cluster_max_start_span_slots: int = 6  # 3 hours between earliest and latest start
+    cluster_max_same_day_gap_slots: int = 2  # 1 hour idle hole on the same day
+    cluster_early_slot: int = 6            # before 10:00
+    cluster_late_slot: int = 16            # 15:00 and later
+    weight_repeated_start_time: float = 4.0    # same start is fine when clustering
+    weight_heavy_day: float = 8.0
+
+    # Hill-climbing moves tried on the best solution each generation
+    local_search_moves: int = 40
 
     # Termination criteria
     plateau_generations: int = 50  # Stop if no improvement for N generations
@@ -372,86 +538,89 @@ class ConstraintViolation:
 
 
 def check_faculty_time_conflict(chromosome: List['Gene'], gene_idx: int) -> Optional[ConstraintViolation]:
-    """H1: Check if faculty teaches two classes at the same time."""
+    """H1: Check if faculty teaches two classes at the same time (including paired days)."""
     gene = chromosome[gene_idx]
-    gene_slots = set(range(gene.start_slot, gene.end_slot()))
 
     for i, other in enumerate(chromosome):
         if i == gene_idx:
             continue
-        if other.professor == gene.professor and other.day == gene.day:
-            other_slots = set(range(other.start_slot, other.end_slot()))
-            overlap = gene_slots.intersection(other_slots)
-            if overlap:
-                return ConstraintViolation(
-                    constraint_type='faculty_time_conflict',
-                    gene_index=gene_idx,
-                    severity='hard',
-                    penalty=HARD_PENALTY * len(overlap),
-                    message=f"Faculty {gene.professor} has time conflict on {gene.day}",
-                    details={
-                        'conflicting_gene': i,
-                        'overlapping_slots': len(overlap),
-                        'time_range': f"{slot_to_time(min(overlap))}-{slot_to_time(max(overlap)+1)}"
-                    }
-                )
+        if other.professor != gene.professor:
+            continue
+        overlap = genes_time_overlap(gene, other)
+        if overlap:
+            shared = set(gene_meeting_days(gene)).intersection(gene_meeting_days(other))
+            return ConstraintViolation(
+                constraint_type='faculty_time_conflict',
+                gene_index=gene_idx,
+                severity='hard',
+                penalty=HARD_PENALTY * overlap,
+                message=f"Faculty {gene.professor} has time conflict on {', '.join(sorted(shared))}",
+                details={
+                    'conflicting_gene': i,
+                    'overlapping_slots': overlap,
+                    'days': list(shared),
+                }
+            )
     return None
 
 
 def check_room_time_conflict(chromosome: List['Gene'], gene_idx: int) -> Optional[ConstraintViolation]:
-    """H2: Check if room hosts two classes at the same time."""
+    """H2: Check if room hosts two classes at the same time (including paired days)."""
     gene = chromosome[gene_idx]
     if not gene.room or gene.room == 'TBA':
         return None
 
-    gene_slots = set(range(gene.start_slot, gene.end_slot()))
-
     for i, other in enumerate(chromosome):
         if i == gene_idx:
             continue
-        if other.room == gene.room and other.day == gene.day and other.room != 'TBA':
-            other_slots = set(range(other.start_slot, other.end_slot()))
-            overlap = gene_slots.intersection(other_slots)
-            if overlap:
-                return ConstraintViolation(
-                    constraint_type='room_time_conflict',
-                    gene_index=gene_idx,
-                    severity='hard',
-                    penalty=HARD_PENALTY * len(overlap),
-                    message=f"Room {gene.room} has time conflict on {gene.day}",
-                    details={
-                        'conflicting_gene': i,
-                        'overlapping_slots': len(overlap),
-                        'time_range': f"{slot_to_time(min(overlap))}-{slot_to_time(max(overlap)+1)}"
-                    }
-                )
+        if other.room != gene.room or other.room == 'TBA':
+            continue
+        if is_saturday_custom(gene) or is_saturday_custom(other):
+            continue
+        overlap = genes_time_overlap(gene, other)
+        if overlap:
+            shared = set(gene_meeting_days(gene)).intersection(gene_meeting_days(other))
+            return ConstraintViolation(
+                constraint_type='room_time_conflict',
+                gene_index=gene_idx,
+                severity='hard',
+                penalty=HARD_PENALTY * overlap,
+                message=f"Room {gene.room} has time conflict on {', '.join(sorted(shared))}",
+                details={
+                    'conflicting_gene': i,
+                    'overlapping_slots': overlap,
+                    'days': list(shared),
+                }
+            )
     return None
 
 
 def check_section_time_conflict(chromosome: List['Gene'], gene_idx: int) -> Optional[ConstraintViolation]:
-    """H3: Check if section attends two classes at the same time."""
+    """H3: Check if section attends two classes at the same time (including paired days)."""
     gene = chromosome[gene_idx]
-    gene_slots = set(range(gene.start_slot, gene.end_slot()))
 
     for i, other in enumerate(chromosome):
         if i == gene_idx:
             continue
-        if other.section == gene.section and other.day == gene.day:
-            other_slots = set(range(other.start_slot, other.end_slot()))
-            overlap = gene_slots.intersection(other_slots)
-            if overlap:
-                return ConstraintViolation(
-                    constraint_type='section_time_conflict',
-                    gene_index=gene_idx,
-                    severity='hard',
-                    penalty=HARD_PENALTY * len(overlap),
-                    message=f"Section {gene.section} has time conflict on {gene.day}",
-                    details={
-                        'conflicting_gene': i,
-                        'overlapping_slots': len(overlap),
-                        'time_range': f"{slot_to_time(min(overlap))}-{slot_to_time(max(overlap)+1)}"
-                    }
-                )
+        if other.section != gene.section:
+            continue
+        if is_saturday_custom(gene) or is_saturday_custom(other):
+            continue
+        overlap = genes_time_overlap(gene, other)
+        if overlap:
+            shared = set(gene_meeting_days(gene)).intersection(gene_meeting_days(other))
+            return ConstraintViolation(
+                constraint_type='section_time_conflict',
+                gene_index=gene_idx,
+                severity='hard',
+                penalty=HARD_PENALTY * overlap,
+                message=f"Section {gene.section} has time conflict on {', '.join(sorted(shared))}",
+                details={
+                    'conflicting_gene': i,
+                    'overlapping_slots': overlap,
+                    'days': list(shared),
+                }
+            )
     return None
 
 
@@ -561,28 +730,52 @@ def check_room_capacity(gene: 'Gene', rooms: List[Room], section_student_count: 
 
 
 def check_faculty_availability(gene: 'Gene', prof_availability: Dict[str, List[str]]) -> Optional[ConstraintViolation]:
-    """H7: Check if class falls within faculty's declared availability."""
+    """H7: Check if every meeting day is within faculty availability."""
     avail = prof_availability.get(gene.professor, [])
-    if avail and gene.day not in avail:
+    if not avail:
+        return None
+    missing = [d for d in gene_meeting_days(gene) if d not in avail]
+    if missing:
         return ConstraintViolation(
             constraint_type='faculty_availability',
             gene_index=-1,
             severity='hard',
-            penalty=HARD_PENALTY,
-            message=f"Faculty {gene.professor} not available on {gene.day}",
+            penalty=HARD_PENALTY * len(missing),
+            message=f"Faculty {gene.professor} not available on {', '.join(missing)}",
             details={
                 'faculty': gene.professor,
-                'scheduled_day': gene.day,
+                'scheduled_days': gene_meeting_days(gene),
+                'unavailable_days': missing,
                 'available_days': avail
             }
         )
     return None
 
 
+def check_saturday_custom_only(gene: 'Gene') -> Optional[ConstraintViolation]:
+    """Saturday may only hold custom blocks."""
+    if SATURDAY not in gene_meeting_days(gene):
+        return None
+    if getattr(gene, 'is_custom', False):
+        return None
+    return ConstraintViolation(
+        constraint_type='saturday_custom_only',
+        gene_index=-1,
+        severity='hard',
+        penalty=HARD_PENALTY,
+        message=f"{gene.subj_code}-{gene.section} is not a custom block and cannot meet on Saturday",
+        details={
+            'course_section': f"{gene.subj_code}-{gene.section}",
+            'faculty': gene.professor,
+            'day': SATURDAY,
+        }
+    )
+
+
 def check_operating_hours(gene: 'Gene', timeslot_config: Optional[Timeslot]) -> Optional[ConstraintViolation]:
     """H8: Check if class falls within institutional operating hours."""
     if not timeslot_config:
-        # Default check: 7:00 AM to 5:00 PM (slot 0-20)
+        # Default check: 7:00 AM to 9:00 PM
         if gene.end_slot() > SLOTS_PER_DAY:
             return ConstraintViolation(
                 constraint_type='operating_hours',
@@ -612,8 +805,23 @@ def check_operating_hours(gene: 'Gene', timeslot_config: Optional[Timeslot]) -> 
     return None
 
 
+def gene_is_custom(gene) -> bool:
+    return bool(getattr(gene, 'is_custom', False))
+
+
+def gene_should_pair(gene) -> bool:
+    """Regular classes use MW/TTh/WF. Custom blocks stay on one day."""
+    if gene_is_custom(gene):
+        return False
+    if getattr(gene, 'pair_day', None):
+        return True
+    return getattr(gene, 'duration', 0) >= 2
+
+
 def check_block_length(gene: 'Gene', is_lab: bool) -> Optional[ConstraintViolation]:
     """H9: Check if block duration is valid (not too long)."""
+    if gene_is_custom(gene):
+        return None
     if gene.duration > MAX_BLOCK_SLOTS:
         return ConstraintViolation(
             constraint_type='block_too_long',
@@ -631,162 +839,468 @@ def check_block_length(gene: 'Gene', is_lab: bool) -> Optional[ConstraintViolati
     return None
 
 
-def check_course_section_uniqueness(chromosome: List['Gene'], gene_idx: int) -> Optional[ConstraintViolation]:
+def check_course_section_uniqueness(chromosome: List['Gene'], gene_idx: int,
+                                   config: Optional['FullGAConfig'] = None) -> Optional[ConstraintViolation]:
     """
-    H10: Check if course-section assignment is unique and doesn't exceed 3 units.
-
-    Rules:
-    - A course-section can only be assigned to ONE faculty member
-    - Total units for a course-section across all genes must not exceed 3 units
-    - Example: CERP 101 Section T should only be taught by one faculty for max 3 units total
+    H10: Each faculty's contact hours for a course-section stay within their units.
     """
     gene = chromosome[gene_idx]
     course_section_key = f"{gene.subj_code}-{gene.section}"
 
-    # Track faculty teaching this course-section and total units
-    faculty_set = set()
-    total_units = 0
-
-    for i, other in enumerate(chromosome):
-        if other.subj_code == gene.subj_code and other.section == gene.section:
-            faculty_set.add(other.professor)
-            # Each gene represents a time block; accumulate units
-            # Assuming each block represents units/hours proportional to duration
-            total_units += (other.duration / 2.0)  # Convert slots to hours
-
-    violations = []
-
-    # Check 1: Multiple faculty teaching same course-section
-    if len(faculty_set) > 1:
-        return ConstraintViolation(
-            constraint_type='course_section_duplicate_faculty',
-            gene_index=gene_idx,
-            severity='hard',
-            penalty=HARD_PENALTY * len(faculty_set),
-            message=f"Course-section {course_section_key} assigned to multiple faculty: {', '.join(sorted(faculty_set))}",
-            details={
-                'course_section': course_section_key,
-                'faculty_count': len(faculty_set),
-                'faculty_list': list(faculty_set)
-            }
-        )
-
-    # Check 2: Total units exceed 3
-    if total_units > 3.0:
+    max_units = float(gene.units or 0) or course_section_max_units(gene, config)
+    if max_units <= 0:
+        return None
+    total_hours = sum(
+        (other.duration / 2.0) * max(1, len(gene_meeting_days(other)))
+        for other in chromosome
+        if other.subj_code == gene.subj_code
+        and other.section == gene.section
+        and other.professor == gene.professor
+    )
+    if total_hours > max_units + 0.1:
         return ConstraintViolation(
             constraint_type='course_section_units_exceeded',
             gene_index=gene_idx,
             severity='hard',
-            penalty=HARD_PENALTY * (total_units - 3.0),
-            message=f"Course-section {course_section_key} total units {total_units:.1f} exceeds maximum 3 units",
+            penalty=HARD_PENALTY * (total_hours - max_units),
+            message=f"Course-section {course_section_key} contact hours {total_hours:.1f} exceed {max_units:.1f} units",
             details={
                 'course_section': course_section_key,
-                'total_units': total_units,
-                'max_units': 3.0,
-                'excess': total_units - 3.0
+                'total_units': total_hours,
+                'max_units': max_units,
+                'excess': total_hours - max_units
             }
         )
 
     return None
 
 
-def check_all_hard_constraints(chromosome: List['Gene'], gene_idx: int, config: FullGAConfig) -> List[ConstraintViolation]:
-    """Run all hard constraint checks on a specific gene and return violations."""
+# ══════════════════════════════════════════════════════════════════════════════
+# OCCUPANCY INDEX (linear-time constraint evaluation)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ScheduleIndex:
+    """
+    Occupancy index for one chromosome.
+
+    Without this, every hard-constraint check rescans the whole chromosome,
+    making a single fitness evaluation quadratic in the number of meetings.
+    """
+    __slots__ = ('prof', 'room', 'section', 'cs_hours', 'cs_faculty', 'prof_day_slots')
+
+    def __init__(self, chromosome: List['Gene']):
+        self.prof: Dict[Tuple[str, str, int], List[int]] = {}
+        self.room: Dict[Tuple[str, str, int], List[int]] = {}
+        self.section: Dict[Tuple[str, str, int], List[int]] = {}
+        self.cs_hours: Dict[Tuple[str, str, str], float] = {}
+        self.cs_faculty: Dict[Tuple[str, str], Set[str]] = {}
+        self.prof_day_slots: Dict[Tuple[str, str], Set[int]] = {}
+
+        for i, g in enumerate(chromosome):
+            days = gene_meeting_days(g)
+            slots = tuple(gene_slot_range(g))
+            has_room = bool(g.room) and g.room != 'TBA'
+            for day in days:
+                for slot in slots:
+                    self.prof.setdefault((g.professor, day, slot), []).append(i)
+                    if gene_is_custom(g) and day == SATURDAY:
+                        continue
+                    self.section.setdefault((g.section, day, slot), []).append(i)
+                    if has_room:
+                        self.room.setdefault((g.room, day, slot), []).append(i)
+                self.prof_day_slots.setdefault(
+                    (g.professor, day), set()).update(slots)
+
+            key = (g.subj_code, g.section, g.professor)
+            self.cs_hours[key] = self.cs_hours.get(
+                key, 0.0) + (g.duration / 2.0) * max(1, len(days))
+            self.cs_faculty.setdefault(
+                (g.subj_code, g.section), set()).add(g.professor)
+
+    def overlap(self, occ_map, owner: str, gene: 'Gene',
+                gene_idx: int) -> Tuple[int, int, List[str]]:
+        """(overlapping slot count, one conflicting gene index, shared days)."""
+        overlap = 0
+        other_idx = -1
+        days: List[str] = []
+        for day in gene_meeting_days(gene):
+            for slot in gene_slot_range(gene):
+                holders = occ_map.get((owner, day, slot))
+                if not holders or len(holders) < 2:
+                    continue
+                for j in holders:
+                    if j != gene_idx:
+                        overlap += 1
+                        if other_idx < 0:
+                            other_idx = j
+                        if day not in days:
+                            days.append(day)
+                        break
+        return overlap, other_idx, days
+
+
+def longest_consecutive_run(slots: Set[int]) -> int:
+    """Longest run of back-to-back 30-minute slots."""
+    if not slots:
+        return 0
+    ordered = sorted(slots)
+    best = run = 1
+    for i in range(1, len(ordered)):
+        if ordered[i] == ordered[i - 1] + 1:
+            run += 1
+            best = max(best, run)
+        else:
+            run = 1
+    return best
+
+
+def _subject_meta(config: FullGAConfig, subj_code: str, section: str) -> Dict[str, Any]:
+    """Cached per-course-section metadata (room type, lab flag, size, units)."""
+    cache = getattr(config, '_subject_meta_cache', None)
+    if cache is None:
+        cache = {}
+        for s in config.subjects:
+            cache[(s.code, s.section)] = {
+                'room_type_required': s.room_type_required,
+                'is_lab': s.is_lab,
+                'section_student_count': s.section_student_count,
+                'units': float(s.units or 0),
+            }
+        try:
+            config._subject_meta_cache = cache
+        except Exception:
+            pass
+    return cache.get((subj_code, section), {
+        'room_type_required': 'lecture',
+        'is_lab': False,
+        'section_student_count': 30,
+        'units': 0.0,
+    })
+
+
+def gene_hard_violations(chromosome: List['Gene'], gene_idx: int, config: FullGAConfig,
+                         index: 'ScheduleIndex',
+                         prof_availability: Dict[str, List[str]]) -> List[ConstraintViolation]:
+    """All hard violations for one gene, using a prebuilt occupancy index."""
     gene = chromosome[gene_idx]
     violations = []
+    meta = _subject_meta(config, gene.subj_code, gene.section)
 
-    # H1: Faculty time conflict
-    v = check_faculty_time_conflict(chromosome, gene_idx)
-    if v:
-        violations.append(v)
+    # H1/H2/H3: faculty, room and section double-booking
+    overlap, other_idx, days = index.overlap(
+        index.prof, gene.professor, gene, gene_idx)
+    if overlap:
+        violations.append(ConstraintViolation(
+            constraint_type='faculty_time_conflict',
+            gene_index=gene_idx,
+            severity='hard',
+            penalty=HARD_PENALTY * overlap,
+            message=f"Faculty {gene.professor} has time conflict on {', '.join(days)}",
+            details={'conflicting_gene': other_idx,
+                     'overlapping_slots': overlap, 'days': days},
+        ))
 
-    # H2: Room time conflict
-    v = check_room_time_conflict(chromosome, gene_idx)
-    if v:
-        violations.append(v)
+    if not is_saturday_custom(gene):
+        if gene.room and gene.room != 'TBA':
+            overlap, other_idx, days = index.overlap(
+                index.room, gene.room, gene, gene_idx)
+            if overlap:
+                violations.append(ConstraintViolation(
+                    constraint_type='room_time_conflict',
+                    gene_index=gene_idx,
+                    severity='hard',
+                    penalty=HARD_PENALTY * overlap,
+                    message=f"Room {gene.room} has time conflict on {', '.join(days)}",
+                    details={'conflicting_gene': other_idx,
+                             'overlapping_slots': overlap, 'days': days},
+                ))
 
-    # H3: Section time conflict
-    v = check_section_time_conflict(chromosome, gene_idx)
-    if v:
-        violations.append(v)
+        overlap, other_idx, days = index.overlap(
+            index.section, gene.section, gene, gene_idx)
+        if overlap:
+            violations.append(ConstraintViolation(
+                constraint_type='section_time_conflict',
+                gene_index=gene_idx,
+                severity='hard',
+                penalty=HARD_PENALTY * overlap,
+                message=f"Section {gene.section} has time conflict on {', '.join(days)}",
+                details={'conflicting_gene': other_idx,
+                         'overlapping_slots': overlap, 'days': days},
+            ))
 
-    # H4: Faculty qualification
+    # H4: qualification
     v = check_faculty_qualification(
         gene, config.qualification_matrix, config.subject_allocations)
     if v:
         v.gene_index = gene_idx
         violations.append(v)
 
-    # H7: Faculty availability
-    legacy = extract_legacy_format_from_config(config)
-    v = check_faculty_availability(gene, legacy['prof_availability'])
+    # H7: availability
+    v = check_faculty_availability(gene, prof_availability)
     if v:
         v.gene_index = gene_idx
         violations.append(v)
 
-    # H8: Operating hours
+    v = check_saturday_custom_only(gene)
+    if v:
+        v.gene_index = gene_idx
+        violations.append(v)
+
+    # H8: operating hours
     v = check_operating_hours(gene, config.timeslot_config)
     if v:
         v.gene_index = gene_idx
         violations.append(v)
 
-    # H9: Block length
-    # Determine if this is a lab from the gene or config
-    is_lab = False
-    for subj in config.subjects:
-        if subj.code == gene.subj_code and subj.section == gene.section:
-            is_lab = subj.is_lab
-            break
-    v = check_block_length(gene, is_lab)
+    # H9: block length
+    v = check_block_length(gene, meta['is_lab'])
     if v:
         v.gene_index = gene_idx
         violations.append(v)
 
-    # H5: Room type match (requires SubjectInput with room_type_required)
-    room_type_required = 'lecture'
-    for subj in config.subjects:
-        if subj.code == gene.subj_code and subj.section == gene.section:
-            room_type_required = subj.room_type_required
-            break
-    v = check_room_type_match(gene, config.rooms, room_type_required)
+    # H5/H6: room suitability
+    v = check_room_type_match(gene, config.rooms, meta['room_type_required'])
     if v:
         v.gene_index = gene_idx
         violations.append(v)
 
-    # H6: Room capacity (requires SubjectInput with section_student_count)
-    section_student_count = 30  # Default
-    for subj in config.subjects:
-        if subj.code == gene.subj_code and subj.section == gene.section:
-            section_student_count = subj.section_student_count
-            break
-    v = check_room_capacity(gene, config.rooms, section_student_count)
+    v = check_room_capacity(gene, config.rooms, meta['section_student_count'])
     if v:
         v.gene_index = gene_idx
         violations.append(v)
 
-    # H10: Course-section uniqueness (max 3 units, single faculty only)
-    v = check_course_section_uniqueness(chromosome, gene_idx)
-    if v:
-        violations.append(v)
+    # H11: no marathon teaching days
+    max_run_slots = int(round(config.max_consecutive_hours * 2))
+    for day in gene_meeting_days(gene):
+        run = longest_consecutive_run(
+            index.prof_day_slots.get((gene.professor, day), set()))
+        if run > max_run_slots:
+            violations.append(ConstraintViolation(
+                constraint_type='consecutive_hours_exceeded',
+                gene_index=gene_idx,
+                severity='hard',
+                penalty=HARD_PENALTY * (run - max_run_slots) / 2.0,
+                message=(f"Faculty {gene.professor} teaches {run / 2:.1f} hours straight on "
+                         f"{day} (limit {config.max_consecutive_hours:.1f})"),
+                details={'faculty': gene.professor, 'day': day,
+                         'consecutive_hours': run / 2.0,
+                         'limit_hours': config.max_consecutive_hours},
+            ))
+            break
+
+    # H10: this faculty's hours for the course-section stay within their units
+    key = (gene.subj_code, gene.section, gene.professor)
+    max_units = float(gene.units or 0) or (meta['units'] or 0)
+    total_hours = index.cs_hours.get(key, 0.0)
+    if max_units > 0 and total_hours > max_units + 0.1:
+        violations.append(ConstraintViolation(
+            constraint_type='course_section_units_exceeded',
+            gene_index=gene_idx,
+            severity='hard',
+            penalty=HARD_PENALTY * (total_hours - max_units),
+            message=f"{gene.professor} contact hours {total_hours:.1f} for {gene.subj_code}-{gene.section} exceed {max_units:.1f} units",
+            details={'course_section': f"{gene.subj_code}-{gene.section}",
+                     'faculty': gene.professor,
+                     'total_units': total_hours, 'max_units': max_units,
+                     'excess': total_hours - max_units},
+        ))
 
     return violations
+
+
+def all_hard_violations(chromosome: List['Gene'], config: FullGAConfig,
+                        index: Optional['ScheduleIndex'] = None) -> List[ConstraintViolation]:
+    """Hard violations for the whole chromosome in one linear pass."""
+    if index is None:
+        index = ScheduleIndex(chromosome)
+    prof_availability = extract_legacy_format_from_config(
+        config)['prof_availability']
+    violations = []
+    for i in range(len(chromosome)):
+        violations.extend(gene_hard_violations(
+            chromosome, i, config, index, prof_availability))
+    return violations
+
+
+def check_all_hard_constraints(chromosome: List['Gene'], gene_idx: int, config: FullGAConfig,
+                               index: Optional['ScheduleIndex'] = None) -> List[ConstraintViolation]:
+    """Run all hard constraint checks on a specific gene and return violations."""
+    if index is None:
+        index = ScheduleIndex(chromosome)
+    prof_availability = extract_legacy_format_from_config(
+        config)['prof_availability']
+    return gene_hard_violations(chromosome, gene_idx, config, index, prof_availability)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SOFT CONSTRAINT SCORING FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════════════
 
+def score_schedule_variety(chromosome: List['Gene'], config: FullGAConfig) -> Tuple[float, List[ConstraintViolation]]:
+    """
+    S9: Discourage monotonous timetables.
+
+    Two shapes look wrong to a human even when no constraint is broken: every
+    class of a faculty member starting at the same time (identical blocks
+    stacked in a column), and a whole week's teaching crammed into one or two
+    long days. Both are penalised here.
+    """
+    violations = []
+    penalty = 0.0
+
+    starts_by_prof: Dict[str, Dict[int, List[int]]] = {}
+    day_load: Dict[Tuple[str, str], float] = {}
+    day_genes: Dict[Tuple[str, str], List[int]] = {}
+
+    for i, g in enumerate(chromosome):
+        starts_by_prof.setdefault(g.professor, {}).setdefault(
+            g.start_slot, []).append(i)
+        for day in gene_meeting_days(g):
+            key = (g.professor, day)
+            day_load[key] = day_load.get(key, 0.0) + g.duration / 2.0
+            day_genes.setdefault(key, []).append(i)
+
+    for prof, by_start in starts_by_prof.items():
+        stacked = {slot: idxs for slot, idxs in by_start.items() if len(idxs) > 1}
+        if not stacked:
+            continue
+        repeats = sum(len(idxs) - 1 for idxs in stacked.values())
+        amount = config.weight_repeated_start_time * repeats
+        penalty += amount
+        worst = max(stacked.items(), key=lambda kv: len(kv[1]))
+        violations.append(ConstraintViolation(
+            constraint_type='repeated_start_time',
+            gene_index=worst[1][-1],
+            severity='soft',
+            penalty=amount,
+            message=(f"Faculty {prof} has {len(worst[1])} classes all starting at "
+                     f"{slot_to_time(worst[0])}"),
+            details={'faculty': prof, 'repeats': repeats,
+                     'start_slots': {slot_to_time(s): len(idxs)
+                                     for s, idxs in stacked.items()}},
+        ))
+
+    for (prof, day), hours in day_load.items():
+        if hours <= config.comfortable_daily_hours:
+            continue
+        excess = hours - config.comfortable_daily_hours
+        amount = config.weight_heavy_day * excess
+        penalty += amount
+        violations.append(ConstraintViolation(
+            constraint_type='heavy_teaching_day',
+            gene_index=day_genes[(prof, day)][-1],
+            severity='soft',
+            penalty=amount,
+            message=f"Faculty {prof} teaches {hours:.1f} hours on {day}",
+            details={'faculty': prof, 'day': day, 'hours': hours,
+                     'comfortable_hours': config.comfortable_daily_hours},
+        ))
+
+    return penalty, violations
+
+
+def score_faculty_clusters(chromosome: List['Gene'], config: FullGAConfig) -> Tuple[float, List[ConstraintViolation]]:
+    """
+    Keep each faculty member's classes in a tight cluster.
+
+    A Monday 7:30 AM class plus a Wednesday 4:00 PM class is the shape this
+    penalizes: same teacher, far-apart days, opposite ends of the day.
+    Same-day holes and a wide start-time span are also scored.
+    """
+    violations = []
+    penalty = 0.0
+    weight = config.weight_faculty_cluster
+    max_span = config.cluster_max_start_span_slots
+    max_gap = config.cluster_max_same_day_gap_slots
+    early_cut = config.cluster_early_slot
+    late_cut = config.cluster_late_slot
+
+    meetings: Dict[str, List[Dict[str, Any]]] = {}
+    for i, g in enumerate(chromosome):
+        for day in gene_meeting_days(g):
+            meetings.setdefault(g.professor, []).append({
+                'day': day,
+                'start': g.start_slot,
+                'end': g.end_slot(),
+                'idx': i,
+            })
+
+    for prof, items in meetings.items():
+        if len(items) < 2:
+            continue
+
+        starts = [m['start'] for m in items]
+        span = max(starts) - min(starts)
+        ordered = sorted(starts)
+        median = ordered[len(ordered) // 2]
+        outlier = max(items, key=lambda m: abs(m['start'] - median))
+
+        if span > max_span:
+            amount = weight * (span - max_span)
+            penalty += amount
+            violations.append(ConstraintViolation(
+                constraint_type='faculty_time_spread',
+                gene_index=outlier['idx'],
+                severity='soft',
+                penalty=amount,
+                message=(f"Faculty {prof} starts classes {span / 2:.1f} hours apart "
+                         f"({slot_to_time(min(starts))} vs {slot_to_time(max(starts))})"),
+                details={'faculty': prof, 'span_slots': span,
+                         'earliest': slot_to_time(min(starts)),
+                         'latest': slot_to_time(max(starts))},
+            ))
+
+        early = [m for m in items if m['start'] < early_cut]
+        late = [m for m in items if m['start'] >= late_cut]
+        if early and late:
+            amount = weight * 4
+            penalty += amount
+            smaller = early if len(early) <= len(late) else late
+            violations.append(ConstraintViolation(
+                constraint_type='faculty_split_daypart',
+                gene_index=smaller[0]['idx'],
+                severity='soft',
+                penalty=amount,
+                message=(f"Faculty {prof} is split between early morning and "
+                         f"late afternoon"),
+                details={'faculty': prof,
+                         'early_starts': [slot_to_time(m['start']) for m in early],
+                         'late_starts': [slot_to_time(m['start']) for m in late]},
+            ))
+
+        by_day: Dict[str, List[Dict[str, Any]]] = {}
+        for item in items:
+            by_day.setdefault(item['day'], []).append(item)
+        for day, day_items in by_day.items():
+            day_items.sort(key=lambda m: m['start'])
+            for left, right in zip(day_items, day_items[1:]):
+                gap = right['start'] - left['end']
+                if gap <= max_gap:
+                    continue
+                amount = weight * (gap - max_gap) * 0.5
+                penalty += amount
+                violations.append(ConstraintViolation(
+                    constraint_type='faculty_same_day_gap',
+                    gene_index=right['idx'],
+                    severity='soft',
+                    penalty=amount,
+                    message=(f"Faculty {prof} has a {gap / 2:.1f} hour gap on {day}"),
+                    details={'faculty': prof, 'day': day,
+                             'gap_slots': gap, 'gap_hours': gap / 2.0},
+                ))
+
+    return penalty, violations
+
+
 def score_minimum_load_violation(chromosome: List['Gene'], config: FullGAConfig) -> Tuple[float, List[ConstraintViolation]]:
     """S1: Penalize faculty below 12-unit minimum teaching load."""
     violations = []
     penalty = 0.0
 
-    # Calculate faculty loads
-    faculty_loads: Dict[str, float] = {}
-    for g in chromosome:
-        if g.professor not in faculty_loads:
-            faculty_loads[g.professor] = 0
-        faculty_loads[g.professor] += g.units
+    if not config.enforce_load_limits:
+        return penalty, violations
+
+    faculty_loads = unique_faculty_units(chromosome)
 
     # Check minimum loads
     for faculty_id, load in faculty_loads.items():
@@ -822,12 +1336,10 @@ def score_maximum_load_violation(chromosome: List['Gene'], config: FullGAConfig)
     violations = []
     penalty = 0.0
 
-    # Calculate faculty loads
-    faculty_loads: Dict[str, float] = {}
-    for g in chromosome:
-        if g.professor not in faculty_loads:
-            faculty_loads[g.professor] = 0
-        faculty_loads[g.professor] += g.units
+    if not config.enforce_load_limits:
+        return penalty, violations
+
+    faculty_loads = unique_faculty_units(chromosome)
 
     # Get teaching loads from config
     legacy = extract_legacy_format_from_config(config)
@@ -867,10 +1379,11 @@ def score_load_balance_across_week(chromosome: List['Gene'], config: FullGAConfi
     for g in chromosome:
         if g.professor not in faculty_day_loads:
             faculty_day_loads[g.professor] = {}
-        if g.day not in faculty_day_loads[g.professor]:
-            faculty_day_loads[g.professor][g.day] = 0
-        # Count hours (duration in slots / 2)
-        faculty_day_loads[g.professor][g.day] += g.duration / 2.0
+        hours = g.duration / 2.0
+        for day in gene_meeting_days(g):
+            if day not in faculty_day_loads[g.professor]:
+                faculty_day_loads[g.professor][day] = 0
+            faculty_day_loads[g.professor][day] += hours
 
     # Calculate variance in daily loads for each faculty
     for faculty_id, day_loads in faculty_day_loads.items():
@@ -954,7 +1467,7 @@ def score_continuity_with_previous_schedule(chromosome: List['Gene'], config: Fu
 
 
 def score_faculty_consecutive_hours(chromosome: List['Gene'], config: FullGAConfig) -> Tuple[float, List[ConstraintViolation]]:
-    """S5: Penalize faculty teaching >4 consecutive hours without break."""
+    """S5: Prefer a break once a faculty member has taught a few hours straight."""
     violations = []
     penalty = 0.0
 
@@ -964,30 +1477,22 @@ def score_faculty_consecutive_hours(chromosome: List['Gene'], config: FullGAConf
     for g in chromosome:
         if g.professor not in prof_daily_slots:
             prof_daily_slots[g.professor] = {}
-        if g.day not in prof_daily_slots[g.professor]:
-            prof_daily_slots[g.professor][g.day] = []
-        prof_daily_slots[g.professor][g.day].extend(
-            range(g.start_slot, g.end_slot()))
+        for day in gene_meeting_days(g):
+            if day not in prof_daily_slots[g.professor]:
+                prof_daily_slots[g.professor][day] = []
+            prof_daily_slots[g.professor][day].extend(gene_slot_range(g))
 
     # Check consecutive hours
     for prof, days in prof_daily_slots.items():
         for day, slots in days.items():
             if not slots:
                 continue
-            sorted_slots = sorted(set(slots))
-            consecutive = 1
-            max_consecutive = 1
+            max_consecutive = longest_consecutive_run(set(slots))
 
-            for i in range(1, len(sorted_slots)):
-                if sorted_slots[i] == sorted_slots[i-1] + 1:
-                    consecutive += 1
-                    max_consecutive = max(max_consecutive, consecutive)
-                else:
-                    consecutive = 1
-
-            # Penalize if >8 slots (4 hours) consecutive
-            if max_consecutive > 8:
-                excess_slots = max_consecutive - 8
+            comfortable_slots = int(
+                round(config.comfortable_consecutive_hours * 2))
+            if max_consecutive > comfortable_slots:
+                excess_slots = max_consecutive - comfortable_slots
                 penalty += SOFT_PENALTY * excess_slots
                 violations.append(ConstraintViolation(
                     constraint_type='excessive_consecutive_hours',
@@ -1018,10 +1523,10 @@ def score_section_gaps(chromosome: List['Gene'], config: FullGAConfig) -> Tuple[
     for g in chromosome:
         if g.section not in sect_daily_slots:
             sect_daily_slots[g.section] = {}
-        if g.day not in sect_daily_slots[g.section]:
-            sect_daily_slots[g.section][g.day] = []
-        sect_daily_slots[g.section][g.day].extend(
-            range(g.start_slot, g.end_slot()))
+        for day in gene_meeting_days(g):
+            if day not in sect_daily_slots[g.section]:
+                sect_daily_slots[g.section][day] = []
+            sect_daily_slots[g.section][day].extend(gene_slot_range(g))
 
     # Check for gaps
     for section, days in sect_daily_slots.items():
@@ -1073,7 +1578,7 @@ def score_same_day_concentration(chromosome: List['Gene'], config: FullGAConfig)
         key = f"{g.subj_code}_{g.section}"
         if key not in subj_days:
             subj_days[key] = set()
-        subj_days[key].add(g.day)
+        subj_days[key].update(gene_meeting_days(g))
 
     # Penalize single-day subjects
     for key, days in subj_days.items():
@@ -1105,7 +1610,7 @@ def score_part_time_campus_days(chromosome: List['Gene'], config: FullGAConfig) 
     for g in chromosome:
         if g.professor not in faculty_days:
             faculty_days[g.professor] = set()
-        faculty_days[g.professor].add(g.day)
+        faculty_days[g.professor].update(gene_meeting_days(g))
 
     # Penalize part-time faculty with many campus days
     for faculty in config.faculty:
@@ -1236,6 +1741,16 @@ def score_all_soft_constraints(chromosome: List['Gene'], config: FullGAConfig) -
     total_penalty += penalty
     all_violations.extend(violations)
 
+    # S10: Variety — avoid identical stacked blocks and marathon days
+    penalty, violations = score_schedule_variety(chromosome, config)
+    total_penalty += penalty
+    all_violations.extend(violations)
+
+    # S11: Keep each faculty's classes clustered in day and time
+    penalty, violations = score_faculty_clusters(chromosome, config)
+    total_penalty += penalty
+    all_violations.extend(violations)
+
     return total_penalty, all_violations
 
 
@@ -1317,31 +1832,25 @@ def validate_schedule_config(config: FullGAConfig) -> Dict[str, Any]:
             f"Consider adding more rooms for flexibility."
         )
 
-    # Check 3: Faculty teaching load feasibility
-    teaching_loads = legacy['teaching_loads']
+    # Check 3: Faculty teaching load. Unit ceilings are decided when courses
+    # are allocated in the courses page, so an unusual load is worth mentioning
+    # but never blocks generation.
+    if config.enforce_load_limits:
+        teaching_loads = legacy['teaching_loads']
 
-    for faculty in config.faculty:
-        # Calculate assigned units
-        assigned_units = 0
-        for subject in config.subjects:
-            profs = subject.allocated_professors or []
-            if faculty.id in profs or faculty.name in profs:
-                assigned_units += subject.units
+        for faculty in config.faculty:
+            assigned_units = 0
+            for subject in config.subjects:
+                profs = subject.allocated_professors or []
+                if faculty.id in profs or faculty.name in profs:
+                    assigned_units += subject.units
 
-        # Check against limits
-        max_load = teaching_loads.get(faculty.id, faculty.max_units)
-        if assigned_units > max_load:
-            errors.append(
-                f"Faculty {faculty.name}: {assigned_units:.1f} units assigned "
-                f"exceeds maximum {max_load:.1f} units"
-            )
-
-        min_load = faculty.min_units
-        if assigned_units < min_load and assigned_units > 0:
-            warnings.append(
-                f"Faculty {faculty.name}: {assigned_units:.1f} units assigned "
-                f"below minimum {min_load:.1f} units"
-            )
+            max_load = teaching_loads.get(faculty.id, faculty.max_units)
+            if assigned_units > max_load:
+                warnings.append(
+                    f"Faculty {faculty.name}: {assigned_units:.1f} units assigned "
+                    f"exceeds the usual maximum of {max_load:.1f} units"
+                )
 
     # Check 4: Lab courses have lab rooms
     lab_subjects = [s for s in config.subjects if s.is_lab]
@@ -1379,128 +1888,193 @@ def validate_schedule_config(config: FullGAConfig) -> Dict[str, Any]:
     }
 
 
-def greedy_feasible_schedule(config: FullGAConfig) -> Optional[List['Gene']]:
+def greedy_schedule(config: FullGAConfig) -> Tuple[List['Gene'], int]:
     """
-    Greedy algorithm to find ANY feasible schedule (0 hard violations).
-    Fast but not optimal - just finds something that works.
+    Build a best-effort conflict-free schedule, hardest subjects first.
 
-    Strategy:
-    1. Sort subjects by constraint difficulty (most constrained first)
-    2. For each subject, try to place all its blocks
-    3. Try all possible (day, time, room) combinations
-    4. Pick first valid placement (no conflicts)
-    5. If any subject can't be placed → return None (impossible)
+    Uses an incremental occupancy index, so a candidate placement costs a few
+    dict lookups instead of a full re-check of the chromosome. Blocks that have
+    no clean slot are still placed at their least-conflicting position and
+    counted, leaving them for the GA and repair to resolve.
 
-    Returns:
-        List[Gene] if feasible schedule found, None if impossible
+    Returns: (chromosome, number_of_blocks_placed_with_conflicts)
     """
-    chromosome = []
+    chromosome: List['Gene'] = []
     legacy = extract_legacy_format_from_config(config)
     prof_availability = legacy['prof_availability']
-    rooms = legacy['rooms']
+    rooms = [r for r in (legacy['rooms'] or ['TBA'])]
+    room_filter = _room_filter_for(config)
+    occ = MutableOccupancy([])
+    unplaced = 0
 
-    # Sort subjects by difficulty (fewest available options first)
+    max_run_slots = int(round(config.max_consecutive_hours * 2))
+    prof_day_slots: Dict[Tuple[str, str], Set[int]] = {}
+    prof_starts: Dict[str, Set[int]] = {}
+    prof_days: Dict[str, Set[str]] = {}
+
+    def placement_cost(professor: str, days: List[str], slots: range,
+                       allowed_run: Optional[int] = None) -> Optional[float]:
+        """
+        Preference cost of a free slot, or None if it breaks the consecutive cap.
+
+        Later classes of the same faculty should sit next to the ones already
+        placed: same campus days, nearby start times, small same-day holes.
+        """
+        cost = 0.0
+        limit = max_run_slots if allowed_run is None else max(max_run_slots, allowed_run)
+        for day in days:
+            taken = prof_day_slots.get((professor, day), set())
+            combined = taken | set(slots)
+            if longest_consecutive_run(combined) > limit:
+                return None
+            if taken:
+                span = max(combined) - min(combined) + 1
+                holes = span - len(combined)
+                if holes > config.cluster_max_same_day_gap_slots:
+                    cost += (holes - config.cluster_max_same_day_gap_slots) * 0.5
+
+        existing_starts = prof_starts.get(professor, set())
+        if existing_starts:
+            nearest = min(abs(slots.start - start) for start in existing_starts)
+            cost += nearest * 0.4
+            span = max(max(existing_starts), slots.start) - min(min(existing_starts), slots.start)
+            if span > config.cluster_max_start_span_slots:
+                cost += span - config.cluster_max_start_span_slots
+            already_early = any(s < config.cluster_early_slot for s in existing_starts)
+            already_late = any(s >= config.cluster_late_slot for s in existing_starts)
+            if (already_early and slots.start >= config.cluster_late_slot) or \
+                    (already_late and slots.start < config.cluster_early_slot):
+                cost += 6.0
+        else:
+            cost += abs(slots.start - 6) * 0.05
+
+        existing_days = prof_days.get(professor, set())
+        if existing_days and not (set(days) & existing_days):
+            cost += 2.5
+        return cost
+
     def subject_difficulty(subj):
-        """Calculate constraint difficulty score (lower = more constrained)."""
+        """Fewer available days = more constrained = place earlier."""
         profs = subj.allocated_professors or []
         if not profs:
-            return 0  # Most constrained - no professors!
-
-        # Count available days for allocated professors
-        total_avail_days = 0
-        for prof in profs:
-            avail_days = prof_availability.get(prof, WEEKDAYS)
-            total_avail_days += len(avail_days)
-
-        # Fewer available days = more constrained
-        return total_avail_days
+            return 0
+        return sum(len(prof_availability.get(p, WEEKDAYS)) for p in profs)
 
     subjects_sorted = sorted(config.subjects, key=subject_difficulty)
 
-    # Try to place each subject
     for subject in subjects_sorted:
         professor = subject.allocated_professors[0] if subject.allocated_professors else None
         if not professor:
-            return None  # Can't schedule without professor
+            continue
 
-        # Calculate blocks needed
-        remaining_hours = subject.weekly_hours
-        blocks_placed = 0
+        weekly_slots = slots_for_duration(float(subject.weekly_hours))
+        is_custom = bool(getattr(subject, 'is_custom', False))
+        avail_days = teaching_days(
+            prof_availability.get(professor, WEEKDAYS), is_custom)
+        preferred_room = getattr(subject, 'preferred_room', None)
 
-        while remaining_hours > 0:
-            block_hours = min(remaining_hours, 3)  # Max 3-hour blocks
-            block_slots = slots_for_duration(block_hours)
-
-            # Try to find valid placement
-            placed = False
-
-            # Get available days for this professor
-            avail_days = prof_availability.get(professor, WEEKDAYS)
-            if not avail_days:
-                avail_days = WEEKDAYS
-
-            # CRITICAL FIX: For 1.5-hour blocks, try MW/WF/TTH pairs first
-            days_to_try = []
-            if block_slots == 3:  # 1.5 hours = 3 slots
-                # Build list of valid paired days
-                for day1, day2 in PAIRED_DAYS:
-                    if day1 in avail_days and day2 in avail_days:
-                        days_to_try.extend([day1, day2])
-                # If no pairs available, fall back to all available days
-                if not days_to_try:
-                    days_to_try = avail_days
+        for spec in subject_block_specs(weekly_slots, is_custom=is_custom):
+            block_slots = spec['block_slots']
+            gene = Gene(
+                subj_code=subject.code,
+                subj_name=subject.name,
+                professor=professor,
+                room=preferred_room or rooms[0],
+                section=subject.section,
+                units=subject.units,
+                day=avail_days[0],
+                start_slot=0,
+                duration=block_slots,
+                pair_day=None,
+                is_custom=is_custom,
+            )
+            day_options = _day_options_for_gene(gene, avail_days)[:] if spec['paired'] \
+                else [(d, None) for d in avail_days]
+            already_days = prof_days.get(professor, set())
+            if already_days:
+                day_options.sort(key=lambda pair: 0 if pair[0] in already_days
+                                 or (pair[1] and pair[1] in already_days) else 1)
             else:
-                days_to_try = avail_days
+                random.shuffle(day_options)
 
-            # Try each available day
-            for day in days_to_try:
-                if placed:
+            usable_rooms = list(rooms)
+            if preferred_room:
+                usable_rooms = [preferred_room] + [r for r in usable_rooms if r != preferred_room]
+            if room_filter is not None:
+                suitable = [r for r in rooms if room_filter(gene, r)]
+                if suitable:
+                    usable_rooms = suitable
+
+            start_order = list(range(0, SLOTS_PER_DAY - block_slots + 1))
+            if professor in prof_starts and prof_starts[professor]:
+                cluster = sum(prof_starts[professor]) / len(prof_starts[professor])
+                start_order.sort(key=lambda start: (abs(start - cluster), start))
+            else:
+                random.shuffle(start_order)
+
+            # Best of the first few clean slots, rather than the first one found
+            best: Optional[Tuple[float, str, Optional[str], int, str]] = None
+            fallback: Optional[Tuple[str, Optional[str], int, str]] = None
+            seen = 0
+            for day, pair_day in day_options:
+                days = [day] + ([pair_day] if pair_day else [])
+                for start in start_order:
+                    slots = range(start, start + block_slots)
+                    if occ.busy(occ.prof, professor, days, slots):
+                        continue
+                    share_slot = is_custom and SATURDAY in days
+                    if not share_slot and occ.busy(occ.section, subject.section, days, slots):
+                        continue
+                    free_room = next(
+                        (r for r in usable_rooms
+                         if r == 'TBA' or share_slot or not occ.busy(occ.room, r, days, slots)),
+                        None)
+                    if free_room is None:
+                        continue
+                    if fallback is None:
+                        fallback = (day, pair_day, start, free_room)
+                    cost = placement_cost(
+                        professor, days, slots,
+                        allowed_run=block_slots if is_custom else None)
+                    if cost is None:
+                        continue
+                    if best is None or cost < best[0]:
+                        best = (cost, day, pair_day, start, free_room)
+                    seen += 1
+                    if cost == 0 or seen >= 12:
+                        break
+                if best is not None and (best[0] == 0 or seen >= 12):
                     break
 
-                # Try each possible start time
-                for start_slot in range(0, SLOTS_PER_DAY - block_slots + 1):
-                    if placed:
-                        break
+            placed = best is not None or fallback is not None
+            if best is not None:
+                _, gene.day, gene.pair_day, gene.start_slot, gene.room = best
+            elif fallback is not None:
+                gene.day, gene.pair_day, gene.start_slot, gene.room = fallback
 
-                    # Try each room
-                    for room in rooms:
-                        # Create candidate gene
-                        from services.scheduler_service import Gene  # Forward reference
-                        gene = Gene(
-                            subj_code=subject.code,
-                            subj_name=subject.name,
-                            professor=professor,
-                            room=room,
-                            section=subject.section,
-                            units=subject.units,
-                            day=day,
-                            start_slot=start_slot,
-                            duration=block_slots
-                        )
-
-                        # Check if this placement is valid (no conflicts)
-                        temp_chromosome = chromosome + [gene]
-                        violations = check_all_hard_constraints(
-                            temp_chromosome, len(temp_chromosome) - 1, config)
-
-                        # Only check time conflicts (most critical)
-                        critical_viols = [v for v in violations if v.constraint_type in [
-                            'faculty_time_conflict', 'room_time_conflict', 'section_time_conflict'
-                        ]]
-
-                        if not critical_viols:
-                            # Valid placement found!
-                            chromosome.append(gene)
-                            placed = True
-                            blocks_placed += 1
-                            break
+            chromosome.append(gene)
+            occ.add(len(chromosome) - 1, gene)
 
             if not placed:
-                # Couldn't place this block - configuration is impossible
-                return None
+                # No clean slot: keep it, but move it where it hurts least.
+                _reslot_gene(chromosome, len(chromosome) - 1,
+                             occ, rooms, prof_availability, room_filter, config)
+                unplaced += 1
 
-            remaining_hours -= block_hours
+            for day in gene_meeting_days(gene):
+                prof_day_slots.setdefault((professor, day), set()).update(
+                    gene_slot_range(gene))
+                prof_days.setdefault(professor, set()).add(day)
+            prof_starts.setdefault(professor, set()).add(gene.start_slot)
 
+    return chromosome, unplaced
+
+
+def greedy_feasible_schedule(config: FullGAConfig) -> Optional[List['Gene']]:
+    """Conflict-free greedy schedule, or None if some block could not be placed."""
+    chromosome, unplaced = greedy_schedule(config)
+    if unplaced or not chromosome:
+        return None
     return chromosome
 
 
@@ -1510,10 +2084,12 @@ def greedy_feasible_schedule(config: FullGAConfig) -> Optional[List['Gene']]:
 
 class Gene:
     __slots__ = ('subj_code', 'subj_name', 'professor', 'room',
-                 'section', 'units', 'day', 'start_slot', 'duration')
+                 'section', 'units', 'day', 'start_slot', 'duration', 'pair_day',
+                 'is_custom')
 
     def __init__(self, subj_code, subj_name, professor, room,
-                 section, units, day, start_slot, duration):
+                 section, units, day, start_slot, duration, pair_day=None,
+                 is_custom=False):
         self.subj_code = subj_code
         self.subj_name = subj_name
         self.professor = professor
@@ -1523,6 +2099,8 @@ class Gene:
         self.day = day
         self.start_slot = start_slot
         self.duration = duration
+        self.pair_day = pair_day
+        self.is_custom = bool(is_custom)
 
     def end_slot(self):
         return self.start_slot + self.duration
@@ -1538,45 +2116,51 @@ class Gene:
             'day': self.day,
             'start': slot_to_time(self.start_slot),
             'end': slot_to_time(self.end_slot()),
+            'pairDay': self.pair_day,
         }
+
+    def to_schedule_rows(self) -> List[Dict[str, Any]]:
+        """One timetable row per meeting day (paired classes emit two rows)."""
+        rows = []
+        # Each row carries its own contact hours, so the rows of a course-section
+        # add up to the course's units (a 3-unit MW class is 1.5 + 1.5).
+        meeting_hours = self.duration / 2.0
+        for day in gene_meeting_days(self):
+            rows.append({
+                'subjCode': self.subj_code,
+                'subjName': self.subj_name,
+                'prof': self.professor,
+                'room': self.room,
+                'section': self.section,
+                'units': meeting_hours,
+                'day': day,
+                'start': slot_to_time(self.start_slot),
+                'end': slot_to_time(self.end_slot()),
+            })
+        return rows
 
 
 def random_gene(subject: Dict, rooms: List[str],
                 prof_availability: Dict[str, List[str]] = None) -> Gene:
-    """Create a random gene, respecting professor availability and MW/WF/TTH pairing for 1.5-hour blocks."""
+    """Create a random gene, pairing MW/WF/TTH when the block is a 1.5-hour meeting."""
     prof = subject['professor']
-    avail_days = WEEKDAYS  # default
-
+    is_custom = bool(subject.get('is_custom', False))
+    avail_days = WEEKDAYS
     if prof_availability and prof in prof_availability:
         avail = prof_availability[prof]
         if avail:
             avail_days = avail
-
-    duration = min(subject['block_slots'], MAX_BLOCK_SLOTS)
-
-    # CRITICAL FIX: For 1.5-hour (3-slot) blocks, use MW/WF/TTH pairs
-    # This ensures the UI can properly display paired blocks
-    if duration == 3:  # 1.5 hours = 3 slots (30min each)
-        # Filter available paired days based on professor availability
-        valid_pairs = []
-        for day1, day2 in PAIRED_DAYS:
-            if day1 in avail_days and day2 in avail_days:
-                valid_pairs.append((day1, day2))
-
-        if valid_pairs:
-            # Pick one day from a random valid pair
-            pair = random.choice(valid_pairs)
-            day = random.choice(pair)
-        else:
-            # Fallback if no paired days available
-            day = random.choice(avail_days)
-    else:
-        # For non-1.5-hour blocks, use any available day
-        day = random.choice(avail_days)
+    avail_days = teaching_days(avail_days, is_custom)
+    duration = subject['block_slots']
+    if not is_custom:
+        duration = min(duration, MAX_BLOCK_SLOTS)
+    paired = False if is_custom else subject.get('paired', duration >= 2)
+    day, pair_day = pick_meeting_days(avail_days, paired)
 
     max_start = SLOTS_PER_DAY - duration
     start = random.randint(0, max(0, max_start))
-    room = random.choice(rooms) if rooms else 'TBA'
+    preferred = subject.get('preferred_room')
+    room = preferred if preferred else (random.choice(rooms) if rooms else 'TBA')
 
     return Gene(
         subj_code=subject['code'],
@@ -1588,7 +2172,75 @@ def random_gene(subject: Dict, rooms: List[str],
         day=day,
         start_slot=start,
         duration=duration,
+        pair_day=pair_day,
+        is_custom=is_custom,
     )
+
+
+def subject_block_specs(weekly_slots: int, is_custom: bool = False) -> List[Dict[str, Any]]:
+    """
+    Split weekly contact slots into meeting genes.
+
+    Custom blocks are one straight sitting (5 units = 5 consecutive hours).
+    Regular blocks are cut in half across MW / TTh / WF
+    (2 units = 1h Tue + 1h Thu, 3 units = 1.5h + 1.5h).
+    """
+    slots = max(1, int(weekly_slots))
+    if is_custom:
+        return [{'block_slots': slots, 'paired': False, 'contact_slots': slots}]
+    if slots >= 2:
+        half = slots // 2
+        leftover = slots - (half * 2)
+        specs = [{'block_slots': half, 'paired': True, 'contact_slots': half * 2}]
+        if leftover:
+            specs.append({'block_slots': leftover, 'paired': False, 'contact_slots': leftover})
+        return specs
+    return [{'block_slots': slots, 'paired': False, 'contact_slots': slots}]
+
+
+def coverage_shortfall(chromosome: List['Gene'],
+                       subjects: List[Dict]) -> List[Tuple[Dict, int]]:
+    """
+    Course-sections whose scheduled contact slots fall short of the requirement.
+
+    Returns (subject, missing_slots) pairs.
+    """
+    scheduled: Dict[Tuple[str, str, str], int] = {}
+    for g in chromosome:
+        key = (g.subj_code, g.section, g.professor)
+        scheduled[key] = scheduled.get(key, 0) + \
+            g.duration * max(1, len(gene_meeting_days(g)))
+
+    gaps = []
+    for subj in subjects:
+        key = (subj['code'], subj['section'], subj.get('professor') or '')
+        needed = int(subj.get('weekly_slots', 6))
+        short = needed - scheduled.get(key, 0)
+        if short > 0:
+            gaps.append((subj, short))
+    return gaps
+
+
+def ensure_full_coverage(chromosome: List['Gene'], subjects: List[Dict],
+                         rooms: List[str],
+                         prof_availability: Dict[str, List[str]]
+                         ) -> Tuple[List['Gene'], List[str]]:
+    """
+    Add blocks for any course-section that is missing or under-scheduled.
+
+    Selection and crossover can lose genes, and nothing in the fitness function
+    rewards completeness, so this is the backstop that guarantees every
+    allocated class appears in the timetable.
+    """
+    added = []
+    for subj, short in coverage_shortfall(chromosome, subjects):
+        for spec in subject_block_specs(short, is_custom=bool(subj.get('is_custom'))):
+            s = dict(subj)
+            s['block_slots'] = spec['block_slots']
+            s['paired'] = spec['paired']
+            chromosome.append(random_gene(s, rooms, prof_availability))
+        added.append(f"{subj['code']}-{subj['section']} ({subj.get('professor') or '?'})")
+    return chromosome, added
 
 
 def build_chromosome(subjects: List[Dict], rooms: List[str],
@@ -1596,13 +2248,11 @@ def build_chromosome(subjects: List[Dict], rooms: List[str],
     """Build one chromosome covering all subject-section blocks."""
     genes = []
     for subj in subjects:
-        remaining = subj['weekly_slots']
-        while remaining > 0:
-            block = min(remaining, MAX_BLOCK_SLOTS)
+        for spec in subject_block_specs(subj.get('weekly_slots', 6), is_custom=bool(subj.get('is_custom'))):
             s = dict(subj)
-            s['block_slots'] = block
+            s['block_slots'] = spec['block_slots']
+            s['paired'] = spec['paired']
             genes.append(random_gene(s, rooms, prof_availability))
-            remaining -= block
     return genes
 
 
@@ -1645,13 +2295,10 @@ def fitness_v3(chromosome: List[Gene], config: FullGAConfig) -> FitnessBreakdown
 
     Returns FitnessBreakdown with detailed violation information.
     """
-    hard_violations = []
     soft_violations = []
 
-    # TIER 1: Check all hard constraints for each gene
-    for gene_idx in range(len(chromosome)):
-        violations = check_all_hard_constraints(chromosome, gene_idx, config)
-        hard_violations.extend(violations)
+    # TIER 1: all hard constraints, single linear pass over the chromosome
+    hard_violations = all_hard_violations(chromosome, config)
 
     # Calculate hard penalty
     hard_penalty = sum(v.penalty for v in hard_violations)
@@ -1752,8 +2399,8 @@ def fitness_v2(chromosome: List[Gene],
                 score += HARD_PENALTY
             prof_occ[g.professor].add(key)
 
-        # H2 – room conflict
-        if g.room and g.room != 'TBA':
+        # H2 – room conflict (Saturday custom seminars may share a room)
+        if g.room and g.room != 'TBA' and not is_saturday_custom(g):
             if g.room not in room_occ:
                 room_occ[g.room] = set()
             for key in slots_used:
@@ -1761,16 +2408,17 @@ def fitness_v2(chromosome: List[Gene],
                     score += HARD_PENALTY
                 room_occ[g.room].add(key)
 
-        # H3 – section conflict
+        # H3 – section conflict (Saturday custom seminars may share a section)
         if g.section not in sect_occ:
             sect_occ[g.section] = set()
-        for key in slots_used:
-            if key in sect_occ[g.section]:
-                score += HARD_PENALTY
-            sect_occ[g.section].add(key)
+        if not is_saturday_custom(g):
+            for key in slots_used:
+                if key in sect_occ[g.section]:
+                    score += HARD_PENALTY
+                sect_occ[g.section].add(key)
 
-        # H4 – block too long
-        if g.duration > MAX_BLOCK_SLOTS:
+        # H4 – block too long (custom blocks may be a full straight sitting)
+        if g.duration > MAX_BLOCK_SLOTS and not gene_is_custom(g):
             score += HARD_PENALTY * (g.duration - MAX_BLOCK_SLOTS)
 
         # H5 – professor outside availability
@@ -1793,11 +2441,12 @@ def fitness_v2(chromosome: List[Gene],
         if g.end_slot() > SLOTS_PER_DAY:
             score += SOFT_PENALTY
 
-    # H6 – teaching load exceeded
-    for prof, units in prof_units.items():
-        max_load = teaching_loads.get(prof, DEFAULT_TEACHING_LOAD)
-        if units > max_load:
-            score += HARD_PENALTY * int(units - max_load)
+    # H6 – teaching load exceeded (only when unit ceilings are enforced)
+    if getattr(config, 'enforce_load_limits', False):
+        for prof, units in prof_units.items():
+            max_load = teaching_loads.get(prof, DEFAULT_TEACHING_LOAD)
+            if units > max_load:
+                score += HARD_PENALTY * int(units - max_load)
 
     # S1 – all blocks on same day penalty
     for days_used in subj_days.values():
@@ -1892,10 +2541,9 @@ def mutate_v3(chromosome: List[Gene], config: FullGAConfig,
     # If targeted mutation, identify violated genes
     violated_genes = set()
     if targeted:
-        for i in range(len(result)):
-            violations = check_all_hard_constraints(result, i, config)
-            if violations:
-                violated_genes.add(i)
+        for v in all_hard_violations(result, config):
+            if v.gene_index >= 0:
+                violated_genes.add(v.gene_index)
 
     for i, g in enumerate(result):
         # Higher mutation rate for violated genes in targeted mode
@@ -1903,24 +2551,13 @@ def mutate_v3(chromosome: List[Gene], config: FullGAConfig,
             3 if (targeted and i in violated_genes) else rate
 
         if random.random() < effective_rate:
-            # Mutate day (respect availability AND MW/WF/TTH pairing for 1.5-hour blocks)
+            # Mutate meeting days (keep paired classes as a pair)
             avail = prof_availability.get(g.professor, [])
-            valid_days = avail if avail else WEEKDAYS
-
-            # CRITICAL FIX: For 1.5-hour blocks, use MW/WF/TTH pairs
-            if g.duration == 3:  # 1.5 hours = 3 slots
-                valid_pairs = []
-                for day1, day2 in PAIRED_DAYS:
-                    if day1 in valid_days and day2 in valid_days:
-                        valid_pairs.append((day1, day2))
-
-                if valid_pairs:
-                    pair = random.choice(valid_pairs)
-                    g.day = random.choice(pair)
-                else:
-                    g.day = random.choice(valid_days)
-            else:
-                g.day = random.choice(valid_days)
+            valid_days = teaching_days(avail, getattr(g, 'is_custom', False))
+            paired = gene_should_pair(g)
+            day, pair_day = pick_meeting_days(valid_days, paired)
+            g.day = day
+            g.pair_day = pair_day
 
             # Mutate start time
             max_start = SLOTS_PER_DAY - g.duration
@@ -2068,8 +2705,8 @@ def crossover_v3(p1: List[Gene], p2: List[Gene], method: str = 'uniform') -> Lis
     elif method == 'day':
         return crossover_v3_day_level(p1, p2)
     elif method == 'mixed':
-        # Randomly choose strategy (now includes uniform)
-        choice = random.choice(['uniform', 'section', 'day'])
+        # Randomly choose strategy; skip day-level (duplicates paired genes)
+        choice = random.choice(['uniform', 'section'])
         return crossover_v3(p1, p2, method=choice)
     elif method == 'gene':
         # Legacy gene-preserving crossover
@@ -2079,101 +2716,404 @@ def crossover_v3(p1: List[Gene], p2: List[Gene], method: str = 'uniform') -> Lis
         return crossover_uniform(p1, p2)
 
 
-def repair_chromosome(chromosome: List[Gene], config: FullGAConfig, max_attempts: int = 100) -> List[Gene]:
+class MutableOccupancy:
+    """(owner, day, slot) -> gene indices, updated in place as genes move."""
+    __slots__ = ('prof', 'room', 'section')
+
+    def __init__(self, chromosome: List[Gene]):
+        self.prof: Dict[Tuple[str, str, int], Set[int]] = {}
+        self.room: Dict[Tuple[str, str, int], Set[int]] = {}
+        self.section: Dict[Tuple[str, str, int], Set[int]] = {}
+        for i, g in enumerate(chromosome):
+            self.add(i, g)
+
+    def _each(self, gene: Gene):
+        has_room = bool(gene.room) and gene.room != 'TBA'
+        for day in gene_meeting_days(gene):
+            share = gene_is_custom(gene) and day == SATURDAY
+            for slot in gene_slot_range(gene):
+                yield self.prof, (gene.professor, day, slot)
+                if share:
+                    continue
+                yield self.section, (gene.section, day, slot)
+                if has_room:
+                    yield self.room, (gene.room, day, slot)
+
+    def add(self, idx: int, gene: Gene) -> None:
+        for occ_map, key in self._each(gene):
+            occ_map.setdefault(key, set()).add(idx)
+
+    def remove(self, idx: int, gene: Gene) -> None:
+        for occ_map, key in self._each(gene):
+            holders = occ_map.get(key)
+            if holders:
+                holders.discard(idx)
+                if not holders:
+                    del occ_map[key]
+
+    def busy(self, occ_map, owner: str, days: List[str], slots) -> int:
+        """Occupied slot count for an owner, assuming the moving gene is detached."""
+        count = 0
+        for day in days:
+            for slot in slots:
+                holders = occ_map.get((owner, day, slot))
+                if holders:
+                    count += len(holders)
+        return count
+
+    def conflicted_genes(self, chromosome: List[Gene]) -> List[int]:
+        """Gene indices sharing any slot with another gene."""
+        hits: Set[int] = set()
+        for occ_map in (self.prof, self.room, self.section):
+            for holders in occ_map.values():
+                if len(holders) > 1:
+                    hits.update(holders)
+        return sorted(hits)
+
+
+def clone_chromosome(chromosome: List[Gene]) -> List[Gene]:
+    """Fast copy of a chromosome (much cheaper than copy.deepcopy)."""
+    return [Gene(g.subj_code, g.subj_name, g.professor, g.room, g.section,
+                 g.units, g.day, g.start_slot, g.duration, g.pair_day,
+                 getattr(g, 'is_custom', False))
+            for g in chromosome]
+
+
+def _day_options_for_gene(gene: Gene, avail_days: List[str]) -> List[Tuple[str, Optional[str]]]:
+    paired = gene_should_pair(gene)
+    days = teaching_days(avail_days, getattr(gene, 'is_custom', False))
+    if paired:
+        pairs = available_day_pairs(days)
+        if pairs:
+            return [(a, b) for a, b in pairs]
+        if len(days) >= 2:
+            return [(days[0], days[1])]
+    return [(d, None) for d in days]
+
+
+def _room_filter_for(config: FullGAConfig):
+    """Predicate for 'this room is type/capacity-suitable for this gene'."""
+    room_objs = {}
+    for r in (config.rooms or []):
+        room_objs[r.name] = r
+        if getattr(r, 'id', None):
+            room_objs[r.id] = r
+
+    if not room_objs:
+        return None
+
+    def suitable(gene: Gene, room_name: str) -> bool:
+        obj = room_objs.get(room_name)
+        if obj is None:
+            return True  # unknown room, can't validate
+        meta = _subject_meta(config, gene.subj_code, gene.section)
+        if obj.room_type != meta['room_type_required']:
+            return False
+        return obj.capacity >= meta['section_student_count']
+
+    return suitable
+
+
+def prof_slots_on_day(occ: MutableOccupancy, professor: str, day: str) -> Set[int]:
+    """Slots a faculty member already occupies on a day (moving gene detached)."""
+    return {slot for slot in range(SLOTS_PER_DAY)
+            if occ.prof.get((professor, day, slot))}
+
+
+def overlong_day_genes(chromosome: List[Gene], max_run_slots: int) -> List[int]:
+    """Genes belonging to a faculty day that runs past the consecutive cap."""
+    day_slots: Dict[Tuple[str, str], Set[int]] = {}
+    for g in chromosome:
+        for day in gene_meeting_days(g):
+            day_slots.setdefault((g.professor, day), set()).update(
+                gene_slot_range(g))
+
+    hot = {key for key, slots in day_slots.items()
+           if longest_consecutive_run(slots) > max_run_slots}
+    if not hot:
+        return []
+    return [i for i, g in enumerate(chromosome)
+            if any((g.professor, day) in hot for day in gene_meeting_days(g))]
+
+
+def _reslot_gene(result: List[Gene], idx: int, occ: MutableOccupancy,
+                 rooms: List[str], prof_availability: Dict[str, List[str]],
+                 room_filter=None,
+                 config: Optional[FullGAConfig] = None) -> Tuple[bool, int]:
     """
-    Repair hard constraint violations using greedy re-slotting.
+    Move one gene to its least-conflicting (days, time, room).
 
-    This is crucial after crossover to ensure children don't inherit
-    incompatible genes from different parents.
-
-    Strategy:
-    - Find genes with hard violations
-    - Try to re-slot them to valid positions
-    - Only touches violated genes, preserves good ones
-
-    Args:
-        chromosome: Chromosome to repair
-        config: GA configuration
-        max_attempts: Maximum repair iterations to prevent infinite loops
-
-    Returns:
-        Repaired chromosome (best effort, may still have some violations)
+    Time is chosen on faculty+section occupancy first, then a free room is
+    picked for that time, which keeps each move roughly linear in slots
+    instead of scanning every day/time/room combination. Among equally
+    conflict-free options the least monotonous one wins.
     """
-    attempts = 0
-    legacy = extract_legacy_format_from_config(config)
-    prof_availability = legacy['prof_availability']
-    rooms = legacy['rooms']
+    gene = result[idx]
+    old = (gene.day, gene.pair_day, gene.start_slot, gene.room)
+    occ.remove(idx, gene)
 
-    while attempts < max_attempts:
-        # Check for hard violations
-        violations_found = []
-        for gene_idx in range(len(chromosome)):
-            viols = check_all_hard_constraints(chromosome, gene_idx, config)
-            # Only care about time conflicts (most critical)
-            critical_viols = [v for v in viols if v.constraint_type in [
-                'faculty_time_conflict', 'room_time_conflict', 'section_time_conflict'
-            ]]
-            if critical_viols:
-                violations_found.append(gene_idx)
+    avail_days = teaching_days(
+        prof_availability.get(gene.professor, WEEKDAYS),
+        getattr(gene, 'is_custom', False))
+    day_options = _day_options_for_gene(gene, avail_days)[:]
+    other_days = {d for i, g in enumerate(result)
+                  if i != idx and g.professor == gene.professor
+                  for d in gene_meeting_days(g)}
+    if other_days:
+        day_options.sort(key=lambda pair: 0 if pair[0] in other_days
+                         or (pair[1] and pair[1] in other_days) else 1)
+    else:
+        random.shuffle(day_options)
+    max_start = max(0, SLOTS_PER_DAY - gene.duration)
 
-        if not violations_found:
-            # All repaired!
+    # Only consider rooms that are still valid for this class, otherwise the
+    # repair would trade a time conflict for a room type/capacity violation.
+    usable_rooms = [r for r in rooms if r and r != 'TBA']
+    random.shuffle(usable_rooms)
+    if room_filter is not None:
+        suitable = [r for r in usable_rooms if room_filter(gene, r)]
+        if suitable:
+            usable_rooms = suitable
+    if not usable_rooms:
+        usable_rooms = [gene.room]
+
+    max_run_slots = int(round(
+        (config.max_consecutive_hours if config else 8.0) * 2))
+    comfortable_hours = config.comfortable_daily_hours if config else 6.0
+    cluster_gap = config.cluster_max_same_day_gap_slots if config else 2
+    cluster_span = config.cluster_max_start_span_slots if config else 6
+    other_starts = {g.start_slot for i, g in enumerate(result)
+                    if i != idx and g.professor == gene.professor}
+    start_order = list(range(0, max_start + 1))
+    if other_starts:
+        cluster = sum(other_starts) / len(other_starts)
+        start_order.sort(key=lambda start: (abs(start - cluster), start))
+
+    best = None
+    best_score = None        # conflicts only, used for the return value
+    best_ranked = None       # conflicts first, day shape as tie-break
+    for day, pair_day in day_options:
+        days = [day] + ([pair_day] if pair_day else [])
+        existing = {d: prof_slots_on_day(occ, gene.professor, d) for d in days}
+        for start in start_order:
+            slots = range(start, start + gene.duration)
+            share_slot = is_saturday_custom(gene) or SATURDAY in days and gene_is_custom(gene)
+            conflicts = occ.busy(occ.prof, gene.professor, days, slots)
+            if not share_slot:
+                conflicts += occ.busy(occ.section, gene.section, days, slots)
+            if best_ranked is not None and conflicts >= best_ranked[0]:
+                continue
+
+            room_choice = usable_rooms[0]
+            room_score = 0 if share_slot else None
+            if not share_slot:
+                for room in usable_rooms:
+                    busy = occ.busy(occ.room, room, days, slots)
+                    if room_score is None or busy < room_score:
+                        room_score = busy
+                        room_choice = room
+                        if busy == 0:
+                            break
+
+            conflicts += room_score or 0
+            shape = 0.0
+            for d in days:
+                combined = existing[d] | set(slots)
+                run = longest_consecutive_run(combined)
+                if run > max_run_slots:
+                    shape += 5.0 * (run - max_run_slots)
+                if combined:
+                    span = max(combined) - min(combined) + 1
+                    holes = span - len(combined)
+                    if holes > cluster_gap:
+                        shape += (holes - cluster_gap) * 0.45
+                hours = len(combined) / 2.0
+                if hours > comfortable_hours:
+                    shape += (hours - comfortable_hours) * 0.25
+            if other_starts:
+                nearest = min(abs(start - other) for other in other_starts)
+                shape += nearest * 0.35
+                span = max(max(other_starts), start) - min(min(other_starts), start)
+                if span > cluster_span:
+                    shape += span - cluster_span
+            elif start > 12:
+                shape += (start - 12) * 0.05
+
+            ranked = (conflicts, shape)
+            if best_ranked is None or ranked < best_ranked:
+                best_ranked = ranked
+                best_score = conflicts
+                best = (day, pair_day, start, room_choice)
+                if ranked == (0, 0.0):
+                    break
+        if best_ranked == (0, 0.0):
             break
 
-        # Pick one violated gene to fix
-        gene_idx = violations_found[0]
-        gene = chromosome[gene_idx]
+    if best is None:
+        gene.day, gene.pair_day, gene.start_slot, gene.room = old
+        occ.add(idx, gene)
+        return False, 0
 
-        # Try to find a valid slot
-        found_valid = False
-        for _ in range(20):  # Try 20 random slots
-            # Random day from faculty availability
-            avail_days = prof_availability.get(gene.professor, WEEKDAYS)
-            if not avail_days:
-                avail_days = WEEKDAYS
-            new_day = random.choice(avail_days)
+    gene.day, gene.pair_day, gene.start_slot, gene.room = best
+    occ.add(idx, gene)
+    moved = best != old
+    return moved, best_score or 0
 
-            # Random time slot
-            max_start = SLOTS_PER_DAY - gene.duration
-            if max_start < 0:
-                max_start = 0
-            new_start = random.randint(0, max(0, max_start))
 
-            # Try random room
-            new_room = random.choice(rooms) if rooms else gene.room
+def min_conflicts_repair(chromosome: List[Gene], config: FullGAConfig,
+                         max_attempts: int = 80,
+                         deadline: Optional[float] = None) -> Tuple[List[Gene], int]:
+    """
+    Min-conflicts local search over the genes that actually clash.
 
-            # Save old values
-            old_day, old_start, old_room = gene.day, gene.start_slot, gene.room
+    Each pass moves a conflicted gene to its least-conflicting placement. If a
+    clash remains, the gene it collides with is queued next (ejection chain).
+    """
+    result = chromosome
+    legacy = extract_legacy_format_from_config(config)
+    rooms = legacy['rooms'] or ['TBA']
+    prof_availability = legacy['prof_availability']
+    room_filter = _room_filter_for(config)
+    repairs = 0
 
-            # Apply new values
-            gene.day = new_day
-            gene.start_slot = new_start
-            gene.room = new_room
+    occ = MutableOccupancy(result)
+    max_run_slots = int(round(config.max_consecutive_hours * 2))
 
-            # Check if this fixes conflicts
-            new_viols = check_all_hard_constraints(
-                chromosome, gene_idx, config)
-            critical_new = [v for v in new_viols if v.constraint_type in [
-                'faculty_time_conflict', 'room_time_conflict', 'section_time_conflict'
-            ]]
+    queue = occ.conflicted_genes(result)
+    queued = set(queue)
+    # A day that runs past the consecutive cap is a hard violation too, even
+    # though nothing overlaps, so those genes need re-slotting as well.
+    for idx in overlong_day_genes(result, max_run_slots):
+        if idx not in queued:
+            queue.append(idx)
+            queued.add(idx)
+    random.shuffle(queue)  # vary which gene yields first across calls
+    attempts = 0
 
-            if not critical_new:
-                # Fixed!
-                found_valid = True
-                break
-            else:
-                # Revert
-                gene.day = old_day
-                gene.start_slot = old_start
-                gene.room = old_room
-
-        if not found_valid:
-            # Couldn't repair this gene, try next violation
-            pass
-
+    while queue and attempts < max_attempts:
+        if deadline is not None and _time.time() >= deadline:
+            break
         attempts += 1
+        idx = queue.pop(0)
+        queued.discard(idx)
 
-    return chromosome
+        moved, leftover = _reslot_gene(
+            result, idx, occ, rooms, prof_availability, room_filter, config)
+        if moved:
+            repairs += 1
+
+        if leftover:
+            gene = result[idx]
+            for j, other in enumerate(result):
+                if j == idx or j in queued:
+                    continue
+                if genes_time_overlap(gene, other) and (
+                    other.professor == gene.professor
+                    or (other.room == gene.room and gene.room != 'TBA')
+                    or other.section == gene.section
+                ):
+                    queue.append(j)
+                    queued.add(j)
+                    break
+
+    return result, repairs
+
+
+def local_search_improve(chromosome: List[Gene], config: FullGAConfig,
+                         breakdown: 'FitnessBreakdown',
+                         max_moves: int = 30,
+                         deadline: Optional[float] = None
+                         ) -> Tuple[List[Gene], 'FitnessBreakdown']:
+    """
+    Hill-climb one schedule: try single small moves, keep only improvements.
+
+    Preference violations (gaps, long stretches, bad times) are cheap to fix by
+    nudging one class, but random mutation nearly always breaks feasibility
+    instead, so the GA alone cannot polish a feasible schedule.
+    """
+    if not chromosome or max_moves <= 0:
+        return chromosome, breakdown
+
+    legacy = extract_legacy_format_from_config(config)
+    rooms = [r for r in (legacy['rooms'] or []) if r and r != 'TBA']
+    prof_availability = legacy['prof_availability']
+    room_filter = _room_filter_for(config)
+
+    best = chromosome
+    best_fb = breakdown
+
+    # Prefer nudging classes that are actually involved in a violation
+    hot = [v.gene_index for v in best_fb.soft_violations if v.gene_index >= 0]
+
+    for _ in range(max_moves):
+        if deadline is not None and _time.time() >= deadline:
+            break
+
+        candidate = clone_chromosome(best)
+        idx = random.choice(hot) if hot and random.random() < 0.7 \
+            else random.randrange(len(candidate))
+        if idx >= len(candidate):
+            continue
+        gene = candidate[idx]
+        move = random.random()
+        max_start = max(0, SLOTS_PER_DAY - gene.duration)
+
+        if move < 0.30:
+            # Pull this class toward the faculty's usual start time
+            peer_starts = [o.start_slot for o in candidate
+                           if o.professor == gene.professor]
+            if len(peer_starts) >= 2:
+                median = sorted(peer_starts)[len(peer_starts) // 2]
+                step = max(1, abs(gene.start_slot - median) // 2)
+                if gene.start_slot < median:
+                    gene.start_slot = min(max_start, gene.start_slot + step)
+                elif gene.start_slot > median:
+                    gene.start_slot = max(0, gene.start_slot - step)
+                else:
+                    gene.start_slot = max(0, min(max_start, median))
+            else:
+                gene.start_slot = random.randint(0, max_start)
+        elif move < 0.55:
+            # Nudge the start time
+            gene.start_slot = random.randint(0, max_start)
+        elif move < 0.75:
+            # Different day (or day pair) within faculty availability
+            avail = prof_availability.get(gene.professor, WEEKDAYS) or WEEKDAYS
+            options = _day_options_for_gene(gene, avail)
+            if options:
+                gene.day, gene.pair_day = random.choice(options)
+        elif move < 0.88 and rooms:
+            usable = [r for r in rooms if room_filter is None
+                      or room_filter(gene, r)] or rooms
+            gene.room = random.choice(usable)
+        else:
+            # Swap times with another class of the same section
+            peers = [j for j, o in enumerate(candidate)
+                     if j != idx and o.section == gene.section
+                     and o.duration == gene.duration]
+            if not peers:
+                continue
+            other = candidate[random.choice(peers)]
+            gene.day, other.day = other.day, gene.day
+            gene.pair_day, other.pair_day = other.pair_day, gene.pair_day
+            gene.start_slot, other.start_slot = other.start_slot, gene.start_slot
+
+        fb = fitness_v3(candidate, config)
+        if (fb.hard_penalty, fb.total_score) < (best_fb.hard_penalty, best_fb.total_score):
+            best, best_fb = candidate, fb
+            hot = [v.gene_index for v in best_fb.soft_violations
+                   if v.gene_index >= 0]
+
+    return best, best_fb
+
+
+def repair_chromosome(chromosome: List[Gene], config: FullGAConfig,
+                      max_attempts: int = 100,
+                      deadline: Optional[float] = None) -> List[Gene]:
+    """Repair inherited conflicts after crossover via min-conflicts search."""
+    repaired, _ = min_conflicts_repair(
+        chromosome, config, max_attempts=max_attempts, deadline=deadline)
+    return repaired
 
 
 def tournament_select_v3(population: List[List[Gene]],
@@ -2216,8 +3156,9 @@ def mutate_v2(chromosome: List[Gene], rooms: List[str],
         if random.random() < rate:
             # Mutate day (respect availability)
             avail = prof_availability.get(g.professor, [])
-            valid_days = avail if avail else WEEKDAYS
-            g.day = random.choice(valid_days)
+            valid_days = teaching_days(avail, getattr(g, 'is_custom', False))
+            paired = gene_should_pair(g)
+            g.day, g.pair_day = pick_meeting_days(valid_days, paired)
             # Mutate start time
             max_start = SLOTS_PER_DAY - g.duration
             g.start_slot = random.randint(0, max(0, max_start))
@@ -2249,6 +3190,7 @@ def crossover_v2(p1: List[Gene], p2: List[Gene]) -> List[Gene]:
             if key in p2_map and p2_map[key]:
                 donor = p2_map[key][0]
                 g.day = donor.day
+                g.pair_day = getattr(donor, 'pair_day', None)
                 g.start_slot = donor.start_slot
                 g.room = donor.room
                 # Rotate through donors
@@ -2268,6 +3210,51 @@ def tournament_select_v2(population, scores, k=4):
 # REFERENCE SEMESTER SEEDING
 # ══════════════════════════════════════════════════════════════════════════════
 
+def merge_reference_into_paired_genes(genes: List[Gene]) -> List[Gene]:
+    """Collapse two same-time meetings (MW/TTH/WF) into one paired gene."""
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for g in genes:
+        groups[(g.subj_code, g.section)].append(g)
+
+    merged: List[Gene] = []
+    for glist in groups.values():
+        by_day = {}
+        for g in glist:
+            if g.day and g.day not in by_day:
+                by_day[g.day] = g
+        days = list(by_day.keys())
+        used = set()
+
+        def add_pair(d1, d2):
+            if gene_is_custom(by_day[d1]) or gene_is_custom(by_day[d2]):
+                return
+            g = copy.deepcopy(by_day[d1])
+            g.day = d1
+            g.pair_day = d2
+            g.duration = min(by_day[d1].duration, by_day[d2].duration, MAX_BLOCK_SLOTS)
+            if g.duration > 3:
+                g.duration = 3
+            merged.append(g)
+            used.add(d1)
+            used.add(d2)
+
+        for d1, d2 in PAIRED_DAYS:
+            if d1 in by_day and d2 in by_day:
+                add_pair(d1, d2)
+        leftover = [d for d in days if d not in used]
+        if len(leftover) >= 2:
+            add_pair(leftover[0], leftover[1])
+            leftover = leftover[2:]
+        for d in leftover:
+            g = copy.deepcopy(by_day[d])
+            g.pair_day = None
+            merged.append(g)
+        if not by_day:
+            merged.extend(glist)
+    return merged
+
+
 def seed_from_reference(reference_schedules: List[Dict],
                         subjects: List[Dict],
                         rooms: List[str],
@@ -2284,6 +3271,11 @@ def seed_from_reference(reference_schedules: List[Dict],
     # Apply overrides to reference
     ref_data = apply_overrides(reference_schedules, overrides)
 
+    custom_keys = {
+        (s.get('code'), s.get('section'))
+        for s in subjects if s.get('is_custom')
+    }
+
     # Convert reference to genes
     ref_genes = []
     for s in ref_data:
@@ -2293,16 +3285,19 @@ def seed_from_reference(reference_schedules: List[Dict],
             duration = end_slot - start_slot
             if duration <= 0:
                 continue
+            code = s.get('subjCode', s.get('subj_code', ''))
+            section = s.get('section', '')
             ref_genes.append(Gene(
-                subj_code=s.get('subjCode', s.get('subj_code', '')),
+                subj_code=code,
                 subj_name=s.get('subjName', s.get('subj_name', '')),
                 professor=s.get('prof', ''),
                 room=s.get('room', 'TBA'),
-                section=s.get('section', ''),
+                section=section,
                 units=int(s.get('units', 3)),
                 day=s.get('day', 'Monday'),
                 start_slot=start_slot,
                 duration=duration,
+                is_custom=(code, section) in custom_keys,
             ))
         except (ValueError, IndexError):
             continue
@@ -2310,53 +3305,40 @@ def seed_from_reference(reference_schedules: List[Dict],
     if not ref_genes:
         return []
 
-    # Deduplicate: ensure total hours per subject-section don't exceed expected
-    # Group by subject+section, keep only enough blocks to fill weekly_hours
-    from collections import defaultdict
-    gene_groups = defaultdict(list)
-    for g in ref_genes:
-        key = f"{g.subj_code}_{g.section}"
-        gene_groups[key].append(g)
+    ref_genes = merge_reference_into_paired_genes(ref_genes)
 
-    # Find configured weekly hours from subjects list
     subj_hours = {}
     for s in subjects:
-        key = f"{s['code']}_{s['section']}"
+        key = f"{s['code']}_{s['section']}_{s.get('professor') or ''}"
         subj_hours[key] = s.get(
             'weekly_slots', slots_for_duration(float(s.get('units', 3))))
 
-    # Trim excess blocks
     trimmed_genes = []
-    for key, genes in gene_groups.items():
-        max_slots = subj_hours.get(key, 6)  # default 3 hours = 6 slots
-        total_slots = 0
-        for g in genes:
-            if total_slots + g.duration <= max_slots:
+    from collections import defaultdict
+    gene_groups = defaultdict(list)
+    for g in ref_genes:
+        gene_groups[f"{g.subj_code}_{g.section}_{g.professor}"].append(g)
+    for key, group in gene_groups.items():
+        max_slots = subj_hours.get(key, 6)
+        total = 0
+        for g in group:
+            contact = g.duration * max(1, len(gene_meeting_days(g)))
+            if total + contact <= max_slots + 0.1:
                 trimmed_genes.append(g)
-                total_slots += g.duration
-            elif total_slots < max_slots:
-                # Trim this gene's duration to fit
-                g.duration = max_slots - total_slots
-                trimmed_genes.append(g)
-                total_slots = max_slots
-
+                total += contact
     ref_genes = trimmed_genes if trimmed_genes else ref_genes
 
-    # Ensure ALL subjects from the subjects list are covered
-    # If a subject isn't in the reference, create random genes for it
-    ref_keys = set(f"{g.subj_code}_{g.section}" for g in ref_genes)
+    ref_keys = set(f"{g.subj_code}_{g.section}_{g.professor}" for g in ref_genes)
     for subj in subjects:
-        key = f"{subj['code']}_{subj['section']}"
+        key = f"{subj['code']}_{subj['section']}_{subj.get('professor') or ''}"
         if key not in ref_keys:
-            # This subject wasn't in reference — create from scratch
-            remaining = subj.get('weekly_slots', slots_for_duration(
-                float(subj.get('units', 3))))
-            while remaining > 0:
-                block = min(remaining, MAX_BLOCK_SLOTS)
+            for spec in subject_block_specs(subj.get(
+                    'weekly_slots', slots_for_duration(float(subj.get('units', 3)))),
+                    is_custom=bool(subj.get('is_custom'))):
                 s = dict(subj)
-                s['block_slots'] = block
+                s['block_slots'] = spec['block_slots']
+                s['paired'] = spec['paired']
                 ref_genes.append(random_gene(s, rooms, prof_availability))
-                remaining -= block
 
     # Create seeded population with varying levels of preservation
     population = []
@@ -2385,9 +3367,11 @@ def seed_from_reference(reference_schedules: List[Dict],
         for g in variant:
             # Keep day if it's in professor's availability, otherwise randomize
             avail = prof_availability.get(g.professor, [])
-            valid_days = avail if avail else WEEKDAYS
-            if g.day not in valid_days:
-                g.day = random.choice(valid_days)
+            valid_days = teaching_days(avail, getattr(g, 'is_custom', False))
+            if g.day not in valid_days or (
+                    g.pair_day and g.pair_day not in valid_days):
+                g.day, g.pair_day = pick_meeting_days(
+                    valid_days, gene_should_pair(g))
             
             # Randomize time slot
             max_start = SLOTS_PER_DAY - g.duration
@@ -2430,34 +3414,38 @@ def apply_overrides(reference_data: List[Dict], overrides: Dict[str, Any]) -> Li
 # ══════════════════════════════════════════════════════════════════════════════
 
 def repair_pass_v3(chromosome: List[Gene], config: FullGAConfig,
-                   max_iterations: int = 300) -> Tuple[List[Gene], int]:
+                   max_iterations: int = 300,
+                   deadline: Optional[float] = None) -> Tuple[List[Gene], int]:
     """
     Enhanced repair pass with comprehensive constraint handling.
 
-    Strategies applied in order:
-    1. Fix faculty time conflicts (move time/day)
-    2. Fix room conflicts (swap room, move time)
-    3. Fix section conflicts (move time/day)
-    4. Fix qualification mismatches (swap faculty if possible)
-    5. Fix availability violations (move to valid day)
-    6. Fix room type/capacity violations (swap to suitable room)
+    Runs min-conflicts local search first, then targeted per-violation-type
+    strategies for whatever remains (qualification, room type, capacity...).
 
     Returns: (repaired_chromosome, repairs_made_count)
     """
-    result = copy.deepcopy(chromosome)
+    mc_attempts = min(120, max_iterations)
+    result, repairs_made = min_conflicts_repair(
+        copy.deepcopy(chromosome), config,
+        max_attempts=mc_attempts, deadline=deadline)
+    leftover_iters = max(0, max_iterations - mc_attempts)
     legacy = extract_legacy_format_from_config(config)
-    repairs_made = 0
 
-    for iteration in range(max_iterations):
-        # Get all hard violations
-        all_violations = []
-        for gene_idx in range(len(result)):
-            violations = check_all_hard_constraints(result, gene_idx, config)
-            for v in violations:
-                all_violations.append((gene_idx, v))
+    for iteration in range(leftover_iters):
+        if deadline is not None and _time.time() >= deadline:
+            break
+
+        violations = all_hard_violations(result, config)
+        all_violations = [(v.gene_index, v)
+                          for v in violations if v.gene_index >= 0]
 
         if not all_violations:
             break  # No more violations
+
+        # These strategies move genes without looking at the whole picture, so
+        # keep a snapshot and roll back any "fix" that makes things worse.
+        penalty_before = sum(v.penalty for v in violations)
+        snapshot = clone_chromosome(result)
 
         # Pick a random violation to fix
         gene_idx, violation = random.choice(all_violations)
@@ -2475,47 +3463,53 @@ def repair_pass_v3(chromosome: List[Gene], config: FullGAConfig,
             fixed = _repair_qualification(result, gene_idx, config)
         elif violation.constraint_type == 'faculty_availability':
             fixed = _repair_availability(result, gene_idx, legacy)
+        elif violation.constraint_type == 'saturday_custom_only':
+            fixed = _try_move_day(result, gene_idx, legacy['prof_availability'])
         elif violation.constraint_type in ['room_type_mismatch', 'room_capacity_exceeded']:
             fixed = _repair_room_assignment(result, gene_idx, config)
         elif violation.constraint_type == 'operating_hours':
             fixed = _repair_operating_hours(result, gene_idx)
 
         if fixed:
-            repairs_made += 1
+            penalty_after = sum(
+                v.penalty for v in all_hard_violations(result, config))
+            if penalty_after > penalty_before:
+                result = snapshot  # rolled back, that move hurt
+            else:
+                repairs_made += 1
 
     return result, repairs_made
 
 
 def _repair_faculty_conflict(chromosome: List[Gene], gene_idx: int,
                              legacy: Dict[str, Any]) -> bool:
-    """Try to fix faculty time conflict by moving to different time/day."""
+    """Try to fix faculty time conflict by moving to different time/day pair."""
     g = chromosome[gene_idx]
     prof_availability = legacy['prof_availability']
 
-    # Get valid days for this faculty
-    valid_days = prof_availability.get(g.professor, WEEKDAYS)
-    if not valid_days:
-        valid_days = WEEKDAYS
+    valid_days = prof_availability.get(g.professor, WEEKDAYS) or WEEKDAYS
+    old = (g.day, g.pair_day, g.start_slot)
 
-    # Try each day
-    for day in random.sample(valid_days, len(valid_days)):
-        # Get occupied slots for this faculty on this day
+    for day, pair_day in _day_options_for_gene(g, valid_days):
+        g.day = day
+        g.pair_day = pair_day
         occupied = set()
+        g_days = set(gene_meeting_days(g))
         for i, other in enumerate(chromosome):
             if i == gene_idx:
                 continue
-            if other.professor == g.professor and other.day == day:
-                occupied.update(range(other.start_slot, other.end_slot()))
+            if other.professor != g.professor:
+                continue
+            if g_days.intersection(gene_meeting_days(other)):
+                occupied.update(gene_slot_range(other))
 
-        # Try all possible start times
         for start_slot in range(0, SLOTS_PER_DAY - g.duration + 1):
             gene_slots = set(range(start_slot, start_slot + g.duration))
             if not gene_slots.intersection(occupied):
-                # Found a free slot
-                g.day = day
                 g.start_slot = start_slot
                 return True
 
+    g.day, g.pair_day, g.start_slot = old
     return False
 
 
@@ -2637,7 +3631,9 @@ def _repair_availability(chromosome: List[Gene], gene_idx: int,
     g = chromosome[gene_idx]
     prof_availability = legacy['prof_availability']
 
-    valid_days = prof_availability.get(g.professor, [])
+    valid_days = teaching_days(
+        prof_availability.get(g.professor, []),
+        getattr(g, 'is_custom', False))
     if not valid_days or g.day in valid_days:
         return False  # Already valid or no availability data
 
@@ -2855,7 +3851,7 @@ def _try_move_day(chromosome: List[Gene], idx: int,
     """Try moving gene to a different day within professor's availability."""
     g = chromosome[idx]
     avail = prof_availability.get(g.professor, [])
-    valid_days = avail if avail else WEEKDAYS
+    valid_days = teaching_days(avail, getattr(g, 'is_custom', False))
 
     random.shuffle(valid_days)
     for day in valid_days:
@@ -3664,7 +4660,7 @@ def create_default_ga_config() -> FullGAConfig:
         weight_min_load_violation=100.0,
         weight_max_load_violation=1000.0,
         weight_continuity_bonus=5.0,
-        weight_load_balance=10.0,
+        weight_load_balance=3.0,
         weight_gap_penalty=10.0,
 
         # Termination criteria - all enabled
@@ -3820,7 +4816,8 @@ class TerminationState:
     termination_reason: Optional[str] = None
 
     def should_terminate(self, config: FullGAConfig, current_score: float,
-                         current_time: float, is_feasible: bool) -> Tuple[bool, str]:
+                         current_time: float, is_feasible: bool,
+                         soft_violation_count: Optional[int] = None) -> Tuple[bool, str]:
         """
         Evaluate all termination criteria and determine if GA should stop.
 
@@ -3836,13 +4833,20 @@ class TerminationState:
         if self.current_generation >= config.max_generations:
             return True, f"Max generations reached ({config.max_generations})"
 
-        # Check feasibility threshold (perfect solution found)
-        if config.feasibility_threshold is not None:
-            if current_score <= config.feasibility_threshold and is_feasible:
-                return True, f"Feasibility threshold reached (score: {current_score:.2f})"
+        # Check feasibility threshold (nothing left to improve).
+        # A negative score alone does not mean perfection: soft bonuses such as
+        # continuity with the reference semester can push it below zero while
+        # real preference violations remain.
+        if config.feasibility_threshold is not None and is_feasible:
+            nothing_left = soft_violation_count == 0 if soft_violation_count is not None \
+                else current_score <= config.feasibility_threshold
+            if nothing_left and current_score <= config.feasibility_threshold:
+                return True, f"Optimal solution found (score: {current_score:.2f})"
 
-        # Check plateau detection
-        if config.enable_plateau_detection:
+        # Check plateau detection. A plateau while the best solution still has
+        # hard conflicts is not a good reason to stop: spend the remaining time
+        # budget trying to clear them instead.
+        if config.enable_plateau_detection and is_feasible:
             if self.generations_without_improvement >= config.plateau_generations:
                 return True, f"Plateau detected ({config.plateau_generations} generations without improvement)"
 
@@ -3935,15 +4939,15 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
     validation_result = validate_schedule_config(config)
 
     if validation_result['warnings']:
-        print("\n⚠️  WARNINGS:")
+        print("\nWARNINGS:")
         for warning in validation_result['warnings']:
-            print(f"   • {warning}")
+            print(f"   - {warning}")
             warnings.append(warning)
 
     if not validation_result['valid']:
-        print("\n❌ VALIDATION FAILED:")
+        print("\nVALIDATION FAILED:")
         for error in validation_result['errors']:
-            print(f"   • {error}")
+            print(f"   - {error}")
         print("="*70 + "\n")
 
         return {
@@ -3955,7 +4959,7 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
             'suggestion': 'Check faculty availability, room capacity, and teaching load assignments.'
         }
 
-    print("✅ Configuration validated successfully!")
+    print("Configuration validated successfully.")
     print("="*70 + "\n")
 
     # Validate
@@ -3967,27 +4971,27 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
             'warnings': ['No subject data to generate from.']
         }
 
-    # Prepare subjects (use qualification matrix for correct prof assignment)
+    # Prepare subjects. Each entry already belongs to one faculty, including
+    # when two faculty share the same course+section at different times.
     subjects_for_ga = []
     for subj in config.subjects:
-        # CRITICAL FIX: Use qualification matrix to get the CORRECT professor for this course-section
         assigned_prof = None
-        if config.qualification_matrix and subj.section:
-            course_section_key = f"{subj.code}-{subj.section}"
-            assigned_prof = config.qualification_matrix.course_section_to_faculty.get(
-                course_section_key)
-
-        # Fall back to allocated_professors (from reference schedule) if no matrix assignment
+        if subj.allocated_professors:
+            assigned_prof = subj.allocated_professors[0]
+        elif config.qualification_matrix and subj.section:
+            names = config.qualification_matrix.get_qualified_faculty(
+                subj.code, subj.section)
+            assigned_prof = names[0] if names else None
+        if isinstance(assigned_prof, list):
+            assigned_prof = assigned_prof[0] if assigned_prof else None
         if not assigned_prof:
-            prof_list = subj.allocated_professors or config.subject_allocations.get(
-                subj.code, [])
-            if prof_list:
-                assigned_prof = prof_list[0]
-            else:
-                # FINAL FALLBACK: Skip only if NO professor found anywhere
-                warnings.append(
-                    f"{subj.code}-{subj.section} has no allocated professor — skipping")
-                continue
+            prof_list = config.subject_allocations.get(subj.code, [])
+            assigned_prof = prof_list[0] if prof_list else None
+
+        if not assigned_prof:
+            warnings.append(
+                f"{subj.code}-{subj.section} has no allocated professor — skipping")
+            continue
 
         professor = assigned_prof
         weekly_slots = slots_for_duration(subj.weekly_hours)
@@ -3999,6 +5003,8 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
             'units': subj.units,
             'weekly_slots': weekly_slots,
             'allocated_professors': [professor],  # Single professor per course-section
+            'is_custom': bool(getattr(subj, 'is_custom', False)),
+            'preferred_room': getattr(subj, 'preferred_room', None),
         })
 
     if not subjects_for_ga:
@@ -4018,66 +5024,45 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
     # PHASE 2: GREEDY FEASIBILITY - GUARANTEE A WORKING SCHEDULE
     # ═══════════════════════════════════════════════════════════════
     print("\n" + "="*70)
-    print("PHASE 2: GREEDY FEASIBILITY SEARCH")
+    print("PHASE 2: GREEDY SEED SEARCH")
     print("="*70)
-    print("Finding a conflict-free base schedule...")
+    print("Building a base schedule (hardest subjects first)...")
 
     greedy_start = _time.time()
-    feasible_solution = greedy_feasible_schedule(config)
+    greedy_solution, greedy_unplaced = greedy_schedule(config)
+    greedy_solution, greedy_repairs = min_conflicts_repair(
+        greedy_solution, config, max_attempts=max(200, len(greedy_solution)))
     greedy_time = _time.time() - greedy_start
+    greedy_fitness = fitness_v3(greedy_solution, config)
 
-    if feasible_solution is None:
-        print(f"\n❌ No feasible schedule found after {greedy_time:.1f}s")
-        print("   This configuration is IMPOSSIBLE with current constraints.")
-        print("="*70 + "\n")
+    print(f"Greedy seed built in {greedy_time:.1f}s "
+          f"({len(greedy_solution)} meetings, {greedy_unplaced} needed repair)")
+    print(f"   Fitness: {greedy_fitness.total_score:.1f} "
+          f"(hard {greedy_fitness.hard_penalty:.0f}, soft {greedy_fitness.soft_penalty:.0f})")
 
-        return {
-            'success': False,
-            'message': 'No feasible schedule exists with current constraints.',
-            'schedules': [],
-            'warnings': warnings,
-            'errors': ['Unable to find conflict-free schedule. Configuration is over-constrained.'],
-            'suggestion': 'Try: Add more rooms, relax faculty availability, or reduce subject load.'
-        }
+    if not greedy_fitness.is_feasible:
+        warnings.append(
+            f"Greedy seed still has {len(greedy_fitness.hard_violations)} hard violation(s). "
+            'The genetic algorithm will keep trying to resolve them.'
+        )
 
-    # Evaluate the greedy solution
-    greedy_fitness = fitness_v3(feasible_solution, config)
-
-    print(f"✅ Feasible schedule found in {greedy_time:.1f}s!")
-    print(f"   Fitness: {greedy_fitness.total_score:.1f}")
-    print(f"   Hard violations: {len(greedy_fitness.hard_violations)}")
-    print(f"   Soft violations: {len(greedy_fitness.soft_violations)}")
-    print(f"   Hard penalty: {greedy_fitness.hard_penalty:.1f}")
-    print(f"   Soft penalty: {greedy_fitness.soft_penalty:.1f}")
-    print("\n🎯 Now optimizing with GA for better quality...")
-    print("="*70 + "\n")
-
-    # Add greedy solution to progress log
     progress_log.append({
         'phase': 'greedy',
         'elapsed_seconds': greedy_time,
         'fitness': greedy_fitness.total_score,
         'hard_penalty': greedy_fitness.hard_penalty,
         'soft_penalty': greedy_fitness.soft_penalty,
-        'is_feasible': greedy_fitness.is_feasible
+        'is_feasible': greedy_fitness.is_feasible,
+        'blocks_needing_repair': greedy_unplaced,
+        'repairs_made': greedy_repairs,
     })
+    print("="*70 + "\n")
 
-    # Build initial population
-    population = []
-
-    # Seed population with greedy solution (multiple copies with slight variations)
-    print("Seeding population with feasible solution...")
-    for i in range(min(config.pop_size // 2, 20)):  # Use up to half population or 20 copies
-        if i == 0:
-            # First copy is exact greedy solution
-            population.append(copy.deepcopy(feasible_solution))
-        else:
-            # Other copies have slight mutations for diversity
-            mutated = copy.deepcopy(feasible_solution)
-            mutated = mutate_v2(mutated, rooms, prof_availability, rate=0.1)
-            population.append(mutated)
-
-    print(f"✓ Added {len(population)} greedy-seeded chromosomes")
+    population = [copy.deepcopy(greedy_solution)]
+    for _ in range(min(config.pop_size // 2, 20) - 1):
+        mutated = copy.deepcopy(greedy_solution)
+        mutated = mutate_v2(mutated, rooms, prof_availability, rate=0.1)
+        population.append(mutated)
 
     # Continue with reference seeding if available
 
@@ -4102,6 +5087,7 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
     initial_mutation_rate = config.mutation_rate
     min_mutation_rate = config.mutation_rate * 0.5
     total_repairs = 0
+    run_deadline = term_state.start_time + config.time_limit_seconds
 
     while True:
         current_time = _time.time()
@@ -4116,7 +5102,25 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
 
         if best_breakdown is None or gen_best_breakdown.total_score < best_breakdown.total_score:
             best_breakdown = gen_best_breakdown
-            best_chrom = copy.deepcopy(population[gen_best_idx])
+            best_chrom = clone_chromosome(population[gen_best_idx])
+
+        # While the best solution still has conflicts, keep re-running
+        # min-conflicts on it (tie-breaking is randomised, so each attempt
+        # explores a different resolution).
+        if not best_breakdown.is_feasible:
+            candidate, _ = min_conflicts_repair(
+                clone_chromosome(best_chrom), config,
+                max_attempts=max(200, 2 * len(best_chrom)), deadline=run_deadline)
+            candidate_fb = fitness_v3(candidate, config)
+            if (candidate_fb.hard_penalty, candidate_fb.total_score) < \
+                    (best_breakdown.hard_penalty, best_breakdown.total_score):
+                best_chrom, best_breakdown = candidate, candidate_fb
+
+        # Hill-climb the best solution. Random crossover/mutation almost always
+        # breaks a feasible schedule, so without this the elite never improves.
+        best_chrom, best_breakdown = local_search_improve(
+            best_chrom, config, best_breakdown,
+            max_moves=config.local_search_moves, deadline=run_deadline)
 
         # Update termination state
         term_state.update(best_breakdown.total_score,
@@ -4146,7 +5150,8 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
 
         # Check termination criteria
         should_stop, reason = term_state.should_terminate(
-            config, best_breakdown.total_score, current_time, best_breakdown.is_feasible
+            config, best_breakdown.total_score, current_time,
+            best_breakdown.is_feasible, len(best_breakdown.soft_violations)
         )
 
         if should_stop:
@@ -4167,9 +5172,10 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
                                 key=lambda i: fitness_breakdowns[i].total_score)
         next_gen = []
 
-        # Elitism: preserve best N solutions
-        for i in range(min(config.elitism_count, len(sorted_indices))):
-            next_gen.append(copy.deepcopy(population[sorted_indices[i]]))
+        # Elitism: preserve best N solutions, including the hill-climbed best
+        next_gen.append(clone_chromosome(best_chrom))
+        for i in range(min(config.elitism_count, len(sorted_indices)) - 1):
+            next_gen.append(clone_chromosome(population[sorted_indices[i]]))
 
         # Generate offspring
         while len(next_gen) < config.pop_size:
@@ -4180,8 +5186,9 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
                     population, fitness_breakdowns, config)
                 child = crossover_v3(p1, p2, method='mixed')
 
-                # PHASE 1 FIX: Repair after crossover to fix inherited conflicts
-                child = repair_chromosome(child, config, max_attempts=50)
+                # Repair after crossover to fix inherited conflicts
+                child = repair_chromosome(
+                    child, config, max_attempts=50, deadline=run_deadline)
             else:
                 # No crossover, just select one parent
                 child = copy.deepcopy(tournament_select_v3(
@@ -4194,27 +5201,73 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
             # Optional repair pass (only if many violations)
             if use_targeted and random.random() < 0.3:
                 child, repairs = repair_pass_v3(
-                    child, config, max_iterations=50)
+                    child, config, max_iterations=50, deadline=run_deadline)
                 total_repairs += repairs
 
             next_gen.append(child)
 
+            # Never let offspring construction run past the time budget
+            if _time.time() >= run_deadline and len(next_gen) >= config.elitism_count + 1:
+                break
+
+        # Stuck: replace part of the population with fresh repaired schedules
+        # so the search can leave the basin it is trapped in.
+        if term_state.generations_without_improvement >= max(10, config.plateau_generations // 2):
+            immigrants = max(1, config.pop_size // 10)
+            for _ in range(immigrants):
+                if _time.time() >= run_deadline:
+                    break
+                fresh = build_chromosome(
+                    subjects_for_ga, rooms, prof_availability)
+                fresh = repair_chromosome(
+                    fresh, config, max_attempts=100, deadline=run_deadline)
+                slot = random.randrange(config.elitism_count, len(next_gen)) \
+                    if len(next_gen) > config.elitism_count else len(next_gen) - 1
+                next_gen[slot] = fresh
+
         population = next_gen
 
-    # Final repair pass if needed
+    # Final repair pass if needed, with its own reserved time slice.
+    # Only adopt the result if it actually improves on the best found solution.
     if best_breakdown.hard_penalty > 0:
-        best_chrom, repairs = repair_pass_v3(
-            best_chrom, config, max_iterations=300)
+        final_deadline = _time.time() + max(10.0,
+                                            config.time_limit_seconds * 0.1)
+        candidate, repairs = repair_pass_v3(
+            best_chrom, config, max_iterations=300, deadline=final_deadline)
         total_repairs += repairs
-        # Re-evaluate after repair
-        best_breakdown = fitness_v3(best_chrom, config)
+        candidate_breakdown = fitness_v3(candidate, config)
+        if (candidate_breakdown.hard_penalty, candidate_breakdown.total_score) < \
+                (best_breakdown.hard_penalty, best_breakdown.total_score):
+            best_chrom, best_breakdown = candidate, candidate_breakdown
+            print(f"Final repair improved the schedule: hard penalty "
+                  f"{best_breakdown.hard_penalty:.0f}")
+        else:
+            print("Final repair found no improvement; keeping best GA solution.")
 
-    # Calculate faculty loads
-    faculty_loads: Dict[str, float] = {}
-    for g in best_chrom:
-        if g.professor not in faculty_loads:
-            faculty_loads[g.professor] = 0
-        faculty_loads[g.professor] += g.units
+    # Nothing in the fitness function rewards completeness, so make sure every
+    # allocated course-section really made it into the winning chromosome.
+    best_chrom, restored = ensure_full_coverage(
+        best_chrom, subjects_for_ga, rooms, prof_availability)
+    if restored:
+        print(
+            f"Coverage check: re-added {len(restored)} missing course-section(s)")
+        best_chrom, _ = min_conflicts_repair(
+            best_chrom, config, max_attempts=max(200, 8 * len(restored)))
+        best_breakdown = fitness_v3(best_chrom, config)
+        warnings.append(
+            f"{len(restored)} course-section(s) were missing from the optimised "
+            f"schedule and had to be placed afterwards: {', '.join(restored[:10])}"
+            + (' ...' if len(restored) > 10 else ''))
+
+    unscheduled = [f"{s['code']}-{s['section']} ({s.get('professor') or '?'})"
+                   for s, _ in coverage_shortfall(best_chrom, subjects_for_ga)]
+    if unscheduled:
+        warnings.append(
+            f"{len(unscheduled)} course-section(s) could not be scheduled: "
+            + ', '.join(unscheduled[:10])
+            + (' ...' if len(unscheduled) > 10 else ''))
+
+    faculty_loads = unique_faculty_units(best_chrom)
 
     # Generate violation report for chatbot
     violation_report = _generate_violation_report(
@@ -4222,14 +5275,21 @@ def run_full_ga_v3(config: FullGAConfig, progress_callback=None) -> Dict:
 
     elapsed = _time.time() - term_state.start_time
 
+    schedule_rows = []
+    for g in best_chrom:
+        schedule_rows.extend(g.to_schedule_rows())
+
     return {
         'success': True,
-        'message': f"Generated {len(best_chrom)} entries in {elapsed:.1f}s. {term_state.termination_reason}",
-        'schedules': [g.to_dict() for g in best_chrom],
+        'message': f"Generated {len(schedule_rows)} entries in {elapsed:.1f}s. {term_state.termination_reason}",
+        'schedules': schedule_rows,
         'fitness_breakdown': best_breakdown.to_dict(),
         'generations_run': term_state.current_generation,
         'termination_reason': term_state.termination_reason,
         'faculty_loads': faculty_loads,
+        'course_sections_requested': len(subjects_for_ga),
+        'course_sections_scheduled': len(subjects_for_ga) - len(unscheduled),
+        'unscheduled_course_sections': unscheduled,
         'warnings': warnings,
         'elapsed_seconds': round(elapsed, 2),
         'progress_log': progress_log,
@@ -4281,19 +5341,16 @@ def _generate_violation_report(breakdown: FitnessBreakdown, faculty_loads: Dict[
         })
 
     # Faculty load summary
-    underloaded = [f for f, load in faculty_loads.items() if load < 12]
-    overloaded = []
-    for f in config.faculty:
-        load = faculty_loads.get(f.id, 0) or faculty_loads.get(f.name, 0)
-        if load > f.max_units:
-            overloaded.append(f.name)
+    if config.enforce_load_limits:
+        overloaded = []
+        for f in config.faculty:
+            load = faculty_loads.get(f.id, 0) or faculty_loads.get(f.name, 0)
+            if load > f.max_units:
+                overloaded.append(f.name)
 
-    if underloaded:
-        report['summary'].append(
-            f"⚠ {len(underloaded)} faculty below 12-unit minimum")
-    if overloaded:
-        report['summary'].append(
-            f"⚠ {len(overloaded)} faculty exceed maximum load")
+        if overloaded:
+            report['summary'].append(
+                f"⚠ {len(overloaded)} faculty exceed maximum load")
 
     return report
 
@@ -4343,6 +5400,8 @@ def run_full_ga(config: FullGAConfig) -> Dict:
             'units': subj.units,
             'weekly_slots': weekly_slots,
             'allocated_professors': prof_list,
+            'is_custom': bool(getattr(subj, 'is_custom', False)),
+            'preferred_room': getattr(subj, 'preferred_room', None),
         })
 
     if not subjects_for_ga:
@@ -4452,19 +5511,18 @@ def run_full_ga(config: FullGAConfig) -> Dict:
         warnings.append(
             f"{conflicts_remaining} conflict(s) could not be fully resolved")
 
-    # Calculate faculty loads
-    faculty_loads: Dict[str, float] = {}
-    for g in best_chrom:
-        if g.professor not in faculty_loads:
-            faculty_loads[g.professor] = 0
-        faculty_loads[g.professor] += g.units
+    faculty_loads = unique_faculty_units(best_chrom)
 
     elapsed = _time.time() - start_time
 
+    schedule_rows = []
+    for g in best_chrom:
+        schedule_rows.extend(g.to_schedule_rows())
+
     return {
         'success': True,
-        'message': f"Generated {len(best_chrom)} schedule entries in {elapsed:.1f}s with {conflicts_remaining} conflict(s)",
-        'schedules': [g.to_dict() for g in best_chrom],
+        'message': f"Generated {len(schedule_rows)} schedule entries in {elapsed:.1f}s with {conflicts_remaining} conflict(s)",
+        'schedules': schedule_rows,
         'fitness_score': best_score,
         'generations_run': generations_run,
         'conflicts_remaining': conflicts_remaining,
@@ -4521,7 +5579,7 @@ def run_ga(subjects: List[Dict],
     if best_chrom is None:
         best_chrom = population[0]
 
-    return [g.to_dict() for g in best_chrom]
+    return [row for g in best_chrom for row in g.to_schedule_rows()]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
