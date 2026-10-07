@@ -2588,21 +2588,6 @@ def add_research():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-        doc_ref = db.collection('research').document()
-        print(f"✅ Doc ref created with ID: {doc_ref.doc_id}")
-
-        print(f"💾 Saving to database...")
-        doc_ref.set(research_doc)
-        print(f"✅ Research saved successfully!")
-
-        research_doc['id'] = doc_ref.doc_id
-
-        return jsonify(research_doc), 201
-    except Exception as e:
-        print(f"❌ ERROR adding research: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/research/<research_id>', methods=['DELETE'])
@@ -2715,28 +2700,35 @@ def get_extensions():
 def add_extension():
     """Add a new extension activity for the current member."""
     try:
+        from services.supabase_service import supabase
+        from datetime import datetime
+
         uid = session.get('uid')
+        print(f"🔍 Add extension - UID from session: {uid}")
+
         if not uid:
+            print("❌ No UID in session!")
             return jsonify({'error': 'Not authenticated'}), 401
 
         data = request.get_json()
+        print(f"📥 Received extension data: {data}")
 
-        # Get current member info
-        members = db.collection('members').where(
-            'uid', '==', uid).limit(1).stream()
-        member_list = [{'id': d.id, **d.to_dict()} for d in members]
-
-        if not member_list:
+        # Find member by uid
+        member_response = supabase.table(
+            'members').select('*').eq('uid', uid).execute()
+        if not member_response.data:
+            print(f"❌ Member not found for UID: {uid}")
             return jsonify({'error': 'Member not found'}), 404
 
-        member = member_list[0]
+        member = member_response.data[0]
+        member_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
+        )
+        print(f"✅ Found member: {member_name} (ID: {member.get('id')})")
 
         # Prepare extension document
-        from datetime import datetime
         extension_doc = {
-            'uid': uid,
             'member_id': member['id'],
-            'member_name': f"{member.get('first', '')} {member.get('last', '')}".strip(),
+            'member_name': member_name,
             'extension_type': data.get('extension_type'),
             'title': data.get('title', ''),
             'role': data.get('role', ''),
@@ -2752,15 +2744,23 @@ def add_extension():
             'updated_at': datetime.utcnow().isoformat()
         }
 
-        # Add to database
-        doc_ref = db.collection('extensions').document()
-        doc_ref.set(extension_doc)
+        # Insert into Supabase
+        print(f"📄 Inserting extension into Supabase...")
+        insert_response = supabase.table(
+            'extensions').insert(extension_doc).execute()
 
-        extension_doc['id'] = doc_ref.doc_id
+        if not insert_response.data:
+            raise Exception("Failed to insert extension")
 
-        return jsonify(extension_doc), 201
+        new_extension = insert_response.data[0]
+        print(f"✅ Extension added with ID: {new_extension.get('id')}")
+
+        return jsonify(new_extension), 201
+
     except Exception as e:
-        print(f"Error adding extension: {e}")
+        print(f"❌ Error adding extension: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -2769,22 +2769,52 @@ def add_extension():
 def delete_extension(extension_id):
     """Delete an extension activity."""
     try:
+        from services.supabase_service import supabase
+
         uid = session.get('uid')
+        print(f"🗑️ Delete extension - ID: {extension_id}, UID: {uid}")
+
         if not uid:
+            print("❌ Not authenticated")
             return jsonify({'error': 'Not authenticated'}), 401
 
-        # Verify ownership
-        doc = db.collection('extensions').document(extension_id).get()
-        if not doc.exists:
+        # Verify ownership by checking member_id
+        print(f"🔍 Checking if extension exists...")
+        extension_response = supabase.table('extensions').select(
+            '*').eq('id', extension_id).execute()
+
+        if not extension_response.data:
+            print(f"❌ Extension not found: {extension_id}")
             return jsonify({'error': 'Extension not found'}), 404
 
-        if doc.to_dict().get('uid') != uid:
+        extension = extension_response.data[0]
+
+        # Get member to verify ownership
+        member_response = supabase.table(
+            'members').select('*').eq('uid', uid).execute()
+        if not member_response.data:
+            print(f"❌ Member not found for UID: {uid}")
             return jsonify({'error': 'Unauthorized'}), 403
 
-        db.collection('extensions').document(extension_id).delete()
+        member = member_response.data[0]
+
+        if extension.get('member_id') != member['id']:
+            print(
+                f"❌ Member mismatch: extension.member_id={extension.get('member_id')}, member.id={member['id']}")
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Delete from Supabase
+        print(f"🗑️ Deleting extension from Supabase...")
+        delete_response = supabase.table('extensions').delete().eq(
+            'id', extension_id).execute()
+        print(f"✅ Extension deleted")
+
         return jsonify({'status': 'ok'})
+
     except Exception as e:
-        print(f"Error deleting extension: {e}")
+        print(f"❌ Error deleting extension: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -5576,7 +5606,8 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']
+            : c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:
