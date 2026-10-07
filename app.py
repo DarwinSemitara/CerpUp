@@ -2554,6 +2554,7 @@ def add_research():
 
         # Prepare research document
         research_doc = {
+            'uid': uid,  # Add uid field required by database
             'member_id': member['id'],
             'member_name': member_name,
             'research_type': data.get('research_type'),
@@ -2566,8 +2567,8 @@ def add_research():
             'date_completion': data.get('date_completion') or None,
             'funding_agency': data.get('funding_agency', ''),
             'credit_units': data.get('credit_units', ''),
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'updated_at': datetime.now(timezone.utc).isoformat()
         }
 
         # Insert into Supabase
@@ -2727,6 +2728,7 @@ def add_extension():
 
         # Prepare extension document
         extension_doc = {
+            'uid': uid,  # Add uid field required by database
             'member_id': member['id'],
             'member_name': member_name,
             'extension_type': data.get('extension_type'),
@@ -2740,8 +2742,8 @@ def add_extension():
             'end_date': data.get('end_date') or None,
             'funding_agency': data.get('funding_agency', ''),
             'credit_units': data.get('credit_units', ''),
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'updated_at': datetime.now(timezone.utc).isoformat()
         }
 
         # Insert into Supabase
