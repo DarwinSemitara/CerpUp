@@ -73,6 +73,9 @@ function renderMembers() {
                 </span>`
                 : `<span style="color:#9ca3af;font-size:0.8rem;">—</span>`;
 
+            const memberFullName = `${m.first} ${m.last}`;
+            const memberRole = m.role || 'Faculty Member';
+
             return `
                 <tr>
                     <td>${photoHtml}</td>
@@ -81,12 +84,6 @@ function renderMembers() {
                     <td>${m.suffix || 'N/A'}</td>
                     <td><span style="text-transform:capitalize;">${m.type || 'faculty'}</span></td>
                     <td>${facultyBadge}</td>
-                    <td>
-                        <div class="member-actions">
-                            ${accountButton}
-                            <button class="action-btn action-btn-delete" onclick="openDeleteModal('${m.id || ''}')">Delete</button>
-                        </div>
-                    </td>
                 </tr>
             `;
         }).join('');
@@ -655,3 +652,295 @@ if (document.getElementById('courses-list')) {
     loadCourses();
     loadFacultyForCourses();
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// Activity Calendar - DISABLED (moved to comprehensive modal in dashboard)
+// ══════════════════════════════════════════════════════════════
+/*
+let activityData = {};
+let activityMemberId = null;
+let activityMemberName = '';
+let activityView = 'daily'; // 'daily' or 'monthly'
+let activityCurrentDate = new Date();
+
+async function openActivityModal(memberId, memberName, memberRole) {
+    activityMemberId = memberId;
+    activityMemberName = memberName;
+    activityView = 'daily';
+    activityCurrentDate = new Date();
+
+    document.getElementById('activity-member-name').textContent = memberName;
+    document.getElementById('activity-calendar-modal').classList.add('open');
+
+    // Reset toggle buttons
+    document.querySelectorAll('.activity-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === 'daily');
+    });
+
+    await loadActivityData();
+    renderActivityCalendar();
+}
+
+function closeActivityModal() {
+    document.getElementById('activity-calendar-modal').classList.remove('open');
+    activityMemberId = null;
+    activityData = {};
+}
+
+let activityLoadedYear = null;
+
+async function loadActivityData() {
+    if (!activityMemberId) return;
+
+    const year = activityCurrentDate.getFullYear();
+
+    // Only load if we haven't loaded this year yet
+    if (activityLoadedYear === year && Object.keys(activityData).length > 0) {
+        return; // Use cached data
+    }
+
+    try {
+        const res = await fetch(`/api/members/${activityMemberId}/activity?year=${year}`);
+        if (!res.ok) throw new Error('Failed to load activity data');
+        activityData = await res.json();
+        activityLoadedYear = year;
+    } catch (error) {
+        console.error('Failed to load activity:', error);
+        activityData = {};
+        activityLoadedYear = null;
+    }
+}
+
+function switchActivityView(view) {
+    activityView = view;
+    document.querySelectorAll('.activity-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === view);
+    });
+    renderActivityCalendar();
+}
+
+async function activityPrevPeriod() {
+    const oldYear = activityCurrentDate.getFullYear();
+    activityCurrentDate.setFullYear(oldYear - 1);
+    const newYear = activityCurrentDate.getFullYear();
+
+    if (newYear !== activityLoadedYear) {
+        await loadActivityData();
+    }
+    renderActivityCalendar();
+}
+
+async function activityNextPeriod() {
+    const oldYear = activityCurrentDate.getFullYear();
+    activityCurrentDate.setFullYear(oldYear + 1);
+    const newYear = activityCurrentDate.getFullYear();
+
+    if (newYear !== activityLoadedYear) {
+        await loadActivityData();
+    }
+    renderActivityCalendar();
+}
+
+function activityGoToToday() {
+    activityCurrentDate = new Date();
+    loadActivityData().then(() => renderActivityCalendar());
+}
+
+function renderActivityCalendar() {
+    const container = document.getElementById('activity-calendar-grid');
+    const labelEl = document.getElementById('activity-period-label');
+
+    if (!container || !labelEl) return;
+
+    if (activityView === 'daily') {
+        renderDailyView(container, labelEl);
+    } else {
+        renderMonthlyView(container, labelEl);
+    }
+}
+
+function renderDailyView(container, labelEl) {
+    const year = activityCurrentDate.getFullYear();
+    labelEl.textContent = year.toString();
+
+    // Build GitHub-style yearly calendar
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    let html = '<div class="activity-year-view">';
+
+    // Weekday labels column
+    html += '<div class="activity-weekday-labels">';
+    html += '<div class="activity-weekday-label">Mon</div>';
+    html += '<div class="activity-weekday-label"></div>';
+    html += '<div class="activity-weekday-label">Wed</div>';
+    html += '<div class="activity-weekday-label"></div>';
+    html += '<div class="activity-weekday-label">Fri</div>';
+    html += '<div class="activity-weekday-label"></div>';
+    html += '<div class="activity-weekday-label"></div>';
+    html += '</div>';
+
+    // Each month column
+    for (let month = 0; month < 12; month++) {
+        html += '<div class="activity-month-col">';
+        html += `<div class="activity-month-label">${monthNames[month]}</div>`;
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+        // Build a 2D grid: weeks[weekIndex][dayOfWeek]
+        const maxWeeks = 6;
+        const weeks = Array.from({ length: maxWeeks }, () => Array(7).fill(null));
+
+        // Fill in the days
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dayOfWeek = date.getDay(); // 0 = Sunday
+            const daysSinceStart = day - 1 + startingDayOfWeek;
+            const weekIndex = Math.floor(daysSinceStart / 7);
+            weeks[weekIndex][dayOfWeek] = day;
+        }
+
+        // Render as 7 rows (days of week) × N columns (weeks)
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+            html += '<div class="activity-week-row">';
+            for (let weekIndex = 0; weekIndex < maxWeeks; weekIndex++) {
+                const day = weeks[weekIndex][dayOfWeek];
+                if (day) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const activityCount = (activityData.daily && activityData.daily[dateStr]) || { total: 0 };
+                    const level = getActivityLevel(activityCount.total);
+
+                    html += `<div class="activity-box-small ${level}"
+                                  data-date="${dateStr}"
+                                  data-count="${activityCount.total}"
+                                  data-research="${activityCount.research || 0}"
+                                  data-extensions="${activityCount.extensions || 0}"
+                                  data-admin="${activityCount.admin || 0}"
+                                  onmouseenter="showActivityTooltip(event)"
+                                  onmouseleave="hideActivityTooltip()"></div>`;
+                } else {
+                    html += `<div style="width:10px;height:10px;"></div>`;
+                }
+            }
+            html += '</div>';
+        }
+
+        html += '</div>'; // Close month column
+    }
+
+    html += '</div>'; // Close year view
+    container.innerHTML = html;
+}
+
+function renderMonthlyView(container, labelEl) {
+    const year = activityCurrentDate.getFullYear();
+    labelEl.textContent = year.toString();
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+
+    let html = '<div class="activity-month-grid">';
+
+    for (let month = 0; month < 12; month++) {
+        const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+        const monthData = (activityData.monthly && activityData.monthly[monthKey]) || { total: 0 };
+
+        html += `<div class="activity-month-box"
+                      data-month="${monthKey}"
+                      data-count="${monthData.total}"
+                      data-research="${monthData.research || 0}"
+                      data-extensions="${monthData.extensions || 0}"
+                      data-admin="${monthData.admin || 0}"
+                      onmouseenter="showActivityTooltip(event)"
+                      onmouseleave="hideActivityTooltip()">
+                    <div class="activity-month-name">${monthNames[month]}</div>
+                    <div class="activity-month-count">${monthData.total}</div>
+                </div>`;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function getActivityLevel(count) {
+    if (count === 0) return 'empty';
+    if (count <= 5) return 'level-1';
+    if (count <= 10) return 'level-2';
+    return 'level-3';
+}
+
+function showActivityTooltip(event) {
+    const box = event.target;
+    const tooltip = document.getElementById('activity-tooltip');
+    if (!tooltip) return;
+
+    const total = parseInt(box.dataset.count) || 0;
+    const research = parseInt(box.dataset.research) || 0;
+    const extensions = parseInt(box.dataset.extensions) || 0;
+    const admin = parseInt(box.dataset.admin) || 0;
+
+    // Get date string
+    let dateStr = '';
+    if (box.dataset.date) {
+        const date = new Date(box.dataset.date + 'T00:00:00');
+        dateStr = date.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' });
+    } else if (box.dataset.month) {
+        const [year, month] = box.dataset.month.split('-');
+        const date = new Date(year, parseInt(month) - 1, 1);
+        dateStr = date.toLocaleDateString('default', { month: 'long', year: 'numeric' });
+    }
+
+    const dateEl = tooltip.querySelector('.activity-tooltip-date');
+    const breakdownEl = tooltip.querySelector('.activity-tooltip-breakdown');
+
+    dateEl.textContent = dateStr;
+
+    if (total === 0) {
+        breakdownEl.innerHTML = '<div style="font-size:0.7rem;color:rgba(255,255,255,0.7);">No activity</div>';
+    } else {
+        breakdownEl.innerHTML = `
+            <div class="activity-tooltip-item">
+                <span>Total:</span>
+                <span style="font-weight:700;">${total}</span>
+            </div>
+            ${research > 0 ? `<div class="activity-tooltip-item"><span>Research:</span><span>${research}</span></div>` : ''}
+            ${extensions > 0 ? `<div class="activity-tooltip-item"><span>Extensions:</span><span>${extensions}</span></div>` : ''}
+            ${admin > 0 ? `<div class="activity-tooltip-item"><span>Admin:</span><span>${admin}</span></div>` : ''}
+        `;
+    }
+
+    tooltip.classList.add('show');
+    positionTooltip(event, tooltip);
+}
+
+function positionTooltip(event, tooltip) {
+    const box = event.target.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+
+    let left = box.left + (box.width / 2) - (tooltipRect.width / 2);
+    let top = box.top - tooltipRect.height - 8;
+
+    // Keep tooltip in viewport
+    if (left < 10) left = 10;
+    if (left + tooltipRect.width > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipRect.width - 10;
+    }
+    if (top < 10) {
+        top = box.bottom + 8;
+    }
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+}
+
+function hideActivityTooltip() {
+    const tooltip = document.getElementById('activity-tooltip');
+    if (tooltip) {
+        tooltip.classList.remove('show');
+    }
+}
+*/
+// END Activity Calendar - functionality moved to dashboard modal

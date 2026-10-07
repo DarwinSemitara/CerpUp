@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/static/js/forecast_chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS Version 1.2 - Fixed active padding v2 -->
     <style>
@@ -981,6 +982,86 @@
             border-radius: 50%;
         }
 
+        .forecast-stat-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            margin-bottom: 14px;
+            align-items: center;
+        }
+
+        .forecast-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #374151;
+        }
+
+        .forecast-stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .forecast-stat-label {
+            color: #6b7280;
+        }
+
+        .forecast-stat-value {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .forecast-stat-note {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: #9ca3af;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .forecast-charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .forecast-key {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: #9ca3af;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .forecast-key span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .forecast-key-line {
+            width: 22px;
+            height: 0;
+            border-top: 2.5px solid #6b0f1a;
+        }
+
+        .forecast-key-line.dashed {
+            border-top-style: dashed;
+            border-color: #9ca3af;
+        }
+
+        @media (max-width: 1100px) {
+            .forecast-charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .members-container {
             background: white;
             border-radius: 12px;
@@ -1100,77 +1181,37 @@
                 <!-- Dashboard Content (shown by default) -->
                 <div id="dashboard-view">
                     <!-- Charts Row -->
-                    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px;">
-                        <!-- Publications Line Chart -->
+                    <div class="forecast-charts-grid">
                         <div class="chart-card">
                             <div class="chart-header">
                                 <div>
-                                    <div class="chart-title">Publications Report</div>
-                                    <div class="chart-subtitle">
-                                        <span id="pub-year-label">This Year</span> vs <span
-                                            id="pub-prev-year-label">Last Year</span>
-                                    </div>
-                                </div>
-                                <div class="year-selector">
-                                    <button class="year-btn" onclick="toggleYearDropdown('pub')">
-                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <span id="pub-year-btn-label">This Year</span>
-                                        <svg style="width:12px;height:12px;flex-shrink:0;" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                                d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
-                                    <div class="year-dropdown" id="pub-year-dropdown"></div>
+                                    <div class="chart-title">Research &amp; extension outlook</div>
+                                    <div class="chart-subtitle" id="forecast-subtitle">Yearly volume with a 3-year ARIMA outlook</div>
                                 </div>
                             </div>
-                            <!-- Inline legend -->
-                            <div style="display:flex;gap:16px;margin-bottom:12px;">
-                                <div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:#374151;">
-                                    <div style="width:24px;height:3px;background:#6b0f1a;border-radius:2px;"></div>
-                                    <span id="pub-legend-current">This Year</span>
-                                </div>
-                                <div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:#9ca3af;">
-                                    <div
-                                        style="width:24px;height:3px;background:#9b1a2a;border-radius:2px;border-top:2px dashed #9b1a2a;">
-                                    </div>
-                                    <span id="pub-legend-prev">Last Year</span>
-                                </div>
-                            </div>
-                            <div style="position:relative;height:240px;">
+                            <div class="forecast-stat-row" id="forecast-summary"></div>
+                            <div style="position:relative;height:260px;">
                                 <canvas id="publicationsChart"></canvas>
+                            </div>
+                            <div class="forecast-key">
+                                <span><i class="forecast-key-line"></i> Recorded</span>
+                                <span><i class="forecast-key-line dashed"></i> Forecast</span>
                             </div>
                         </div>
 
-                        <!-- TAP-HSP Pie Chart (no year dropdown) -->
                         <div class="chart-card" style="display:flex;flex-direction:column;">
                             <div class="chart-header" style="margin-bottom:12px;">
                                 <div>
-                                    <div class="chart-title">TAP-HSP Progress</div>
-                                    <div class="chart-subtitle">Current status</div>
+                                    <div class="chart-title">This year's mix</div>
+                                    <div class="chart-subtitle">Papers, projects, extensions, FSRs</div>
                                 </div>
                             </div>
                             <div
                                 style="display:flex;flex-direction:column;align-items:center;gap:16px;flex:1;justify-content:center;">
-                                <div style="width:150px;height:150px;position:relative;">
+                                <div style="width:168px;height:168px;position:relative;">
                                     <canvas id="tapChart"></canvas>
                                 </div>
-                                <div style="display:flex;flex-direction:column;gap:8px;width:100%;">
-                                    <div class="legend-item">
-                                        <div class="legend-dot" style="background:#6b0f1a;"></div><span>Ongoing</span>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-dot" style="background:#9b1a2a;"></div>
-                                        <span>Finished</span>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-dot" style="background:#d4a0a8;"></div><span>Pending</span>
-                                    </div>
-                                </div>
+                                <div id="mix-legend" style="display:flex;flex-direction:column;gap:8px;width:100%;"></div>
                             </div>
                         </div>
                     </div>
@@ -1557,233 +1598,22 @@
 
         // Keep dashboard DOM alive so charts persist
         const dashboardView = document.getElementById('dashboard-view');
-        let pubChart = null, tapChartInst = null;
         let membersData = [];
         let membersFiltered = [];
         let membersPage = 1;
         const MEMBERS_PAGE_SIZE = 8;
 
-        const pubData = {
-            'this': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        };
-        const pubPrevYear = { 'this': 2024, 2025: 2024, 2024: 2023, 2023: 2022 };
-        const pubData2022 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-        // TAP data: [ongoing, finished, pending]
-        let tapCurrent = [0, 0, 0];
-        let pubYear = 'this';
-
-        // Fetch real data from API
-        (async function loadDashboardStats() {
-            try {
-                const res = await fetch('/api/dashboard/stats');
-                if (res.ok) {
-                    const stats = await res.json();
-                    pubData['this'] = stats.pub_this_year || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-                    tapCurrent = stats.tap || [0, 0, 0];
-                    initCharts();
-                }
-            } catch (e) { console.warn('Dashboard stats fetch failed:', e); }
-        })();
-
-        // TAP data loaded from API above
-
-        function getPrevData(y) {
-            const prev = pubPrevYear[y];
-            return pubData[prev] || pubData2022;
-        }
-
-        function getYearLabel(y) {
-            return y === 'this' ? 'This Year' : String(y);
-        }
-        function getPrevLabel(y) {
-            const prev = pubPrevYear[y];
-            return prev ? String(prev) : '—';
-        }
-
-        function initCharts() {
-            if (pubChart) { pubChart.destroy(); pubChart = null; }
-            if (tapChartInst) { tapChartInst.destroy(); tapChartInst = null; }
-
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-            // ── Line chart ──
-            const pubCtx = document.getElementById('publicationsChart');
-            if (pubCtx) {
-                pubChart = new Chart(pubCtx, {
-                    type: 'line',
-                    data: {
-                        labels: months,
-                        datasets: [
-                            {
-                                label: getYearLabel(pubYear),
-                                data: pubData[pubYear],
-                                borderColor: '#6b0f1a',  // maroon
-                                backgroundColor: 'rgba(107,15,26,0.08)',
-                                borderWidth: 3,
-                                pointBackgroundColor: '#6b0f1a',
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 2,
-                                pointRadius: 5,
-                                pointHoverRadius: 7,
-                                pointHoverBorderWidth: 2,
-                                fill: true,
-                                tension: 0,   // straight lines for seamless connection
-                                spanGaps: false,  // ensure no gaps
-                            },
-                            {
-                                label: getPrevLabel(pubYear),
-                                data: getPrevData(pubYear),
-                                borderColor: '#9b1a2a',  // lighter maroon
-                                backgroundColor: 'rgba(155,26,42,0.05)',
-                                borderWidth: 2.5,
-                                borderDash: [6, 4],
-                                pointBackgroundColor: '#9b1a2a',
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 1.5,
-                                pointRadius: 4,
-                                pointHoverRadius: 6,
-                                pointHoverBorderWidth: 2,
-                                fill: false,
-                                tension: 0,   // straight lines for seamless connection
-                                spanGaps: false,  // ensure no gaps
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: 'rgba(0,0,0,0.8)',
-                                padding: 10,
-                                cornerRadius: 6,
-                                titleFont: { size: 12, weight: '600' },
-                                bodyFont: { size: 11 },
-                                callbacks: {
-                                    title: items => months[items[0].dataIndex],
-                                    label: ctx => ` ${ctx.dataset.label}: ${ctx.raw} publications`
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                position: 'left',
-                                grid: {
-                                    color: '#f3f4f6',
-                                    drawBorder: false
-                                },
-                                ticks: {
-                                    font: { size: 11 },
-                                    stepSize: 2,
-                                    padding: 8
-                                }
-                            },
-                            x: {
-                                position: 'bottom',
-                                grid: { display: false },
-                                ticks: {
-                                    font: { size: 11 },
-                                    padding: 6
-                                }
-                            }
-                        },
-                        elements: {
-                            line: {
-                                borderJoinStyle: 'miter'  // sharp corners for clean connections
-                            }
-                        }
-                    }
-                });
-            }
-
-            // ── Pie chart ──
-            const tapCtx = document.getElementById('tapChart');
-            if (tapCtx) {
-                const [ongoing, finished, pending] = tapCurrent;
-                tapChartInst = new Chart(tapCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: ['Ongoing', 'Finished', 'Pending'],
-                        datasets: [{
-                            data: [ongoing, finished, pending],
-                            backgroundColor: ['#6b0f1a', '#9b1a2a', '#d4a0a8'],
-                            borderColor: ['#5a0d16', '#7d1522', '#b88590'],
-                            borderWidth: 1,
-                            hoverOffset: 6,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: ctx => {
-                                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                                        const pct = ((ctx.raw / total) * 100).toFixed(1);
-                                        return ` ${ctx.label}: ${ctx.raw} (${pct}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Build pub year dropdown only
-            buildYearDropdown('pub', ['this', 2025, 2024, 2023], pubYear, y => {
-                pubYear = y;
-                const curLabel = getYearLabel(y);
-                const prevLabel = getPrevLabel(y);
-                document.getElementById('pub-year-label').textContent = curLabel;
-                document.getElementById('pub-prev-year-label').textContent = prevLabel;
-                document.getElementById('pub-year-btn-label').textContent = curLabel;
-                document.getElementById('pub-legend-current').textContent = curLabel;
-                document.getElementById('pub-legend-prev').textContent = prevLabel;
-                if (pubChart) {
-                    pubChart.data.datasets[0].label = curLabel;
-                    pubChart.data.datasets[0].data = pubData[y];
-                    pubChart.data.datasets[1].label = prevLabel;
-                    pubChart.data.datasets[1].data = getPrevData(y);
-                    pubChart.update();
-                }
+        if (typeof loadDashboardForecast === 'function') {
+            loadDashboardForecast({
+                lineCanvasId: 'publicationsChart',
+                mixCanvasId: 'tapChart',
+                legendId: 'mix-legend',
+                summaryId: 'forecast-summary',
+                subtitleId: 'forecast-subtitle',
+                scope: 'admin',
+                horizon: 3,
             });
         }
-
-        function buildYearDropdown(prefix, years, current, onChange) {
-            const dd = document.getElementById(`${prefix}-year-dropdown`);
-            if (!dd) return;
-            dd.innerHTML = years.map(y => {
-                const label = y === 'this' ? 'This Year' : String(y);
-                const isActive = y === current || (y === 'this' && current === 'this');
-                return `<div class="year-option ${isActive ? 'active' : ''}" onclick="selectYear('${prefix}', '${y}')">${label}</div>`;
-            }).join('');
-            window[`_${prefix}YearCb`] = onChange;
-        }
-
-        window.selectYear = function (prefix, y) {
-            // Convert numeric string back to number if needed
-            const val = (y === 'this') ? 'this' : parseInt(y);
-            window[`_${prefix}YearCb`]?.(val);
-            document.getElementById(`${prefix}-year-dropdown`).classList.remove('open');
-            document.querySelectorAll(`#${prefix}-year-dropdown .year-option`).forEach(o => {
-                const oVal = o.textContent === 'This Year' ? 'this' : parseInt(o.textContent);
-                o.classList.toggle('active', oVal === val);
-            });
-        };
-
-        window.toggleYearDropdown = function (prefix) {
-            const dd = document.getElementById(`${prefix}-year-dropdown`);
-            if (!dd) return;
-            const isOpen = dd.classList.contains('open');
-            document.querySelectorAll('.year-dropdown.open').forEach(d => d.classList.remove('open'));
-            if (!isOpen) dd.classList.add('open');
-        };
 
         // ── Members ───────────────────────────────────────────────────
 

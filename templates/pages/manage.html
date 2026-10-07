@@ -255,7 +255,6 @@
                         <th>Suffix</th>
                         <th>Type</th>
                         <th>Faculty</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="members-tbody">
@@ -518,6 +517,321 @@
         </div>
     </div>
 </div>
+
+<!-- Success Modal -->
+<div class="modal" id="success-modal">
+    <div class="modal-box" style="max-width: 400px;">
+        <div class="modal-body" style="text-align: center; padding: 32px 24px;">
+            <div
+                style="width: 64px; height: 64px; margin: 0 auto 16px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h3 style="font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 8px;">Success!</h3>
+            <p id="success-message" style="font-size: 0.875rem; color: #6b7280;"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Calendar Modal - DISABLED (moved to dashboard) -->
+{% if false %}
+<div class="modal" id="activity-calendar-modal">
+    <div class="modal-box" style="max-width: 1100px;">
+        <div class="modal-header" style="position:relative;padding-right:60px;">
+            <div>
+                <h3 class="modal-title" id="activity-member-name">Activity Calendar</h3>
+            </div>
+            <button class="activity-modal-close" onclick="closeActivityModal()">✕</button>
+        </div>
+        <div class="modal-body" style="padding:24px;">
+            <!-- Controls -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                <!-- Navigation (Center) -->
+                <div style="display:flex;align-items:center;gap:10px;margin:0 auto;">
+                    <button class="activity-nav-btn-sm" onclick="activityPrevPeriod()">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div style="min-width:120px;text-align:center;">
+                        <span id="activity-period-label" style="font-size:0.9rem;font-weight:700;color:#111827;"></span>
+                    </div>
+                    <button class="activity-nav-btn-sm" onclick="activityNextPeriod()">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Today Button (Right) -->
+                <button class="activity-today-btn-sm" onclick="activityGoToToday()">
+                    Today
+                </button>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div id="activity-calendar-grid"></div>
+
+            <!-- Legend -->
+            <div
+                style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid #e5e7eb;">
+                <span style="font-size:0.75rem;color:#6b7280;font-weight:600;">Less</span>
+                <div style="display:flex;gap:4px;">
+                    <div class="activity-legend-box" style="background:#f3f4f6;" title="No activity"></div>
+                    <div class="activity-legend-box" style="background:#bbf7d0;" title="1-5 activities"></div>
+                    <div class="activity-legend-box" style="background:#22c55e;" title="6-10 activities"></div>
+                    <div class="activity-legend-box" style="background:#15803d;" title="11+ activities"></div>
+                </div>
+                <span style="font-size:0.75rem;color:#6b7280;font-weight:600;">More</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Activity Calendar Styles */
+    .activity-modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: none;
+        background: #f3f4f6;
+        color: #6b7280;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        font-weight: 300;
+        transition: all 0.2s;
+        z-index: 10;
+    }
+
+    .activity-modal-close:hover {
+        background: #ef4444;
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .activity-nav-btn-sm {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+
+    .activity-nav-btn-sm:hover {
+        border-color: #22c55e;
+        background: #f0fdf4;
+        color: #15803d;
+    }
+
+    .activity-today-btn-sm {
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        color: #374151;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .activity-today-btn-sm:hover {
+        border-color: #22c55e;
+        background: #f0fdf4;
+        color: #15803d;
+    }
+
+    .activity-toggle-container {
+        display: flex;
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 3px;
+        gap: 2px;
+    }
+
+    .activity-toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .activity-toggle-btn:hover {
+        color: #374151;
+    }
+
+    .activity-toggle-btn.active {
+        background: white;
+        color: #15803d;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    #activity-calendar-grid {
+        min-height: 200px;
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* GitHub-style yearly view */
+    .activity-year-view {
+        display: flex;
+        gap: 4px;
+        align-items: start;
+        overflow-x: auto;
+    }
+
+    .activity-month-col {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        flex-shrink: 0;
+    }
+
+    .activity-month-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-align: center;
+        margin-bottom: 4px;
+        height: 16px;
+    }
+
+    .activity-week-row {
+        display: flex;
+        gap: 3px;
+    }
+
+    .activity-weekday-labels {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding-top: 20px;
+        margin-right: 8px;
+        flex-shrink: 0;
+    }
+
+    .activity-weekday-label {
+        font-size: 0.65rem;
+        color: #9ca3af;
+        text-align: right;
+        height: 10px;
+        line-height: 10px;
+    }
+
+    .activity-box-small {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.15s;
+        border: 1px solid rgba(27, 31, 35, 0.06);
+    }
+
+    .activity-box-small:hover {
+        transform: scale(1.4);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        z-index: 100;
+        border-color: #22c55e;
+    }
+
+    .activity-box-small.empty {
+        background: #ebedf0;
+    }
+
+    .activity-box-small.level-1 {
+        background: #c6e9d2;
+    }
+
+    .activity-box-small.level-2 {
+        background: #7fc89c;
+    }
+
+    .activity-box-small.level-3 {
+        background: #28a745;
+    }
+
+    .activity-legend-box {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        border: 1px solid rgba(27, 31, 35, 0.06);
+        cursor: help;
+    }
+
+    /* Tooltip */
+    .activity-tooltip {
+        position: fixed;
+        background: #111827;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        pointer-events: none;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        display: none;
+        white-space: nowrap;
+    }
+
+    .activity-tooltip.show {
+        display: block;
+    }
+
+    .activity-tooltip-date {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .activity-tooltip-breakdown {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .activity-tooltip-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.7rem;
+    }
+</style>
+
+<!-- Tooltip for activity boxes -->
+<div class="activity-tooltip" id="activity-tooltip">
+    <div class="activity-tooltip-date"></div>
+    <div class="activity-tooltip-breakdown"></div>
+</div>
+{% endif %}
+<!-- END Activity Calendar Modal -->
 
 <script src="/static/js/manage.js"></script>
 {% endblock %}

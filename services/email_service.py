@@ -429,3 +429,162 @@ CERP Team
         return True, "Development mode: Welcome email skipped"
 
     return success, message
+
+
+def send_password_reset_email(email, name, code):
+    """
+    Send password reset code email
+    Returns: (success: bool, message: str)
+    """
+    subject = 'CERP Password Reset Code'
+
+    # Plain text version
+    text_body = f"""
+Hello {name},
+
+You recently requested to reset your CERP account password.
+
+Your password reset code is: {code}
+
+This code will expire in 15 minutes.
+
+If you didn't request this code, please ignore this email and ensure your account is secure.
+
+Best regards,
+CERP Team
+    """
+
+    # HTML version
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{ 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6; 
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }}
+        .container {{ 
+            max-width: 600px; 
+            margin: 40px auto; 
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }}
+        .header {{ 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white; 
+            padding: 30px 20px; 
+            text-align: center;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }}
+        .content {{ 
+            padding: 40px 30px;
+        }}
+        .code-box {{ 
+            background: linear-gradient(135deg, #fef3f2 0%, #fee2e2 100%);
+            border: 3px solid #ef4444;
+            border-radius: 12px; 
+            padding: 30px; 
+            margin: 30px 0; 
+            text-align: center;
+        }}
+        .code {{ 
+            font-size: 42px; 
+            font-weight: bold; 
+            color: #dc2626; 
+            letter-spacing: 12px;
+            font-family: 'Courier New', monospace;
+        }}
+        .warning {{
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+        .security-notice {{
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+        .footer {{ 
+            text-align: center; 
+            padding: 20px;
+            background: #f9fafb;
+            font-size: 13px; 
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Password Reset Request</h1>
+        </div>
+        <div class="content">
+            <p style="font-size: 16px; margin: 0 0 20px 0;">Hello <strong>{name}</strong>,</p>
+            <p style="font-size: 15px; color: #4b5563;">You recently requested to reset your CERP account password.</p>
+            
+            <p style="font-size: 15px; color: #4b5563;">Your password reset code is:</p>
+            
+            <div class="code-box">
+                <div class="code">{code}</div>
+            </div>
+            
+            <div class="warning">
+                <strong>⏰ Important:</strong> This code will expire in <strong>15 minutes</strong>.
+            </div>
+            
+            <div class="security-notice">
+                <strong>🔒 Security Notice:</strong> If you didn't request this password reset, please ignore this email and ensure your account is secure. Consider changing your password if you suspect unauthorized access.
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280;">
+                Enter this code in the password reset form to proceed with creating a new password.
+            </p>
+            
+            <p style="font-size: 15px; margin-top: 30px;">
+                Best regards,<br>
+                <strong>CERP Team</strong>
+            </p>
+        </div>
+        <div class="footer">
+            <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>
+    """
+
+    # Always print code to console for easy testing
+    print("\n" + "="*70)
+    print("🔑 PASSWORD RESET CODE GENERATED")
+    print("="*70)
+    print(f"📧 Email: {email}")
+    print(f"👤 Name:  {name}")
+    print(f"🔢 Code:  {code}")
+    print(f"⏰ Valid for: 15 minutes")
+    print("="*70 + "\n")
+
+    success, message = send_email_via_smtp(
+        email, subject, html_body, text_body)
+
+    # Always log the code for development
+    logger.info(f"Password reset code for {email}: {code}")
+
+    return success, message
