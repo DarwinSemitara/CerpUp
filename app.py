@@ -1,7 +1,9 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, send_file, make_response
+﻿from forgot_password_routes import register_forgot_password_routes
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, send_file, make_response
 from dotenv import load_dotenv
 from services.supabase_service import verify_access_token as verify_id_token, db, supabase
 from services.cloudinary_service import upload_member_photo, delete_member_photo
+from services.audit_service import log_audit_action, get_recent_audit_logs, mark_audit_log_as_read, mark_all_audit_logs_as_read, AuditAction
 from datetime import datetime, timezone
 import os
 import re
@@ -48,9 +50,9 @@ def retry_supabase_query(query_func, max_retries=3, initial_delay=0.5):
             error_msg = str(e)
 
             # Check if it's a retryable error (network/timeout/connection errors)
-            if ('WinError 10035' in error_msg or 'ReadError' in error_msg or 
+            if ('WinError 10035' in error_msg or 'ReadError' in error_msg or
                 'timeout' in error_msg.lower() or 'ConnectionTerminated' in error_msg or
-                'RemoteProtocolError' in error_msg or 'connection' in error_msg.lower()):
+                    'RemoteProtocolError' in error_msg or 'connection' in error_msg.lower()):
                 if attempt < max_retries - 1:
                     logger.warning(
                         f"Supabase query failed (attempt {attempt + 1}/{max_retries}): {type(e).__name__}. Retrying in {delay}s...")
@@ -326,7 +328,7 @@ def api_login():
         # Get credentials from environment variables for security
         ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'cerp_admin')
         ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'CerpAdmin783695!')
-        
+
         if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             session.permanent = True  # Make session persistent
             session['uid'] = 'admin-hardcoded'
@@ -489,25 +491,28 @@ def get_current_member():
 
         if member_list:
             member_data = member_list[0]
-            
+
             # Build fullName from 'first' and 'last' fields (same as staff endpoint does)
             first = member_data.get('first', '')
             last = member_data.get('last', '')
             suffix = member_data.get('suffix', '')
-            
+
             full_name = f"{first} {last}".strip()
             if suffix and full_name:
                 full_name += f", {suffix}"
-            
+
             # Add standardized name fields to response
             member_data['firstName'] = first
             member_data['lastName'] = last
-            member_data['fullName'] = full_name if full_name else member_data.get('email', 'Unknown User')
-            
+            member_data['fullName'] = full_name if full_name else member_data.get(
+                'email', 'Unknown User')
+
             # Override 'role' field with session role (admin/user), not job title
-            member_data['role'] = role  # Use session role, not database role field
-            
-            logger.info(f"✅ GET_CURRENT_MEMBER - Found member: {full_name or member_data.get('email', 'Unknown')}")
+            # Use session role, not database role field
+            member_data['role'] = role
+
+            logger.info(
+                f"✅ GET_CURRENT_MEMBER - Found member: {full_name or member_data.get('email', 'Unknown')}")
             return jsonify(member_data)
         else:
             logger.warning(
@@ -716,16 +721,25 @@ def section_schedule_section():
 @app.route('/schedule/courses/')
 @login_required
 def schedule_courses():
-    """Courses and Faculty management page."""
+    """Courses and Faculty management page (V2 - Redesigned with 4-step workflow)."""
     if is_partial():
-        return render_template('partials/courses.html')
+        return render_template('partials/courses2.html')
     email = session.get('email', '')
     initial = email[0].upper() if email else 'A'
-    return render_template('pages/courses.html',
+    return render_template('pages/courses2.html',
                            email=email,
                            initial=initial,
                            page_title='Courses',
                            active_page='courses')
+
+
+# LEGACY V1 route removed - V2 is now the primary courses page
+# Old route: /schedule/courses2/ redirects to /schedule/courses/
+@app.route('/schedule/courses2/')
+@login_required
+def schedule_courses2():
+    """Redirect old V2 route to main courses route."""
+    return redirect('/schedule/courses/', code=302)
 
 
 @app.route('/schedule/events/')
@@ -970,6 +984,9 @@ def che_chat():
         # New: user role (admin vs user/member)
         user_role = data.get('user_role', 'admin')
         user_name = data.get('user_name', None)
+        # New: semester/year filtering for schedule page queries
+        current_school_year = data.get('school_year') or data.get('schoolYear')
+        current_semester = data.get('semester')
 
         if not message:
             return jsonify({'reply': 'Please send a message.', 'error': True}), 400
@@ -997,7 +1014,7 @@ def che_chat():
 
         # Always inject schedule context for scheduling awareness
         context_data = {}
-        
+
         # Room list for CHE awareness, including rooms added on the courses page
         try:
             context_data['available_rooms'] = get_all_rooms()
@@ -1005,10 +1022,49 @@ def che_chat():
             logger.warning(f"CHE room context fetch: {room_err}")
             context_data['available_rooms'] = list(DEFAULT_ROOMS)
 
-
         try:
             # Schedules (always loaded for GA awareness) - FROM SUPABASE
-            result = supabase.table('schedules').select('*').execute()
+            query = supabase.table('schedules').select('*')
+
+            # Filter by semester/year if provided (from schedule page context)
+            if current_school_year:
+                query = query.eq('school_year', current_school_year)
+            if current_semester:
+                query = query.eq('semester', str(current_semester))
+
+            # DEBUG LOGGING
+            print(f"\n=== CHE CHAT DEBUG ===")
+            print(f"Message: '{message}'")
+            print(f"School Year: {current_school_year}")
+            print(f"Semester: {current_semester}")
+
+            result = query.execute()
+
+            print(f"Total schedules fetched: {len(result.data)}")
+            if result.data:
+                print(
+                    f"Sample schedule: prof='{result.data[0].get('prof')}', day='{result.data[0].get('day')}', school_year='{result.data[0].get('school_year')}', semester='{result.data[0].get('semester')}'")
+
+                # Check Aaron Joseph specifically
+                aaron_schedules = [s for s in result.data if 'aaron' in s.get(
+                    'prof', '').lower() and 'joseph' in s.get('prof', '').lower()]
+                print(
+                    f"Aaron Joseph total schedules in this semester: {len(aaron_schedules)}")
+                if aaron_schedules:
+                    monday_aaron = [s for s in aaron_schedules if s.get(
+                        'day', '').lower() == 'monday']
+                    print(
+                        f"Aaron Joseph Monday schedules: {len(monday_aaron)}")
+                    if monday_aaron:
+                        for s in monday_aaron:
+                            print(
+                                f"  - {s.get('start')} to {s.get('end')}: {s.get('subj_code')} ({s.get('prof')})")
+                    else:
+                        print(
+                            "  - No Monday classes for Aaron Joseph in this semester")
+                        print(
+                            f"  - Aaron's days this semester: {list(set([s.get('day') for s in aaron_schedules]))}")
+
             schedules_raw = []
             for data in result.data:
                 # Normalize to camelCase for consistency with GA functions
@@ -1036,31 +1092,35 @@ def che_chat():
                 context_data['members'] = [
                     {'id': d.id, **d.to_dict()} for d in member_docs]
             except Exception as member_err:
-                logger.warning(f"CHE context: members table not available - {member_err}")
+                logger.warning(
+                    f"CHE context: members table not available - {member_err}")
                 context_data['members'] = []
-            
+
             try:
                 research_docs = db.collection('research').stream()
                 context_data['research'] = [
                     {'id': d.id, **d.to_dict()} for d in research_docs]
             except Exception as research_err:
-                logger.warning(f"CHE context: research table not available - {research_err}")
+                logger.warning(
+                    f"CHE context: research table not available - {research_err}")
                 context_data['research'] = []
-            
+
             try:
                 ext_docs = db.collection('extensions').stream()
                 context_data['extensions'] = [
                     {'id': d.id, **d.to_dict()} for d in ext_docs]
             except Exception as ext_err:
-                logger.warning(f"CHE context: extensions table not available - {ext_err}")
+                logger.warning(
+                    f"CHE context: extensions table not available - {ext_err}")
                 context_data['extensions'] = []
-            
+
             try:
                 news_docs = db.collection('news').stream()
                 context_data['news'] = [
                     {'id': d.id, **d.to_dict()} for d in news_docs]
             except Exception as news_err:
-                logger.warning(f"CHE context: news table not available - {news_err}")
+                logger.warning(
+                    f"CHE context: news table not available - {news_err}")
                 context_data['news'] = []
 
         result = che_chat_fn(
@@ -1241,7 +1301,8 @@ def che_execute_action():
                             s.get('weekly_hours', s.get('units', 3))),
                         allocated_professors=s.get('professors', []),
                         is_custom=bool(s.get('is_custom')),
-                        preferred_room=s.get('preferred_room') or s.get('room'),
+                        preferred_room=s.get(
+                            'preferred_room') or s.get('room'),
                     ))
 
                 config = FullGAConfig(
@@ -1480,6 +1541,31 @@ def add_member():
         print(
             f"💾 Saved member {member_id} with is_faculty={member['is_faculty']}")
 
+        # Log audit action
+        try:
+            admin_email = session.get('email', 'admin')
+            admin_uid = session.get('uid', 'unknown')
+            member_name = f"{member['first']} {member['last']}".strip()
+
+            log_audit_action(
+                supabase=supabase,
+                action_type=AuditAction.MEMBER_CREATED,
+                description=f"Added new member: {member_name}",
+                performed_by=admin_uid,
+                performed_by_email=admin_email,
+                target_type='member',
+                target_id=member_id,
+                target_name=member_name,
+                metadata={
+                    'role': member['role'],
+                    'type': member['type'],
+                    'is_faculty': member['is_faculty'],
+                    'email': member['email']
+                }
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to log audit action: {audit_err}")
+
         return jsonify({'status': 'ok', 'id': member_id, 'member': member}), 201
 
     except Exception as e:
@@ -1524,6 +1610,56 @@ def update_member(member_id):
             data['first'] = raw.title() if raw.isupper() or raw.islower() else raw
 
         db.collection('members').document(member_id).update(data)
+
+        # Log audit action
+        try:
+            admin_email = session.get('email', 'admin')
+            admin_uid = session.get('uid', 'unknown')
+            member_data = doc.to_dict()
+            member_name = f"{member_data.get('first', '')} {member_data.get('last', '')}".strip(
+            )
+
+            # Check for specific action types
+            if 'disabled' in data:
+                # Faculty enable/disable action
+                is_disabled = data['disabled']
+                action_type = AuditAction.MEMBER_DISABLED if is_disabled else AuditAction.MEMBER_ENABLED
+                description = f"{'Disabled' if is_disabled else 'Enabled'} member: {member_name}"
+            else:
+                # General update
+                action_type = AuditAction.MEMBER_UPDATED
+                # Build a description of what changed
+                changes = []
+                if 'first' in data or 'last' in data:
+                    changes.append('name')
+                if 'role' in data:
+                    changes.append('role')
+                if 'email' in data:
+                    changes.append('email')
+                if 'type' in data:
+                    changes.append('type')
+                if 'is_faculty' in data:
+                    changes.append('faculty status')
+                if 'availability' in data:
+                    changes.append('availability')
+
+                change_desc = ', '.join(changes) if changes else 'details'
+                description = f"Updated {member_name}: {change_desc}"
+
+            log_audit_action(
+                supabase=supabase,
+                action_type=action_type,
+                description=description,
+                performed_by=admin_uid,
+                performed_by_email=admin_email,
+                target_type='member',
+                target_id=member_id,
+                target_name=member_name,
+                metadata={'changes': data}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to log audit action: {audit_err}")
+
         return jsonify({'status': 'ok', 'id': member_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1556,6 +1692,32 @@ def delete_member(member_id):
 
         # Delete the member record
         db.collection('members').document(member_id).delete()
+
+        # Log audit action
+        try:
+            admin_email = session.get('email', 'admin')
+            admin_uid = session.get('uid', 'unknown')
+            member_name = f"{member_data.get('first', '')} {member_data.get('last', '')}".strip(
+            )
+
+            log_audit_action(
+                supabase=supabase,
+                action_type=AuditAction.MEMBER_DELETED,
+                description=f"Deleted member: {member_name}" +
+                (" and account" if uid else ""),
+                performed_by=admin_uid,
+                performed_by_email=admin_email,
+                target_type='member',
+                target_id=member_id,
+                target_name=member_name,
+                metadata={
+                    'had_account': bool(uid),
+                    'email': member_data.get('email', ''),
+                    'role': member_data.get('role', '')
+                }
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to log audit action: {audit_err}")
 
         return jsonify({
             'status': 'ok',
@@ -1738,6 +1900,29 @@ def create_member_account(member_id):
 
         logger.info(f"Verification code sent: {message}")
 
+        # Log audit action
+        try:
+            admin_email = session.get('email', 'admin')
+            admin_uid = session.get('uid', 'unknown')
+
+            log_audit_action(
+                supabase=supabase,
+                action_type='ACCOUNT_CREATED',
+                description=f"Created account for member: {display_name}",
+                performed_by=admin_uid,
+                performed_by_email=admin_email,
+                target_type='account',
+                target_id=user_id,
+                target_name=display_name,
+                metadata={
+                    'email': email,
+                    'member_id': member_id,
+                    'faculty_id': faculty_id
+                }
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to log audit action: {audit_err}")
+
         return jsonify({
             'status': 'ok',
             'uid': user_id,
@@ -1747,6 +1932,178 @@ def create_member_account(member_id):
     except Exception as e:
         logger.error(
             f"Unexpected error in create_member_account: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/members/<member_id>/activity', methods=['GET'])
+@login_required
+def get_member_activity(member_id):
+    """Get daily and monthly activity counts for a member (research, extensions, admin works)."""
+    try:
+        from collections import defaultdict
+        from datetime import datetime as dt, timezone, timedelta
+
+        # Get rolling 12-month period from today
+        now = dt.now(timezone.utc)
+        end_date = now
+        start_date = now.replace(
+            day=1) - timedelta(days=330)  # ~11 months back
+        start_date = start_date.replace(day=1)  # First day of that month
+
+        # Initialize counters
+        daily = defaultdict(
+            lambda: {'total': 0, 'research': 0, 'extensions': 0, 'admin': 0})
+        monthly = defaultdict(
+            lambda: {'total': 0, 'research': 0, 'extensions': 0, 'admin': 0})
+
+        # Helper to parse date
+        def parse_date(value):
+            if not value:
+                return None
+            try:
+                if isinstance(value, str):
+                    return dt.fromisoformat(value.replace('Z', '+00:00'))
+                return value
+            except:
+                return None
+
+        # Helper to check if date is in range
+        def is_in_range(date_obj):
+            return date_obj and start_date <= date_obj <= end_date
+
+        # Count research submissions
+        try:
+            research_query = supabase.table('research').select(
+                'created_at, member_id').eq('member_id', member_id).execute()
+            for item in (research_query.data or []):
+                date_obj = parse_date(item.get('created_at'))
+                if is_in_range(date_obj):
+                    date_str = date_obj.strftime('%Y-%m-%d')
+                    month_str = date_obj.strftime('%Y-%m')
+                    daily[date_str]['total'] += 1
+                    daily[date_str]['research'] += 1
+                    monthly[month_str]['total'] += 1
+                    monthly[month_str]['research'] += 1
+        except Exception as e:
+            logger.warning(f'Research query failed: {e}')
+
+        # Also check Firestore research
+        try:
+            research_docs = db.collection('research').where(
+                'member_id', '==', member_id).stream()
+            for doc in research_docs:
+                data = doc.to_dict()
+                date_obj = parse_date(data.get('created_at'))
+                if is_in_range(date_obj):
+                    date_str = date_obj.strftime('%Y-%m-%d')
+                    month_str = date_obj.strftime('%Y-%m')
+                    daily[date_str]['total'] += 1
+                    daily[date_str]['research'] += 1
+                    monthly[month_str]['total'] += 1
+                    monthly[month_str]['research'] += 1
+        except Exception as e:
+            logger.warning(f'Firestore research query failed: {e}')
+
+        # Count extensions submissions
+        try:
+            ext_query = supabase.table('extensions').select(
+                'created_at, member_id').eq('member_id', member_id).execute()
+            for item in (ext_query.data or []):
+                date_obj = parse_date(item.get('created_at'))
+                if is_in_range(date_obj):
+                    date_str = date_obj.strftime('%Y-%m-%d')
+                    month_str = date_obj.strftime('%Y-%m')
+                    daily[date_str]['total'] += 1
+                    daily[date_str]['extensions'] += 1
+                    monthly[month_str]['total'] += 1
+                    monthly[month_str]['extensions'] += 1
+        except Exception as e:
+            logger.warning(f'Extensions query failed: {e}')
+
+        # Also check Firestore extensions
+        try:
+            ext_docs = db.collection('extensions').where(
+                'member_id', '==', member_id).stream()
+            for doc in ext_docs:
+                data = doc.to_dict()
+                date_obj = parse_date(data.get('created_at'))
+                if is_in_range(date_obj):
+                    date_str = date_obj.strftime('%Y-%m-%d')
+                    month_str = date_obj.strftime('%Y-%m')
+                    daily[date_str]['total'] += 1
+                    daily[date_str]['extensions'] += 1
+                    monthly[month_str]['total'] += 1
+                    monthly[month_str]['extensions'] += 1
+        except Exception as e:
+            logger.warning(f'Firestore extensions query failed: {e}')
+
+        # Count admin works (FSR submissions)
+        try:
+            fsr_query = supabase.table('fsr_files').select(
+                'created_at, member_id, deleted_at').eq('member_id', member_id).execute()
+            for item in (fsr_query.data or []):
+                if item.get('deleted_at'):
+                    continue
+                date_obj = parse_date(item.get('created_at'))
+                if is_in_range(date_obj):
+                    date_str = date_obj.strftime('%Y-%m-%d')
+                    month_str = date_obj.strftime('%Y-%m')
+                    daily[date_str]['total'] += 1
+                    daily[date_str]['admin'] += 1
+                    monthly[month_str]['total'] += 1
+                    monthly[month_str]['admin'] += 1
+        except Exception as e:
+            logger.warning(f'FSR query failed: {e}')
+
+        # Collect actual items for timeline (limit to recent 50)
+        research_items = []
+        extensions_items = []
+        admin_items = []
+
+        try:
+            research_query = supabase.table('research').select(
+                'id, title, created_at').eq('member_id', member_id).order('created_at', desc=True).limit(50).execute()
+            research_items = research_query.data or []
+        except Exception as e:
+            logger.warning(f'Research items query failed: {e}')
+
+        try:
+            ext_query = supabase.table('extensions').select(
+                'id, title, created_at').eq('member_id', member_id).order('created_at', desc=True).limit(50).execute()
+            extensions_items = ext_query.data or []
+        except Exception as e:
+            logger.warning(f'Extensions items query failed: {e}')
+
+        try:
+            fsr_query = supabase.table('fsr_files').select(
+                'id, created_at').eq('member_id', member_id).is_('deleted_at', None).order('created_at', desc=True).limit(50).execute()
+            admin_items = fsr_query.data or []
+        except Exception as e:
+            logger.warning(f'FSR items query failed: {e}')
+
+        # Calculate total counts
+        total_research = sum(d['research'] for d in daily.values())
+        total_extensions = sum(d['extensions'] for d in daily.values())
+        total_admin = sum(d['admin'] for d in daily.values())
+
+        # Convert daily data to simple count format for calendar
+        daily_counts = {date: data['total'] for date, data in daily.items()}
+
+        return jsonify({
+            'daily': daily_counts,
+            'monthly': dict(monthly),
+            'research_count': total_research,
+            'extensions_count': total_extensions,
+            'admin_count': total_admin,
+            'research': research_items,
+            'extensions': extensions_items,
+            'admin': admin_items,
+            'start_date': start_date.strftime('%Y-%m-%d'),
+            'end_date': end_date.strftime('%Y-%m-%d')
+        })
+
+    except Exception as e:
+        logger.error(f"get_member_activity error: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -2015,6 +2372,85 @@ def complete_first_login():
 
     except Exception as e:
         logger.error(f"Error completing first login: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ── Audit Log API ─────────────────────────────────────────────
+
+@app.route('/api/audit-log', methods=['GET'])
+@login_required
+def get_audit_logs():
+    """
+    Get recent audit logs for admin notifications.
+    Query params:
+    - unread: 'true' to filter only unread logs
+    - limit: number of logs to return (default: 7)
+    """
+    try:
+        # Only admins can view audit logs
+        role = session.get('role')
+        if role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        unread_only = request.args.get('unread', 'false').lower() == 'true'
+        limit = int(request.args.get('limit', 7))
+
+        logs = get_recent_audit_logs(
+            supabase, limit=limit, unread_only=unread_only)
+
+        return jsonify({
+            'status': 'ok',
+            'logs': logs,
+            'count': len(logs)
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching audit logs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/audit-log/<log_id>/read', methods=['POST'])
+@login_required
+def mark_log_as_read(log_id):
+    """Mark a single audit log as read."""
+    try:
+        # Only admins can mark logs as read
+        role = session.get('role')
+        if role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        success = mark_audit_log_as_read(supabase, log_id)
+
+        if success:
+            return jsonify({'status': 'ok', 'message': 'Marked as read'})
+        else:
+            return jsonify({'error': 'Failed to mark as read'}), 500
+
+    except Exception as e:
+        logger.error(f"Error marking log as read: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/audit-log/mark-all-read', methods=['POST'])
+@login_required
+def mark_all_logs_read():
+    """Mark all audit logs as read."""
+    try:
+        # Only admins can mark logs as read
+        role = session.get('role')
+        if role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        count = mark_all_audit_logs_as_read(supabase)
+
+        return jsonify({
+            'status': 'ok',
+            'message': f'Marked {count} logs as read',
+            'count': count
+        })
+
+    except Exception as e:
+        logger.error(f"Error marking all logs as read: {e}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -2671,6 +3107,7 @@ def get_schedules():
                     'year': data.get('year'),
                     'semester': data.get('semester'),
                     'schoolYear': data.get('school_year', data.get('schoolYear')),
+                    'source': data.get('source') or '',
                     'created_at': data.get('created_at')
                 }
 
@@ -3415,6 +3852,501 @@ def get_all_courses():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# FACULTY ELIGIBILITY (faculty_course_units table)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/faculty-course-units', methods=['GET'])
+@login_required
+def get_faculty_eligibility():
+    """Get all faculty eligibility records (V1 table: faculty_eligible_courses)."""
+    try:
+        result = supabase.table(
+            'faculty_eligible_courses').select('*').execute()
+        return jsonify(result.data or [])
+    except Exception as e:
+        logger.error(f"Error fetching faculty eligibility: {e}")
+        return jsonify([]), 200
+
+
+@app.route('/api/faculty-course-units', methods=['POST'])
+@login_required
+def add_faculty_eligibility():
+    """Add faculty eligibility for a course (V1 table: faculty_eligible_courses)."""
+    try:
+        data = request.get_json() or {}
+        faculty_id = data.get('faculty_id')
+        course_id = data.get('course_id')
+
+        if not faculty_id or not course_id:
+            return jsonify({'error': 'faculty_id and course_id required'}), 400
+
+        # Check if already exists
+        existing = supabase.table('faculty_eligible_courses').select('id').eq(
+            'faculty_id', faculty_id
+        ).eq('course_id', course_id).execute()
+
+        if existing.data:
+            return jsonify({'error': 'Eligibility already exists'}), 409
+
+        # Insert new eligibility
+        result = supabase.table('faculty_eligible_courses').insert({
+            'faculty_id': faculty_id,
+            'course_id': course_id
+        }).execute()
+
+        logger.info(
+            f"Added faculty eligibility: faculty={faculty_id}, course={course_id}")
+        return jsonify(result.data[0]), 201
+
+    except Exception as e:
+        logger.error(f"Error adding faculty eligibility: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/faculty-course-units/<entry_id>', methods=['DELETE'])
+@login_required
+def delete_faculty_eligibility(entry_id):
+    """Remove faculty eligibility (V1 table: faculty_eligible_courses)."""
+    try:
+        result = supabase.table('faculty_eligible_courses').delete().eq(
+            'id', entry_id).execute()
+
+        if not result.data:
+            return jsonify({'error': 'Entry not found'}), 404
+
+        logger.info(f"Deleted faculty eligibility: {entry_id}")
+        return jsonify({'status': 'ok'})
+
+    except Exception as e:
+        logger.error(f"Error deleting faculty eligibility: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COURSE ASSIGNMENTS (faculty_courses table)
+# Maps faculty to specific course sections for a given term
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/allocation/assignments', methods=['GET'])
+@login_required
+def get_course_assignments():
+    """Get all course assignments for a term."""
+    try:
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
+
+        query = supabase.table('faculty_courses').select('*')
+
+        if school_year:
+            query = query.eq('school_year', school_year)
+        if semester:
+            query = query.eq('semester', semester)
+
+        result = query.execute()
+        return jsonify(result.data or [])
+
+    except Exception as e:
+        logger.error(f"Error fetching course assignments: {e}")
+        return jsonify([]), 200
+
+
+@app.route('/api/allocation/assignments', methods=['POST'])
+@login_required
+def save_course_assignments():
+    """Save multiple course assignments."""
+    try:
+        data = request.get_json() or {}
+        assignments = data.get('assignments', [])
+
+        if not assignments:
+            return jsonify({'error': 'No assignments provided'}), 400
+
+        saved = []
+        for assignment in assignments:
+            faculty_id = assignment.get('faculty_id')
+            course_id = assignment.get('course_id')
+            section = assignment.get('section')
+            school_year = assignment.get('school_year')
+            semester = assignment.get('semester')
+
+            if not all([faculty_id, course_id, section, school_year, semester]):
+                continue
+
+            # Check if assignment already exists
+            existing = supabase.table('faculty_courses').select('id').eq(
+                'faculty_id', faculty_id
+            ).eq('course_id', course_id).eq(
+                'section', section
+            ).eq('school_year', school_year).eq(
+                'semester', semester
+            ).execute()
+
+            if not existing.data:
+                # Insert new assignment
+                result = supabase.table('faculty_courses').insert({
+                    'faculty_id': faculty_id,
+                    'course_id': course_id,
+                    'section': section,
+                    'school_year': school_year,
+                    'semester': semester
+                }).execute()
+
+                if result.data:
+                    saved.append(result.data[0])
+
+        logger.info(f"Saved {len(saved)} course assignments")
+        return jsonify({'status': 'ok', 'saved': len(saved), 'assignments': saved}), 201
+
+    except Exception as e:
+        logger.error(f"Error saving course assignments: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COURSE SECTIONS CONFIGURATION
+# Defines which sections (A, B, C, etc.) are offered for each course
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/course-sections', methods=['GET'])
+@login_required
+def get_course_sections():
+    """Get configured sections for courses (V1 table: course_term_offerings with JSONB array)."""
+    try:
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
+
+        logger.info(
+            f"[course-sections] Received params - school_year: '{school_year}' (type: {type(school_year).__name__}), semester: '{semester}' (type: {type(semester).__name__})")
+
+        query = supabase.table('course_term_offerings').select('*')
+
+        if school_year:
+            query = query.eq('school_year', school_year)
+        if semester:
+            # Handle both string and integer semester values
+            # Database stores as text, but might be just "1", "2", "3"
+            query = query.eq('semester', semester)
+
+        result = query.execute()
+        logger.info(
+            f"[course-sections] Query returned {len(result.data or [])} records")
+
+        if result.data and len(result.data) > 0:
+            logger.info(f"[course-sections] Sample record: {result.data[0]}")
+        else:
+            # Debug: Try query without filters
+            debug_result = supabase.table('course_term_offerings').select(
+                'school_year, semester').limit(5).execute()
+            logger.warning(
+                f"[course-sections] No data found! Sample of what's in table: {debug_result.data}")
+
+        # Convert JSONB array format to individual section objects for V2 frontend
+        # V1 format: {course_id, school_year, semester, available_sections: ["A", "B", ...]}
+        # V2 format: [{course_id, section_letter: "A", school_year, semester, is_custom_block, ...}, ...]
+        sections = []
+        for offering in (result.data or []):
+            course_id = offering.get('course_id')
+            school_year = offering.get('school_year')
+            semester = offering.get('semester')
+            available_sections = offering.get('available_sections', [])
+            section_metadata = offering.get(
+                'section_metadata') or {}  # Handle None
+
+            for section_letter in available_sections:
+                # Get metadata for this section if exists
+                metadata = section_metadata.get(
+                    section_letter, {}) if section_metadata else {}
+
+                sections.append({
+                    # Synthetic ID
+                    'id': f"{course_id}_{section_letter}_{school_year}_{semester}",
+                    'course_id': course_id,
+                    'section_letter': section_letter,
+                    'school_year': school_year,
+                    'semester': semester,
+                    'is_custom_block': metadata.get('is_custom_block', False),
+                    'units': metadata.get('units'),
+                    'custom_room_name': metadata.get('custom_room_name')
+                })
+
+        return jsonify(sections)
+
+    except Exception as e:
+        logger.error(f"Error fetching course sections: {e}")
+        return jsonify([]), 200
+
+
+@app.route('/api/course-sections', methods=['POST'])
+@login_required
+def add_course_section():
+    """Enable a section for a course (V1 table: course_term_offerings JSONB array)."""
+    try:
+        data = request.get_json() or {}
+        course_id = data.get('course_id')
+        section_letter = data.get('section_letter')
+        school_year = data.get('school_year')
+        semester = data.get('semester')
+        is_custom_block = data.get('is_custom_block', False)
+        units = data.get('units')
+        custom_room_name = data.get('custom_room_name')
+
+        if not all([course_id, section_letter, school_year, semester]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Get existing offering record for this course+term
+        existing = supabase.table('course_term_offerings').select('*').eq(
+            'course_id', course_id
+        ).eq('school_year', school_year).eq('semester', semester).execute()
+
+        if existing.data:
+            # Update existing offering by adding section to JSONB array
+            offering = existing.data[0]
+            available_sections = offering.get('available_sections', [])
+            section_metadata = offering.get('section_metadata', {})
+
+            if section_letter in available_sections:
+                return jsonify({'error': 'Section already configured'}), 409
+
+            # Add section to array
+            available_sections.append(section_letter)
+
+            # Add metadata if custom block or has custom room
+            if is_custom_block or units or custom_room_name:
+                section_metadata[section_letter] = {
+                    'is_custom_block': is_custom_block,
+                    'units': units,
+                    'custom_room_name': custom_room_name
+                }
+
+            # Update the record
+            result = supabase.table('course_term_offerings').update({
+                'available_sections': available_sections,
+                'section_metadata': section_metadata,
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }).eq('id', offering['id']).execute()
+
+            logger.info(
+                f"Added section {section_letter} to course {course_id}")
+
+            # Return in V2 format
+            return jsonify({
+                'id': f"{course_id}_{section_letter}_{school_year}_{semester}",
+                'course_id': course_id,
+                'section_letter': section_letter,
+                'school_year': school_year,
+                'semester': semester,
+                'is_custom_block': is_custom_block,
+                'units': units,
+                'custom_room_name': custom_room_name
+            }), 201
+        else:
+            # Create new offering record
+            section_metadata = {}
+            if is_custom_block or units or custom_room_name:
+                section_metadata[section_letter] = {
+                    'is_custom_block': is_custom_block,
+                    'units': units,
+                    'custom_room_name': custom_room_name
+                }
+
+            result = supabase.table('course_term_offerings').insert({
+                'course_id': course_id,
+                'school_year': school_year,
+                'semester': semester,
+                'available_sections': [section_letter],
+                'section_metadata': section_metadata
+            }).execute()
+
+            logger.info(
+                f"Created offering for course {course_id} with section {section_letter}")
+
+            # Return in V2 format
+            return jsonify({
+                'id': f"{course_id}_{section_letter}_{school_year}_{semester}",
+                'course_id': course_id,
+                'section_letter': section_letter,
+                'school_year': school_year,
+                'semester': semester,
+                'is_custom_block': is_custom_block,
+                'units': units,
+                'custom_room_name': custom_room_name
+            }), 201
+
+    except Exception as e:
+        logger.error(f"Error adding course section: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/course-sections/<entry_id>', methods=['DELETE'])
+@login_required
+def delete_course_section(entry_id):
+    """Disable a section for a course (V1 table: course_term_offerings JSONB array).
+    Entry ID format: {course_id}_{section_letter}_{school_year}_{semester}
+    """
+    try:
+        # Parse synthetic ID
+        parts = entry_id.split('_')
+        if len(parts) < 4:
+            return jsonify({'error': 'Invalid entry ID format'}), 400
+
+        # Handle UUIDs with underscores - course_id is parts[0] through the last UUID segment
+        # Then section_letter, school_year (may have dash), semester
+        section_letter = parts[-3]
+        school_year = parts[-2]
+        semester = parts[-1]
+        course_id = '_'.join(parts[:-3])
+
+        # Get the offering record
+        existing = supabase.table('course_term_offerings').select('*').eq(
+            'course_id', course_id
+        ).eq('school_year', school_year).eq('semester', semester).execute()
+
+        if not existing.data:
+            return jsonify({'error': 'Offering not found'}), 404
+
+        offering = existing.data[0]
+        available_sections = offering.get('available_sections', [])
+        section_metadata = offering.get('section_metadata', {})
+
+        if section_letter not in available_sections:
+            return jsonify({'error': 'Section not found'}), 404
+
+        # Remove section from array
+        available_sections.remove(section_letter)
+
+        # Remove metadata if exists
+        if section_letter in section_metadata:
+            del section_metadata[section_letter]
+
+        # Update the record (or delete if no sections left)
+        if available_sections:
+            supabase.table('course_term_offerings').update({
+                'available_sections': available_sections,
+                'section_metadata': section_metadata,
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }).eq('id', offering['id']).execute()
+        else:
+            # No sections left, delete the offering record
+            supabase.table('course_term_offerings').delete().eq(
+                'id', offering['id']).execute()
+
+        logger.info(
+            f"Deleted section {section_letter} from course {course_id}")
+        return jsonify({'status': 'ok'})
+
+    except Exception as e:
+        logger.error(f"Error deleting course section: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION ROOM ALLOCATIONS
+# Maps course sections to specific rooms for scheduling
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/section-rooms', methods=['GET'])
+@login_required
+def get_section_room_allocations():
+    """Get room allocations for course sections."""
+    try:
+        school_year = request.args.get('school_year')
+        semester = request.args.get('semester')
+
+        query = supabase.table('section_room_allocations').select('*')
+
+        if school_year:
+            query = query.eq('school_year', school_year)
+        if semester:
+            query = query.eq('semester', semester)
+
+        result = query.execute()
+        return jsonify(result.data or [])
+
+    except Exception as e:
+        # Table might not exist yet
+        if _table_is_missing(e):
+            logger.warning("section_room_allocations table not found")
+            return jsonify([]), 200
+        logger.error(f"Error fetching room allocations: {e}")
+        return jsonify([]), 200
+
+
+@app.route('/api/section-rooms', methods=['POST'])
+@login_required
+def save_section_room_allocation():
+    """Save or update room allocation for a section."""
+    try:
+        data = request.get_json() or {}
+        course_id = data.get('course_id')
+        section_letter = data.get('section_letter')
+        school_year = data.get('school_year')
+        semester = data.get('semester')
+        room_id = data.get('room_id')  # Can be null
+        custom_room_name = data.get('custom_room_name')
+
+        if not all([course_id, section_letter, school_year, semester]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        if not room_id and not custom_room_name:
+            return jsonify({'error': 'Either room_id or custom_room_name required'}), 400
+
+        # Check if allocation already exists
+        existing = supabase.table('section_room_allocations').select('id').eq(
+            'course_id', course_id
+        ).eq('section_letter', section_letter).eq(
+            'school_year', school_year
+        ).eq('semester', semester).execute()
+
+        payload = {
+            'course_id': course_id,
+            'section_letter': section_letter,
+            'school_year': school_year,
+            'semester': semester,
+            'room_id': room_id,
+            'custom_room_name': custom_room_name
+        }
+
+        if existing.data:
+            # Update existing
+            result = supabase.table('section_room_allocations').update(payload).eq(
+                'id', existing.data[0]['id']
+            ).execute()
+            logger.info(
+                f"Updated room allocation for {course_id}/{section_letter}")
+        else:
+            # Insert new
+            result = supabase.table(
+                'section_room_allocations').insert(payload).execute()
+            logger.info(
+                f"Created room allocation for {course_id}/{section_letter}")
+
+        return jsonify(result.data[0]), 201
+
+    except Exception as e:
+        logger.error(f"Error saving room allocation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/section-rooms/<allocation_id>', methods=['DELETE'])
+@login_required
+def delete_section_room_allocation(allocation_id):
+    """Remove room allocation."""
+    try:
+        result = supabase.table('section_room_allocations').delete().eq(
+            'id', allocation_id).execute()
+
+        if not result.data:
+            return jsonify({'error': 'Allocation not found'}), 404
+
+        logger.info(f"Deleted room allocation: {allocation_id}")
+        return jsonify({'status': 'ok'})
+
+    except Exception as e:
+        logger.error(f"Error deleting room allocation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # CUSTOM SECTIONS & ROOMS
 # Managed from the courses page. Both tables are optional: until sql/
 # rooms_and_sections.sql has been run the app falls back to the A-Z sections
@@ -3708,7 +4640,8 @@ def _offer_section(course_id: str, section: str, school_year: str, semester: str
         .eq('semester', semester)\
         .execute()
     offered = _as_section_list(
-        existing.data[0].get('available_sections') if existing.data else current
+        existing.data[0].get(
+            'available_sections') if existing.data else current
     )
     if section not in offered:
         offered.append(section)
@@ -3940,7 +4873,8 @@ def allocation_capabilities():
 
     if not caps.get('eligibility_table'):
         try:
-            supabase.table('faculty_eligible_courses').select('id').limit(1).execute()
+            supabase.table('faculty_eligible_courses').select(
+                'id').limit(1).execute()
             caps['eligibility_table'] = True
         except Exception as e:
             if not _table_is_missing(e):
@@ -3948,7 +4882,8 @@ def allocation_capabilities():
 
     if not caps.get('term_offerings_table'):
         try:
-            supabase.table('course_term_offerings').select('id').limit(1).execute()
+            supabase.table('course_term_offerings').select(
+                'id').limit(1).execute()
             caps['term_offerings_table'] = True
         except Exception as e:
             if not _table_is_missing(e):
@@ -3965,7 +4900,8 @@ def allocation_capabilities():
 
     if not caps.get('custom_blocks_table'):
         try:
-            supabase.table('custom_term_blocks').select('id').limit(1).execute()
+            supabase.table('custom_term_blocks').select(
+                'id').limit(1).execute()
             caps['custom_blocks_table'] = True
         except Exception as e:
             if not _table_is_missing(e):
@@ -3973,7 +4909,8 @@ def allocation_capabilities():
 
     if not caps.get('faculty_courses_units'):
         try:
-            supabase.table('faculty_courses').select('id, units').limit(1).execute()
+            supabase.table('faculty_courses').select(
+                'id, units').limit(1).execute()
             caps['faculty_courses_units'] = True
         except Exception as e:
             if not (_column_is_missing(e) or _table_is_missing(e)):
@@ -4145,7 +5082,8 @@ def fetch_custom_blocks(school_year: str = None, semester: str = None) -> list:
             return []
         raise
 
-    members = supabase.table('members').select('id, first, last, suffix').execute()
+    members = supabase.table('members').select(
+        'id, first, last, suffix').execute()
     name_to_id = {}
     for member in members.data or []:
         full = f"{member.get('first', '')} {member.get('last', '')}".strip()
@@ -4319,7 +5257,8 @@ def _update_regular_assignment_units(faculty_id, course_code, section, units, ro
             ) from e
         raise
     if not result.data:
-        raise ValueError(f'{course_code} Section {section} is not assigned to this faculty')
+        raise ValueError(
+            f'{course_code} Section {section} is not assigned to this faculty')
     _set_alloc_cap('faculty_courses_units', True)
     return result.data[0]
 
@@ -4338,7 +5277,8 @@ def _update_custom_block_units(block_id, units, faculty_id=None,
         elif faculty_id and course_code and section:
             catalog = _course_catalog()
             course = next(
-                (c for c in catalog.values() if c.get('course_code') == course_code),
+                (c for c in catalog.values() if c.get(
+                    'course_code') == course_code),
                 None
             )
             if not course:
@@ -4347,7 +5287,8 @@ def _update_custom_block_units(block_id, units, faculty_id=None,
                 .eq('course_id', course['id'])\
                 .eq('section', section)
         else:
-            raise ValueError('Custom block id or faculty + course + section is required')
+            raise ValueError(
+                'Custom block id or faculty + course + section is required')
         result = query.execute()
         if not result.data:
             raise ValueError('Custom block not found for this faculty')
@@ -4383,7 +5324,8 @@ def _assignment_key(course_code, section) -> str:
 def get_allocation_state():
     """Regular allocation and custom blocks are both global."""
     try:
-        school_year = request.args.get('school_year') or current_default_term()[0]
+        school_year = request.args.get(
+            'school_year') or current_default_term()[0]
         semester = request.args.get('semester') or current_default_term()[1]
         caps = allocation_capabilities()
 
@@ -4472,7 +5414,8 @@ def update_course_eligible_faculty(course_id):
     """Set which faculty may teach this course. Does not assign a section."""
     try:
         data = request.get_json() or {}
-        faculty_ids = list({fid for fid in (data.get('faculty_ids') or []) if fid})
+        faculty_ids = list(
+            {fid for fid in (data.get('faculty_ids') or []) if fid})
         caps = allocation_capabilities()
         if not caps['eligibility_table']:
             return jsonify({
@@ -4559,7 +5502,8 @@ def get_faculty_courses_by_name(professor_name):
 
         faculty_id = None
         for member in members_result.data or []:
-            full_name = f"{member.get('first', '')} {member.get('last', '')}".strip()
+            full_name = f"{member.get('first', '')} {member.get('last', '')}".strip(
+            )
             if full_name == professor_name:
                 faculty_id = member['id']
                 break
@@ -4682,7 +5626,7 @@ def assign_faculty_courses(faculty_id):
             if section not in offered:
                 return jsonify({
                     'error': f'Section {section} is not offered for {course_code}. '
-                             f'Offered: {", ".join(offered) or "(none)"}'
+                    f'Offered: {", ".join(offered) or "(none)"}'
                 }), 400
 
             if caps['eligibility_table'] and course['id'] not in eligible_ids:
@@ -4690,7 +5634,7 @@ def assign_faculty_courses(faculty_id):
                 if eligibility_codes is None or course_code not in eligibility_codes:
                     return jsonify({
                         'error': f'This faculty is not assigned to {course_code}. '
-                                 'Assign them to the course before picking a section.'
+                        'Assign them to the course before picking a section.'
                     }), 400
 
             record = {
@@ -4726,7 +5670,8 @@ def assign_faculty_courses(faculty_id):
 
         if validated_records:
             retry_supabase_query(
-                lambda: supabase.table('faculty_courses').insert(validated_records)
+                lambda: supabase.table(
+                    'faculty_courses').insert(validated_records)
             )
 
         logger.info(
@@ -4747,6 +5692,54 @@ def assign_faculty_courses(faculty_id):
         return jsonify({'error': message}), 500
 
 
+@app.route('/api/schedule/generate-preview', methods=['GET'])
+@login_required
+def api_generate_preview():
+    """Counts for the CHE confirm card: allocations, reference rows, existing target blocks."""
+    try:
+        reference_semester = (request.args.get(
+            'reference_semester') or '1').strip()
+        reference_school_year = (request.args.get(
+            'reference_school_year') or '').strip()
+        target_semester = (request.args.get('target_semester') or '1').strip()
+        target_school_year = (request.args.get(
+            'target_school_year') or '').strip()
+
+        existing = 0
+        reference = 0
+        if target_school_year:
+            existing_res = supabase.table('schedules').select('id').eq(
+                'semester', str(target_semester)).eq('school_year', target_school_year).execute()
+            existing = len(existing_res.data or [])
+        if reference_school_year:
+            ref_res = supabase.table('schedules').select('id').eq(
+                'semester', str(reference_semester)).eq('school_year', reference_school_year).execute()
+            reference = len(ref_res.data or [])
+
+        regular = fetch_section_assignments()
+        custom = fetch_custom_blocks()
+        faculty_ids = {row.get('faculty_id') for row in (
+            regular + custom) if row.get('faculty_id')}
+        course_sections = {
+            f"{row.get('course_code')}-{row.get('section')}"
+            for row in (regular + custom)
+            if row.get('course_code') and row.get('section')
+        }
+
+        return jsonify({
+            'success': True,
+            'existing_target_blocks': existing,
+            'reference_blocks': reference,
+            'allocated_course_sections': len(course_sections),
+            'faculty_count': len(faculty_ids),
+            'will_replace': existing > 0,
+            'estimated_minutes': 4,
+        })
+    except Exception as e:
+        logger.error(f"Generate preview error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/schedule/generate-full', methods=['POST'])
 @login_required
 def api_generate_full_schedule():
@@ -4762,7 +5755,7 @@ def api_generate_full_schedule():
         from services.scheduler_service import run_full_ga_v3, FullGAConfig, SubjectInput
 
         data = request.get_json()
-        
+
         print(f"📦 Request data received: {data}", flush=True)
         logger.info(f"� Request data: {data}")
         if not data:
@@ -4773,9 +5766,11 @@ def api_generate_full_schedule():
         reference_semester = data.get('reference_semester', '1')
         reference_school_year = data.get('reference_school_year', '2026-2027')
         save_to_db = data.get('save_to_db', True)
-        
-        print(f"🎯 Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}", flush=True)
-        logger.info(f"Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}")
+
+        print(
+            f"🎯 Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}", flush=True)
+        logger.info(
+            f"Target: {target_school_year} Sem {target_semester}, Reference: {reference_school_year} Sem {reference_semester}")
 
         # CRITICAL FIX: Capture user_id BEFORE entering background thread
         # (session is not available outside request context)
@@ -4798,31 +5793,33 @@ def api_generate_full_schedule():
         def run_ga_background():
             """Run GA with Phase 2 in background thread."""
             logger.info(f"run_ga_background() started at {datetime.now()}")
-            
+
             try:
                 logger.info("Setting ga_progress running flag")
-                
+
                 with ga_progress_lock:
                     ga_progress['running'] = True
 
                 logger.info("Updating progress: Loading reference schedules")
-                
+
                 update_ga_progress(
                     status='running', message='Loading reference schedules...')
 
                 # Load reference semester schedules
                 reference_schedules = []
-                
+
                 logger.info("About to query Supabase for reference schedules")
-                
+
                 try:
-                    logger.info(f"Querying: semester={reference_semester}, school_year={reference_school_year}")
-                    
+                    logger.info(
+                        f"Querying: semester={reference_semester}, school_year={reference_school_year}")
+
                     ref_result = supabase.table('schedules').select('*').eq(
                         'semester', reference_semester).eq('school_year', reference_school_year).execute()
-                    
-                    logger.info(f"Query successful: {len(ref_result.data)} records")
-                    
+
+                    logger.info(
+                        f"Query successful: {len(ref_result.data)} records")
+
                     for rd in ref_result.data:
                         reference_schedules.append({
                             'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
@@ -4835,20 +5832,23 @@ def api_generate_full_schedule():
                             'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
                             'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
                         })
-                    
-                    logger.info(f"Finished processing {len(reference_schedules)} reference schedules")
-                        
+
+                    logger.info(
+                        f"Finished processing {len(reference_schedules)} reference schedules")
+
                 except Exception as e:
                     logger.warning(f"ERROR loading reference schedules: {e}")
                     import traceback
                     logger.warning(traceback.format_exc())
 
-                logger.info(f"Calling update_ga_progress with {len(reference_schedules)} schedules")
-                    
+                logger.info(
+                    f"Calling update_ga_progress with {len(reference_schedules)} schedules")
+
                 update_ga_progress(
                     status='running', message=f'Loaded {len(reference_schedules)} reference schedules')
 
-                logger.info(f"📚 Reference schedules loaded: {len(reference_schedules)} from {reference_school_year} Semester {reference_semester}")
+                logger.info(
+                    f"📚 Reference schedules loaded: {len(reference_schedules)} from {reference_school_year} Semester {reference_semester}")
 
                 # Load faculty data
                 prof_availability = {}
@@ -4856,7 +5856,7 @@ def api_generate_full_schedule():
                 try:
                     member_docs = db.collection('members').where(
                         'is_faculty', '==', True).stream()
-                    
+
                     faculty_count = 0
                     for d in member_docs:
                         faculty_count += 1
@@ -4871,7 +5871,7 @@ def api_generate_full_schedule():
                         load = md.get('teaching_load')
                         if load:
                             teaching_loads_map[full_name] = int(load)
-                    
+
                 except Exception as e:
                     logger.warning(f"ERROR loading faculty: {e}")
                     import traceback
@@ -4880,7 +5880,8 @@ def api_generate_full_schedule():
                 # Load faculty course-section assignments from Supabase.
                 # The same course+section may be taught by more than one faculty.
                 faculty_course_assignments = {}
-                course_section_assignments = {}  # {"COURSE-SECTION": [faculty names]}
+                # {"COURSE-SECTION": [faculty names]}
+                course_section_assignments = {}
                 course_catalog = {}  # {"COURSE-SECTION::faculty_id": {name, units, faculty}}
                 try:
                     term_assignments = fetch_section_assignments()
@@ -5019,7 +6020,8 @@ def api_generate_full_schedule():
                 }
                 reference_keys = set(day_patterns)
                 new_this_semester = sorted(allocated_keys - reference_keys)
-                dropped_from_allocation = sorted(reference_keys - allocated_keys)
+                dropped_from_allocation = sorted(
+                    reference_keys - allocated_keys)
 
                 logger.info(
                     f"Scheduling {len(subjects)} allocated course-sections "
@@ -5043,7 +6045,8 @@ def api_generate_full_schedule():
                 qualification_matrix.faculty_to_course_sections = faculty_course_assignments
 
                 for course_section_key, faculty_names in course_section_assignments.items():
-                    names = faculty_names if isinstance(faculty_names, list) else [faculty_names]
+                    names = faculty_names if isinstance(
+                        faculty_names, list) else [faculty_names]
                     course_code = course_section_key.rsplit('-', 1)[0]
                     for faculty_name in names:
                         if not faculty_name:
@@ -5091,30 +6094,37 @@ def api_generate_full_schedule():
                     status='running', message='Starting schedule optimization...',
                     max_generations=config.max_generations,
                     time_limit_seconds=config.time_limit_seconds)
-                
+
                 logger.info("About to call run_full_ga_v3()")
-                logger.info(f"Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
-                
+                logger.info(
+                    f"Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
+
                 logger.info(f"� About to call run_full_ga_v3()")
-                logger.info(f"� Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
-                
+                logger.info(
+                    f"� Config: {len(subjects)} subjects, {len(rooms_list)} rooms")
+
                 result = run_full_ga_v3(
                     config, progress_callback=progress_callback)
-                
-                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}")
-                
-                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
 
-                logger.info(f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
+                logger.info(
+                    f"run_full_ga_v3() returned: success={result.get('success')}")
+
+                logger.info(
+                    f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
+
+                logger.info(
+                    f"run_full_ga_v3() returned: success={result.get('success')}, message={result.get('message')}")
 
                 if result['success']:
                     schedules = result.get('schedules', [])
-                    
-                    logger.info(f"GA returned {len(schedules)} meeting rows (paired days already expanded)")
+
+                    logger.info(
+                        f"GA returned {len(schedules)} meeting rows (paired days already expanded)")
 
                     # Schedules already include both days of MW/TTH/WF pairs.
 
-                    logger.info("Checking generated rows for exact professor double-bookings")
+                    logger.info(
+                        "Checking generated rows for exact professor double-bookings")
                     conflict_check = []
                     leftover_conflicts = []
                     for sched in schedules:
@@ -5126,7 +6136,7 @@ def api_generate_full_schedule():
                             if (existing['prof'] == prof and
                                 existing['day'] == day and
                                 existing['start'] == start and
-                                existing['end'] == end):
+                                    existing['end'] == end):
                                 leftover_conflicts.append(
                                     f"{prof}: {sched.get('subjCode')} vs {existing['subjCode']} on {day} {start}-{end}"
                                 )
@@ -5142,12 +6152,14 @@ def api_generate_full_schedule():
                         for msg in leftover_conflicts[:5]:
                             logger.warning(f"  {msg}")
                     else:
-                        logger.info("No exact professor double-bookings in generated rows")
+                        logger.info(
+                            "No exact professor double-bookings in generated rows")
 
                     # Save directly to main schedules table (so users can see and review on timetable)
                     if save_to_db and schedules:
-                        logger.info(f"Starting save: {len(schedules)} schedules to main schedules table")
-                        
+                        logger.info(
+                            f"Starting save: {len(schedules)} schedules to main schedules table")
+
                         update_ga_progress(
                             status='running', message=f'Saving {len(schedules)} schedules to timetable...')
 
@@ -5162,7 +6174,8 @@ def api_generate_full_schedule():
                                 'semester', str(target_semester)).eq('school_year', target_school_year).execute()
                             logger.info(f"Cleared old schedules")
                         except Exception as e:
-                            logger.warning(f"Error clearing old schedules: {e}")
+                            logger.warning(
+                                f"Error clearing old schedules: {e}")
 
                         # BATCH INSERT: Prepare all schedule records first
                         schedule_records = []
@@ -5172,8 +6185,10 @@ def api_generate_full_schedule():
                                 # CRITICAL: Normalize room names to consistent format (TCC - 01, not TCC-01)
                                 room_name = sched.get('room', '')
                                 import re
-                                normalized_room = re.sub(r'(\w+)-(\d+)', r'\1 - \2', room_name)  # TCC-01 → TCC - 01
-                                
+                                normalized_room = re.sub(
+                                    # TCC-01 → TCC - 01
+                                    r'(\w+)-(\d+)', r'\1 - \2', room_name)
+
                                 schedule_data = {
                                     'id': new_id,
                                     'subj_code': sched.get('subjCode', ''),
@@ -5189,41 +6204,58 @@ def api_generate_full_schedule():
                                     'semester': str(target_semester),
                                     'school_year': target_school_year,
                                     'year': '1',
+                                    'source': 'GA Generated',
                                     'created_at': datetime.now(timezone.utc).isoformat(),
                                     'pairedWith': None
                                 }
                                 schedule_records.append(schedule_data)
-                                
+
                                 # Log first schedule for debugging
                                 if idx == 0:
-                                    logger.info(f"First schedule data: {schedule_data}")
+                                    logger.info(
+                                        f"First schedule data: {schedule_data}")
                             except Exception as e:
                                 error_msg = f"Failed to prepare schedule {idx}: {e}"
                                 logger.error(error_msg)
                                 save_errors.append(error_msg)
-                        
-                        logger.info(f"Prepared {len(schedule_records)} schedule records for batch insert")
-                        
-                        # Insert in chunks of 100 to avoid payload size limits
+
+                        logger.info(
+                            f"Prepared {len(schedule_records)} schedule records for batch insert")
+
+                        # Insert in chunks of 100. Retry without `source` if that column is not in the schema yet.
                         chunk_size = 100
-                        for i in range(0, len(schedule_records), chunk_size):
+                        include_source = True
+                        i = 0
+                        while i < len(schedule_records):
                             chunk = schedule_records[i:i + chunk_size]
                             try:
-                                insert_result = supabase.table('schedules').insert(chunk).execute()
+                                supabase.table('schedules').insert(
+                                    chunk).execute()
                                 saved += len(chunk)
-                                logger.info(f"Batch inserted chunk {i//chunk_size + 1}: {len(chunk)} schedules (total: {saved})")
+                                logger.info(
+                                    f"Batch inserted chunk {i//chunk_size + 1}: {len(chunk)} schedules (total: {saved})")
+                                i += chunk_size
                             except Exception as e:
+                                err = str(e)
+                                if include_source and ('source' in err.lower() or 'PGRST204' in err):
+                                    logger.warning(
+                                        'schedules.source is missing; saving without the GA label. '
+                                        'Run sql/schedule_source.sql in Supabase.')
+                                    include_source = False
+                                    for rec in schedule_records:
+                                        rec.pop('source', None)
+                                    continue
                                 error_msg = f"Failed to insert batch starting at {i}: {e}"
                                 logger.error(error_msg)
                                 save_errors.append(error_msg)
-                                if (saved % 50) == 0:
-                                    logger.info(f"Progress: {saved} schedules saved so far")
-                        
+                                i += chunk_size
+
                         logger.info(
                             f"Saved {saved} schedules to main schedules table (Target: {target_school_year} Semester {target_semester})")
-                        
+
                         if save_errors:
-                            logger.error(f"{len(save_errors)} schedules failed to save:")
+                            logger.error(
+                                f"{len(save_errors)} schedules failed to save:")
                             for err in save_errors[:5]:  # Log first 5 errors
                                 logger.error(f"  - {err}")
 
@@ -5243,7 +6275,8 @@ def api_generate_full_schedule():
                             summary += f' covering {scheduled} of {requested} allocated course-sections'
                         summary += '. Review them on the timetable.'
 
-                        unscheduled = result.get('unscheduled_course_sections') or []
+                        unscheduled = result.get(
+                            'unscheduled_course_sections') or []
                         if unscheduled:
                             summary += (f' {len(unscheduled)} could not be placed: '
                                         + ', '.join(unscheduled[:5])
@@ -5293,12 +6326,13 @@ def api_generate_full_schedule():
         print("🎬 About to create background thread...", flush=True)
         print("=" * 80, flush=True)
         logger.info(f"🎬 About to create background thread...")
-        
+
         def run_with_context():
             logger.info(f"Thread started at {datetime.now()}")
-            
+
             print("🚀 Background thread started, acquiring app context...", flush=True)
-            logger.info(f"🧵 Background thread started, acquiring app context...")
+            logger.info(
+                f"🧵 Background thread started, acquiring app context...")
             try:
                 with app.app_context():
                     print("✅ App context acquired, starting GA...", flush=True)
@@ -5308,27 +6342,27 @@ def api_generate_full_schedule():
                 logger.error(f"ERROR in thread: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-                
+
                 print(f"❌ Fatal error in background thread: {e}", flush=True)
                 logger.error(f"❌ Fatal error in background thread: {e}")
                 import traceback
                 traceback.print_exc()
-        
+
         print("🔧 Creating thread object...", flush=True)
         logger.info(f"🔧 Creating thread object...")
         thread = threading.Thread(target=run_with_context, daemon=True)
-        
+
         print("▶️ Starting thread...", flush=True)
         logger.info("Starting thread...")
         thread.start()
-        
+
         print("📤 Background thread dispatched", flush=True)
         logger.info(f"📤 Background thread dispatched")
 
         return jsonify({
             'success': True,
             'message': 'Schedule generation started with Phase 2',
-            'note': 'Poll /api/schedule/generate-progress for real-time updates. Generated schedules will be saved to generated_schedules table for review.'
+            'note': 'Poll /api/schedule/generate-progress. Completed runs are written to the schedules table and labeled GA Generated.'
         })
 
     except Exception as e:
@@ -5364,8 +6398,9 @@ def api_save_generated_schedule():
         # Count total schedules for this semester
         count_result = supabase.table('schedules').select('id', count='exact').eq(
             'school_year', school_year).eq('semester', str(semester)).execute()
-        
-        schedule_count = count_result.count if hasattr(count_result, 'count') else len(count_result.data)
+
+        schedule_count = count_result.count if hasattr(
+            count_result, 'count') else len(count_result.data)
 
         return jsonify({
             'success': True,
@@ -5421,6 +6456,34 @@ def debug_extensions():
         return jsonify({'extensions': extensions, 'count': len(extensions)})
     except Exception as e:
         logger.error(f"debug_extensions error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/dashboard/forecast', methods=['GET'])
+@login_required
+def dashboard_forecast():
+    """Yearly ARIMA outlook for papers, projects, extensions, and FSRs."""
+    try:
+        from services.forecast_service import build_forecast_payload
+
+        uid = session.get('uid')
+        role = session.get('role')
+        scope = (request.args.get('scope') or '').strip().lower()
+        member_id = None
+        filter_uid = None
+
+        if role != 'admin' or scope == 'member':
+            member_response = supabase.table('members').select(
+                'id').eq('uid', uid).execute()
+            if member_response.data:
+                member_id = member_response.data[0]['id']
+            filter_uid = uid
+
+        payload = build_forecast_payload(
+            supabase, db, member_id=member_id, uid=filter_uid)
+        return jsonify(payload)
+    except Exception as e:
+        logger.error(f"dashboard_forecast error: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -5802,17 +6865,43 @@ def process_chat_message():
         if not message:
             return jsonify({'error': 'Empty message.'}), 400
 
-        # Get current schedules for context - FROM SUPABASE
+        # Get current semester/year from request (passed from frontend)
+        current_school_year = data.get('school_year') or data.get('schoolYear')
+        current_semester = data.get('semester')
+
+        # Get current schedules for context - FILTERED BY CURRENT SEMESTER/YEAR
         current_schedules = []
-        result = supabase.table('schedules').select('*').execute()
-        for data in result.data:
-            current_schedules.append(data)
+        query = supabase.table('schedules').select('*')
+
+        # Filter by semester/year if provided
+        if current_school_year:
+            query = query.eq('school_year', current_school_year)
+        if current_semester:
+            query = query.eq('semester', str(current_semester))
+
+        result = query.execute()
+        for sched_data in result.data:
+            current_schedules.append(sched_data)
+
+        # DEBUG LOGGING
+        print(f"\n=== CHAT DEBUG ===")
+        print(f"Received school_year: {current_school_year}")
+        print(f"Received semester: {current_semester}")
+        print(f"Total schedules fetched: {len(current_schedules)}")
+        if current_schedules:
+            print(f"Sample schedule: {current_schedules[0]}")
 
         # Process message with NLP
         intent_data = process_message(message)
         intent_type = intent_data.get('intent')
         params = intent_data.get('params', {})
         confidence = intent_data.get('confidence', 0.0)
+
+        # DEBUG LOGGING
+        print(f"Message: '{message}'")
+        print(f"Intent: {intent_type}")
+        print(f"Params: {params}")
+        print(f"Confidence: {confidence}")
 
         response = {
             'status': 'ok',
@@ -5983,6 +7072,119 @@ def process_chat_message():
                 response['message'] = f"Current schedule has {len(current_schedules)} blocks."
                 response['data'] = {'total_schedules': len(current_schedules)}
 
+        # NEW: Handle enhanced query intents with human-like responses
+        elif intent_type in ['query_schedule_by_day', 'query_faculty_schedule', 'query_faculty_load', 'query_free_slots', 'query_faculty_free_time']:
+            from services.nlp_service import generate_human_response_for_schedules, generate_human_response_for_free_time
+
+            response['action'] = 'query_result'
+
+            if intent_type == 'query_schedule_by_day':
+                day = params.get('day')
+                day_schedules = [
+                    s for s in current_schedules if s.get('day') == day]
+                response['message'] = generate_human_response_for_schedules(
+                    day_schedules, 'schedule_by_day', params)
+                response['data'] = {'schedules': day_schedules}
+
+            elif intent_type == 'query_faculty_schedule':
+                faculty_name = params.get('faculty_name', '')
+                day = params.get('day')
+
+                # Flexible matching: match if any part of the name matches
+                faculty_name_parts = faculty_name.lower().split()
+                faculty_schedules = [
+                    s for s in current_schedules
+                    if any(part in s.get('prof', '').lower() for part in faculty_name_parts)
+                ]
+                if day:
+                    # Case-insensitive day matching
+                    faculty_schedules = [
+                        s for s in faculty_schedules if s.get('day', '').lower() == day.lower()]
+                response['message'] = generate_human_response_for_schedules(
+                    faculty_schedules, 'faculty_schedule', params)
+                response['data'] = {'schedules': faculty_schedules}
+
+            elif intent_type == 'query_faculty_load':
+                faculty_name = params.get('faculty_name', '')
+
+                # Flexible matching: match if any part of the name matches
+                faculty_name_parts = faculty_name.lower().split()
+                faculty_schedules = [
+                    s for s in current_schedules
+                    if any(part in s.get('prof', '').lower() for part in faculty_name_parts)
+                ]
+                response['message'] = generate_human_response_for_schedules(
+                    faculty_schedules, 'faculty_load', params)
+                response['data'] = {'schedules': faculty_schedules}
+
+            elif intent_type == 'query_faculty_free_time':
+                faculty_name = params.get('faculty_name', '')
+                day = params.get('day')
+
+                # DEBUG LOGGING
+                print(f"\n=== FACULTY FREE TIME QUERY ===")
+                print(f"Faculty name from params: {faculty_name}")
+                print(f"Day from params: {day}")
+
+                # Flexible matching: match if any part of the name matches
+                faculty_name_parts = faculty_name.lower().split()
+                print(f"Name parts for matching: {faculty_name_parts}")
+
+                faculty_schedules = [
+                    s for s in current_schedules
+                    if any(part in s.get('prof', '').lower() for part in faculty_name_parts)
+                ]
+                print(f"Schedules after name match: {len(faculty_schedules)}")
+                if faculty_schedules:
+                    print(
+                        f"Sample matched schedule: prof='{faculty_schedules[0].get('prof')}', day='{faculty_schedules[0].get('day')}'")
+
+                if day:
+                    # Case-insensitive day matching
+                    before_day_filter = len(faculty_schedules)
+                    faculty_schedules = [
+                        s for s in faculty_schedules if s.get('day', '').lower() == day.lower()]
+                    print(
+                        f"Schedules after day filter ({day}): {before_day_filter} -> {len(faculty_schedules)}")
+                    if faculty_schedules:
+                        print(
+                            f"Monday schedules found: {[s.get('start', '') + '-' + s.get('end', '') for s in faculty_schedules]}")
+
+                # Calculate free periods (simplified - gaps between classes)
+                free_periods = []
+                if faculty_schedules:
+                    # Sort by day and start time
+                    sorted_scheds = sorted(faculty_schedules, key=lambda x: (
+                        x.get('day', ''), x.get('start', '')))
+
+                    # Find gaps (this is simplified - you might want more sophisticated logic)
+                    for i in range(len(sorted_scheds) - 1):
+                        current = sorted_scheds[i]
+                        next_sched = sorted_scheds[i + 1]
+
+                        # If same day and there's a gap
+                        if current.get('day') == next_sched.get('day'):
+                            gap_start = current.get('end')
+                            gap_end = next_sched.get('start')
+                            # Only include significant gaps (more than 30 mins)
+                            if gap_start and gap_end:
+                                free_periods.append({
+                                    'day': current.get('day'),
+                                    'start': gap_start,
+                                    'end': gap_end
+                                })
+
+                response['message'] = generate_human_response_for_free_time(
+                    faculty_name, free_periods, day, has_schedules=len(faculty_schedules) > 0)
+                response['data'] = {
+                    'free_periods': free_periods, 'schedules': faculty_schedules}
+
+            elif intent_type == 'query_free_slots':
+                day = params.get('day')
+                response['message'] = generate_human_response_for_schedules(
+                    current_schedules, 'free_slots', params)
+                response['data'] = {'schedules': current_schedules}
+
         else:
             response['message'] = "I'm not sure what you want me to do. Try asking me to:\n- Generate a full schedule\n- Add a class\n- Remove a class\n- Move a class\n- Show conflicts"
             response['data'] = {'suggestions': [
@@ -6032,21 +7234,21 @@ def member_fsr_data():
         # Schedules — match by last name and filter by semester/year if provided
         semester = request.args.get('semester')
         school_year = request.args.get('school_year')
-        
+
         last_name = (member_data.get('last') or '').strip().lower()
         schedules = []
         if last_name:
             # Build query with optional filters
             query = supabase.table('schedules').select('*')
-            
+
             # Apply filters if provided
             if semester:
                 query = query.eq('semester', semester)
             if school_year:
                 query = query.eq('school_year', school_year)
-            
+
             all_sched = query.execute()
-            
+
             for s in (all_sched.data or []):
                 prof = (s.get('prof') or '').lower()
                 if last_name in prof:
@@ -6375,8 +7577,11 @@ def user_admin_page():
                            initial=initial)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Register Forgot Password Routes
+# ══════════════════════════════════════════════════════════════════════════════
+register_forgot_password_routes(app, db)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-

@@ -276,6 +276,19 @@
         color: #1a1a1a;
     }
 
+    .sched-block .sb-ga {
+        display: inline-block;
+        margin-left: 4px;
+        padding: 0 4px;
+        border-radius: 3px;
+        background: #E6B800;
+        color: #1a1a1a;
+        font-size: 0.55rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        vertical-align: 1px;
+    }
+
     .sched-block .sb-prof {
         color: #555;
         font-size: 0.63rem;
@@ -4356,9 +4369,9 @@
             function showDiscardModal(changeCount) {
                 var modal = document.getElementById('discard-modal');
                 var message = document.getElementById('discard-message');
-                
+
                 message.innerHTML = 'Are you sure you want to discard <strong>' + changeCount + ' unsaved schedule(s)</strong>?<br><br>This will revert to the last saved state and cannot be undone.';
-                
+
                 modal.classList.add('open');
             }
 
@@ -4426,12 +4439,12 @@
             // School year & semester: persist admin's choice via localStorage
             // Default: current year to next year, 1st semester
             var _defaultSY = new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
-            
+
             // Store in window object for global access
             window.currentSchoolYear = localStorage.getItem('cerp_schoolYear') || _defaultSY;
             window.currentSemester = localStorage.getItem('cerp_semester') || '1';
             window.currentSection = localStorage.getItem('cerp_section') || ''; // Empty means show all sections
-            
+
             // Also create local references for backward compatibility
             var currentSchoolYear = window.currentSchoolYear;
             var currentSemester = window.currentSemester;
@@ -4476,11 +4489,11 @@
             // at the same start time. Bidirectional links are set on both blocks.
             function relinkPairedBlocks(arr) {
                 var DAY_PARTNERS = {
-                    'Monday':    'Wednesday',
+                    'Monday': 'Wednesday',
                     'Wednesday': 'Friday',
-                    'Friday':    'Wednesday',
-                    'Tuesday':   'Thursday',
-                    'Thursday':  'Tuesday'
+                    'Friday': 'Wednesday',
+                    'Tuesday': 'Thursday',
+                    'Thursday': 'Tuesday'
                 };
 
                 // Clear any stale pairedWith first
@@ -4535,7 +4548,8 @@
                             units: s.units,
                             section: s.section,
                             schoolYear: s.school_year || s.schoolYear,
-                            semester: s.semester
+                            semester: s.semester,
+                            source: s.source || ''
                         };
                     });
 
@@ -5730,20 +5744,20 @@
                     // Check if user is a faculty member (not admin)
                     var currentUserRole = window.currentUser ? window.currentUser.role : null;
                     var currentUserName = window.currentUser ? window.currentUser.full_name : null;
-                    
+
                     // Normalize current user name (remove suffix for comparison)
                     var currentUserNameNormalized = currentUserName;
                     if (currentUserNameNormalized && currentUserNameNormalized.indexOf(',') > -1) {
                         currentUserNameNormalized = currentUserNameNormalized.split(',')[0].trim();
                     }
-                    
+
                     console.log('👤 Populating professor dropdown:');
                     console.log('   - Current user role:', currentUserRole);
                     console.log('   - Current user name (full):', currentUserName);
                     console.log('   - Current user name (normalized):', currentUserNameNormalized);
                     console.log('   - Available professors:', profs.length);
                     console.log('   - User in prof list?', profs.includes(currentUserNameNormalized));
-                    
+
                     var curProf = profSel.value;
                     profSel.innerHTML = '';
 
@@ -6166,7 +6180,9 @@
                                 var shortProf = nameParts.slice(-2).join(' ');
                                 rows += '<div class="sched-block" id="blk-' + item.id + '" data-id="' + item.id + '" style="background:' + bg + ';height:' + blockH + 'px;">'
                                     + '<span class="sb-del" onclick="deleteEntry(\'' + item.id + '\',event)">&#x2715;</span>'
-                                    + '<span class="sb-subj">' + item.subjCode + '</span>'
+                                    + '<span class="sb-subj">' + item.subjCode
+                                    + (item.source === 'GA Generated' ? '<span class="sb-ga">GA</span>' : '')
+                                    + '</span>'
                                     + '<span class="sb-prof">' + shortProf + '</span>'
                                     + '<span class="sb-room">' + (item.room || '') + '</span>'
                                     + '<span class="sb-section">' + (item.section || '') + '</span>'
@@ -7577,7 +7593,11 @@
                     var res = await fetch('/api/chat/process', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: text })
+                        body: JSON.stringify({
+                            message: text,
+                            school_year: currentSchoolYear,
+                            semester: currentSemester
+                        })
                     });
 
                     var data = await res.json();
@@ -7657,30 +7677,30 @@
 
             // Store current user info globally
             window.currentUser = null;
-            
+
             async function loadCurrentUser() {
                 try {
                     console.log('🔄 Fetching current user from /api/current-member...');
                     var res = await fetch('/api/current-member');
                     console.log('📡 Response status:', res.status, res.statusText);
-                    
+
                     if (res.ok) {
                         var userData = await res.json();
                         console.log('📦 User data received:', userData);
                         console.log('📋 Available fields:', Object.keys(userData).join(', '));
-                        
+
                         // Try ALL possible name field variations
                         var firstName = userData.firstName || userData.first_name || userData.firstname || '';
                         var lastName = userData.lastName || userData.last_name || userData.lastname || '';
                         var fullName = userData.fullName || userData.full_name || userData.fullname || userData.name || '';
                         var suffix = userData.suffix || '';
-                        
+
                         console.log('   - firstName:', firstName || '(empty)');
                         console.log('   - lastName:', lastName || '(empty)');
                         console.log('   - fullName:', fullName || '(empty)');
                         console.log('   - suffix:', suffix || '(empty)');
                         console.log('   - role:', userData.role);
-                        
+
                         // Strategy: Try fullName first, then build from firstName+lastName
                         var finalName = '';
                         if (fullName) {
@@ -7699,7 +7719,7 @@
                             finalName = userData.email || userData.uid || 'Unknown User';
                             console.log('⚠️ No name fields found, using fallback:', finalName);
                         }
-                        
+
                         window.currentUser = {
                             id: userData.id,
                             role: userData.role,
@@ -7712,7 +7732,7 @@
                     } else {
                         var errorText = await res.text();
                         console.error('❌ Failed to load current user. Status:', res.status, 'Response:', errorText);
-                        
+
                         // If 401, user is not logged in - redirect to login
                         if (res.status === 401) {
                             console.warn('🚪 User not authenticated, redirecting to login...');
@@ -7744,11 +7764,11 @@
                 await loadConfiguredSubjects();
 
                 console.log('✅ Schedule page initialization complete');
-                
+
                 // Step 4: Force refresh filter options now that user is loaded
                 // This ensures the dropdown is set correctly for members
                 refreshFilterOptions();
-                
+
                 // Step 5: Apply the filter to show only member's schedule
                 // This triggers rendering with the correct professor filter
                 if (window.currentUser && window.currentUser.role === 'user') {
@@ -9535,7 +9555,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div id="schedule-chat-title" style="font-size:0.9rem;font-weight:700;color:#111827;">Schedule Assistant</div>
+                    <div id="schedule-chat-title" style="font-size:0.9rem;font-weight:700;color:#111827;">Schedule
+                        Assistant</div>
                     <div style="font-size:0.72rem;color:#6b7280;">CHE AI Assistant</div>
                 </div>
             </div>
@@ -9603,12 +9624,42 @@
             lastGenerationParams: null  // Store last generation params for re-generate
         };
 
+        function getTermSelects() {
+            return {
+                year: document.getElementById('schoolyear-select'),
+                sem: document.getElementById('semester-select'),
+                prof: document.getElementById('sf-professor'),
+                section: document.getElementById('section-select')
+            };
+        }
+
+        function currentPageTerm() {
+            var t = getTermSelects();
+            return {
+                schoolYear: (t.year && t.year.value) || localStorage.getItem('cerp_schoolYear') || (new Date().getFullYear() + '-' + (new Date().getFullYear() + 1)),
+                semester: (t.sem && t.sem.value) || localStorage.getItem('cerp_semester') || '1'
+            };
+        }
+
+        function switchToTargetTerm(year, sem) {
+            var t = getTermSelects();
+            if (t.year && year) t.year.value = year;
+            if (t.sem && sem) t.sem.value = sem;
+            if (t.prof) t.prof.value = '';
+            if (t.section) t.section.value = '';
+            if (year) localStorage.setItem('cerp_schoolYear', year);
+            if (sem) localStorage.setItem('cerp_semester', sem);
+            if (typeof onFilterChange === 'function') onFilterChange();
+            else if (typeof applyFilters === 'function') applyFilters();
+        }
+
         // Load chat history from localStorage on page load
         function loadChatHistory() {
             try {
                 // Get current semester/year from filters or localStorage
-                var schoolYear = document.getElementById('school-year-filter')?.value || localStorage.getItem('cerp_schoolYear') || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
-                var semester = document.getElementById('semester-filter')?.value || localStorage.getItem('cerp_semester') || '1';
+                var term = currentPageTerm();
+                var schoolYear = term.schoolYear;
+                var semester = term.semester;
 
                 var saved = localStorage.getItem('schedule_chat_history_' + schoolYear + '_' + semester);
                 if (saved) {
@@ -9640,7 +9691,7 @@
                             }
                         });
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        
+
                         // DON'T restore buttons - they're ephemeral and would cause issues
                     }
                 }
@@ -9653,8 +9704,9 @@
         function saveChatHistory() {
             try {
                 // Get current semester/year from filters or localStorage
-                var schoolYear = document.getElementById('school-year-filter')?.value || localStorage.getItem('cerp_schoolYear') || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
-                var semester = document.getElementById('semester-filter')?.value || localStorage.getItem('cerp_semester') || '1';
+                var term = currentPageTerm();
+                var schoolYear = term.schoolYear;
+                var semester = term.semester;
 
                 var data = {
                     history: scheduleChatState.chatHistory,
@@ -9676,7 +9728,7 @@
             var messagesContainer = document.getElementById('schedule-chat-messages');
             if (messagesContainer) {
                 messagesContainer.innerHTML = '';
-                
+
                 // Set chat title based on role
                 var chatTitle = document.getElementById('schedule-chat-title');
                 if (chatTitle) {
@@ -9686,11 +9738,11 @@
                         chatTitle.textContent = 'Schedule Generator';
                     }
                 }
-                
+
                 // Add welcome message (role-specific)
                 var welcomeMsg = document.createElement('div');
                 welcomeMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
-                
+
                 // Different welcome message for admin vs member
                 var welcomeText = '';
                 if (window.currentUser && window.currentUser.role === 'user') {
@@ -9700,7 +9752,7 @@
                     // ADMIN: Generation assistant
                     welcomeText = 'Hi! I\'m CHE, your schedule generation assistant. I can help you generate optimized schedules using genetic algorithms. Ask me to generate a schedule or answer questions about the scheduling process.';
                 }
-                
+
                 welcomeMsg.innerHTML =
                     '<div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6b0f1a,#9b1a2a);color:white;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;flex-shrink:0;">CHE</div>' +
                     '<div style="max-width:82%;padding:9px 13px;border-radius:14px;border-bottom-left-radius:4px;font-size:0.8rem;line-height:1.55;color:#111827;background:#f3f4f6;white-space:pre-line;">' + welcomeText + '</div>';
@@ -9785,7 +9837,9 @@
                     include_context: true,
                     is_schedule_page: true,  // Flag to indicate this is the schedule page chat
                     user_role: window.currentUser ? window.currentUser.role : 'admin',  // Send user role
-                    user_name: window.currentUser ? window.currentUser.full_name : null  // Send user name for member queries
+                    user_name: window.currentUser ? window.currentUser.full_name : null,  // Send user name for member queries
+                    school_year: currentSchoolYear,  // Send current school year for filtering
+                    semester: currentSemester  // Send current semester for filtering
                 })
             })
                 .then(function (res) { return res.json(); })
@@ -9796,7 +9850,7 @@
 
                     // Get reply and strip JSON code blocks
                     var reply = data.reply || 'Sorry, I encountered an error.';
-                    var cleanReply = reply.replace(/```json[\s\S]*? ```/g, '').trim();
+                    var cleanReply = reply.replace(/```json[\s\S]*?```/g, '').trim();
 
                     scheduleChatState.chatHistory.push({ role: 'assistant', content: reply });
                     saveChatHistory();
@@ -9810,8 +9864,16 @@
                     messagesContainer.appendChild(aiMsg);
 
                     // Check if there's an action that needs confirmation
-                    if (data.action && data.action.confirm) {
-                        renderActionForm(data.action, messagesContainer);
+                    if (data.action) {
+                        if (data.action.action === 'generate_full') {
+                            data.action.action = 'generate_full_schedule';
+                            data.action.confirm = true;
+                        }
+                        if (data.action.confirm) {
+                            renderActionForm(data.action, messagesContainer);
+                        } else if (data.action_result && data.action_result.message) {
+                            showScheduleAIMessage(data.action_result.message, !data.action_result.success);
+                        }
                     }
 
                     // Scroll to bottom
@@ -9899,7 +9961,7 @@
             formCard.appendChild(formTitle);
 
             // Render form fields based on action type
-            if (actionType === 'generate_full_schedule') {
+            if (actionType === 'generate_full_schedule' || actionType === 'generate_full') {
                 renderGenerateFullScheduleForm(formCard, params);
             } else if (actionType === 'add_schedule') {
                 renderAddScheduleForm(formCard, params);
@@ -9927,51 +9989,86 @@
         }
 
         function renderGenerateFullScheduleForm(container, params) {
+            var pageTerm = currentPageTerm();
+            var refSem = params.reference_semester || pageTerm.semester || '1';
+            var refYear = params.reference_school_year || pageTerm.schoolYear;
+            var tgtSem = params.target_semester || pageTerm.semester || '1';
+            var tgtYear = params.target_school_year || pageTerm.schoolYear;
+
             var formHtml = '<div style="display:flex;flex-direction:column;gap:10px;">';
+            formHtml += '<p style="margin:0;font-size:0.75rem;color:#6b7280;line-height:1.45;">CHE will copy faculty/course assignments from the reference term and build a new timetable for the target term. This usually takes about 4 minutes.</p>';
 
-            // Reference semester
-            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Reference Semester</label>';
-            formHtml += '<select id="ref-semester" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;">';
-            formHtml += '<option value="1"' + (params.reference_semester === '1' ? ' selected' : '') + '>1st Semester</option>';
-            formHtml += '<option value="2"' + (params.reference_semester === '2' ? ' selected' : '') + '>2nd Semester</option>';
-            formHtml += '</select></div>';
+            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Use this term as reference</label>';
+            formHtml += '<select id="ref-semester" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;margin-bottom:6px;">';
+            formHtml += '<option value="1"' + (refSem === '1' ? ' selected' : '') + '>1st Semester</option>';
+            formHtml += '<option value="2"' + (refSem === '2' ? ' selected' : '') + '>2nd Semester</option>';
+            formHtml += '</select>';
+            formHtml += '<input type="text" id="ref-year" value="' + escapeHtml(refYear) + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;" placeholder="2026-2027"></div>';
 
-            // Reference school year
-            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Reference School Year</label>';
-            formHtml += '<input type="text" id="ref-year" value="' + (params.reference_school_year || '2026-2027') + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;" placeholder="2026-2027"></div>';
+            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Generate this term</label>';
+            formHtml += '<select id="target-semester" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;margin-bottom:6px;">';
+            formHtml += '<option value="1"' + (tgtSem === '1' ? ' selected' : '') + '>1st Semester</option>';
+            formHtml += '<option value="2"' + (tgtSem === '2' ? ' selected' : '') + '>2nd Semester</option>';
+            formHtml += '</select>';
+            formHtml += '<input type="text" id="target-year" value="' + escapeHtml(tgtYear) + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;" placeholder="2026-2027"></div>';
 
-            // Target semester
-            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Target Semester</label>';
-            formHtml += '<select id="target-semester" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;">';
-            formHtml += '<option value="1"' + (params.target_semester === '1' ? ' selected' : '') + '>1st Semester</option>';
-            formHtml += '<option value="2"' + (params.target_semester === '2' ? ' selected' : '') + '>2nd Semester</option>';
-            formHtml += '</select></div>';
+            formHtml += '<div id="ga-preview-summary" style="font-size:0.75rem;color:#374151;padding:10px;background:#f9fafb;border-radius:6px;line-height:1.5;">Checking current assignments…</div>';
 
-            // Target school year
-            formHtml += '<div><label style="font-size:0.75rem;color:#6b7280;font-weight:600;display:block;margin-bottom:4px;">Target School Year</label>';
-            formHtml += '<input type="text" id="target-year" value="' + (params.target_school_year || '2026-2027') + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;" placeholder="2026-2027"></div>';
-
-            // Save to database
-            formHtml += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:6px;">';
-            formHtml += '<input type="checkbox" id="save-to-db" ' + (params.save_to_db !== false ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;">';
-            formHtml += '<label for="save-to-db" style="font-size:0.75rem;color:#374151;cursor:pointer;">Save generated schedule to database</label>';
-            formHtml += '</div>';
-
-            // Action buttons
             formHtml += '<div style="display:flex;gap:8px;margin-top:6px;">';
-            formHtml += '<button onclick="confirmGenerateSchedule()" style="flex:1;padding:9px;background:#6b0f1a;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Generate Schedule</button>';
-            formHtml += '<button onclick="cancelAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
+            formHtml += '<button type="button" onclick="confirmGenerateSchedule()" style="flex:1;padding:9px;background:#6b0f1a;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Generate schedule</button>';
+            formHtml += '<button type="button" onclick="cancelAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
             formHtml += '</div></div>';
 
             container.innerHTML += formHtml;
+            ['ref-semester', 'ref-year', 'target-semester', 'target-year'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', refreshGeneratePreview);
+                if (el) el.addEventListener('blur', refreshGeneratePreview);
+            });
+            refreshGeneratePreview();
+        }
+
+        function refreshGeneratePreview() {
+            var box = document.getElementById('ga-preview-summary');
+            var refSem = document.getElementById('ref-semester');
+            var refYear = document.getElementById('ref-year');
+            var tgtSem = document.getElementById('target-semester');
+            var tgtYear = document.getElementById('target-year');
+            if (!box || !refSem || !refYear || !tgtSem || !tgtYear) return;
+            var qs = 'reference_semester=' + encodeURIComponent(refSem.value)
+                + '&reference_school_year=' + encodeURIComponent(refYear.value.trim())
+                + '&target_semester=' + encodeURIComponent(tgtSem.value)
+                + '&target_school_year=' + encodeURIComponent(tgtYear.value.trim());
+            fetch('/api/schedule/generate-preview?' + qs)
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (!data.success) {
+                        box.textContent = 'Could not load a preview. You can still generate.';
+                        return;
+                    }
+                    var html = '<strong>' + data.faculty_count + '</strong> faculty · '
+                        + '<strong>' + data.allocated_course_sections + '</strong> course+sections · '
+                        + '<strong>' + data.reference_blocks + '</strong> reference meetings';
+                    if (data.will_replace) {
+                        html += '<div style="margin-top:8px;padding:8px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;color:#92400e;">This will replace <strong>'
+                            + data.existing_target_blocks + '</strong> existing timetable blocks for the target term. That cannot be undone.</div>';
+                    } else {
+                        html += '<div style="margin-top:6px;color:#6b7280;">No existing blocks on the target term yet.</div>';
+                    }
+                    box.innerHTML = html;
+                })
+                .catch(function () {
+                    box.textContent = 'Could not load a preview. You can still generate.';
+                });
         }
 
         function renderGenericConfirmation(container, action) {
+            window._pendingCheAction = action;
             var formHtml = '<div style="display:flex;flex-direction:column;gap:10px;">';
             formHtml += '<div style="font-size:0.8rem;color:#374151;padding:10px;background:#f9fafb;border-radius:6px;">Ready to proceed with this action?</div>';
             formHtml += '<div style="display:flex;gap:8px;">';
-            formHtml += '<button onclick="confirmGenericAction(' + escapeHtml(JSON.stringify(action)) + ')" style="flex:1;padding:9px;background:#6b0f1a;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Confirm</button>';
-            formHtml += '<button onclick="cancelAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
+            formHtml += '<button type="button" onclick="confirmGenericAction()" style="flex:1;padding:9px;background:#6b0f1a;color:white;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">Confirm</button>';
+            formHtml += '<button type="button" onclick="cancelAction(this)" style="padding:9px 16px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;font-size:0.8rem;cursor:pointer;">Cancel</button>';
             formHtml += '</div></div>';
             container.innerHTML += formHtml;
         }
@@ -9983,25 +10080,23 @@
 
             // Check if buttons already exist
             if (document.getElementById('schedule-action-buttons')) return;
-            
+
             // DON'T save buttons to chat history - they're ephemeral UI elements
 
             var btnContainer = document.createElement('div');
             btnContainer.id = 'schedule-action-buttons';
             btnContainer.style.cssText = 'margin:10px 0 10px 34px;max-width:82%;display:flex;flex-direction:column;gap:8px;';
 
-            // Save button
-            var saveBtn = document.createElement('button');
-            saveBtn.onclick = disabled ? null : function () { confirmSaveGeneratedSchedule(); };
-            saveBtn.disabled = disabled;
-            saveBtn.style.cssText = 'width:100%;padding:10px 16px;background:' + (disabled ? '#9ca3af' : '#10b981') + ';color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:' + (disabled ? 'not-allowed' : 'pointer') + ';display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;opacity:' + (disabled ? '0.6' : '1') + ';';
-            saveBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg> ' + (disabled ? 'Schedule Saved' : 'Save Schedule');
-            if (!disabled) {
-                saveBtn.onmouseover = function () { this.style.background = '#059669'; };
-                saveBtn.onmouseout = function () { this.style.background = '#10b981'; };
-            }
-
-            // Re-generate button
+            // Save button is not needed — generation already writes to the timetable
+            var reviewBtn = document.createElement('button');
+            reviewBtn.onclick = function () {
+                var p = scheduleChatState.lastGenerationParams || {};
+                switchToTargetTerm(p.target_school_year, p.target_semester);
+                loadSchedules();
+                showToast('Showing the generated timetable.', 'info', 2000);
+            };
+            reviewBtn.style.cssText = 'width:100%;padding:10px 16px;background:#3b82f6;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;';
+            reviewBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.001 0 01-15.357-2m15.357 2H15" /></svg> Show on timetable';
             var regenBtn = document.createElement('button');
             regenBtn.onclick = function () { triggerRegenerate(); };
             regenBtn.style.cssText = 'width:100%;padding:10px 16px;background:#6b0f1a;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;';
@@ -10009,20 +10104,7 @@
             regenBtn.onmouseover = function () { this.style.background = '#8b1424'; };
             regenBtn.onmouseout = function () { this.style.background = '#6b0f1a'; };
 
-            // Refresh/Show Schedule button (in case auto-load failed)
-            var refreshBtn = document.createElement('button');
-            refreshBtn.onclick = function () {
-                console.log('🔄 Manual refresh requested');
-                loadGeneratedSchedules();
-                showToast('Loading generated schedules...', 'info', 2000);
-            };
-            refreshBtn.style.cssText = 'width:100%;padding:10px 16px;background:#3b82f6;color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;';
-            refreshBtn.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Refresh & Show Schedule';
-            refreshBtn.onmouseover = function () { this.style.background = '#2563eb'; };
-            refreshBtn.onmouseout = function () { this.style.background = '#3b82f6'; };
-
-            btnContainer.appendChild(saveBtn);
-            btnContainer.appendChild(refreshBtn);
+            btnContainer.appendChild(reviewBtn);
             btnContainer.appendChild(regenBtn);
             messagesContainer.appendChild(btnContainer);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -10085,11 +10167,11 @@
                 .then(function (data) {
                     if (data.success) {
                         showScheduleAIMessage('Schedule saved successfully! The schedule is now visible to all users.', false);
-                        
+
                         // Remove action buttons after save
                         var btnContainer = document.getElementById('schedule-action-buttons');
                         if (btnContainer) btnContainer.remove();
-                        
+
                         // Reload main schedules
                         loadSchedules();
                     } else {
@@ -10119,106 +10201,19 @@
             showSaveAndRegenerateButtons();
         };
 
-        // Load generated schedules (from generated_schedules table)
+        // Load generated schedules onto the live timetable
         function loadGeneratedSchedules() {
-            console.log('🔍 loadGeneratedSchedules() called');
-            console.log('📊 scheduleChatState:', scheduleChatState);
-            
-            // Load from generated_schedules table instead of schedules table
-            // CRITICAL FIX: Use lastGenerationParams to ensure we load the correct target semester
             var schoolYear, semester;
-            
             if (scheduleChatState && scheduleChatState.lastGenerationParams) {
-                // Use the target semester/year from the generation request
                 schoolYear = scheduleChatState.lastGenerationParams.target_school_year;
                 semester = scheduleChatState.lastGenerationParams.target_semester;
-                console.log('📋 Loading generated schedules for TARGET:', schoolYear, 'Semester', semester);
             } else {
-                // Fallback to filter values
-                var yearFilter = document.getElementById('school-year-filter');
-                var semesterFilter = document.getElementById('semester-filter');
-
-                if (!yearFilter || !semesterFilter) {
-                    loadSchedules(); // Fallback
-                    return;
-                }
-
-                schoolYear = yearFilter.value;
-                semester = semesterFilter.value;
-                console.log('📋 Loading generated schedules from FILTERS:', schoolYear, 'Semester', semester);
+                var term = currentPageTerm();
+                schoolYear = term.schoolYear;
+                semester = term.semester;
             }
-
-            fetch('/api/schedules/generated?school_year=' + schoolYear + '&semester=' + semester)
-                .then(function (res) { return res.json(); })
-                .then(function (data) {
-                    console.log('📥 API Response:', data);
-                    
-                    if (data.schedules && data.schedules.length > 0) {
-                        console.log('✅ Found', data.schedules.length, 'generated schedules');
-                        
-                        // Replace pendingSchedules with generated schedules
-                        pendingSchedules = data.schedules.map(function (s) {
-                            return {
-                                id: s.id,
-                                prof: s.prof,
-                                subjCode: s.subj_code || s.subjCode,
-                                subjName: s.subj_name || s.subjName,
-                                type: s.type,
-                                day: s.day,
-                                start: s.start_time || s.start,
-                                end: s.end_time || s.end,
-                                room: s.room,
-                                units: s.units,
-                                section: s.section,
-                                schoolYear: s.school_year || s.schoolYear,
-                                semester: s.semester,
-                                isGenerated: true  // Flag to indicate this is from generated_schedules
-                            };
-                        });
-
-                        console.log('📦 Mapped pendingSchedules:', pendingSchedules.length, 'items');
-
-                        // Update filter dropdowns AND clear prof/section filters to show ALL generated schedules
-                        var yearFilter = document.getElementById('school-year-filter');
-                        var semesterFilter = document.getElementById('semester-filter');
-                        var profFilter = document.getElementById('professor-filter');
-                        var sectionFilter = document.getElementById('section-filter');
-                        
-                        if (yearFilter && semesterFilter) {
-                            console.log('🔄 Updating filters to:', schoolYear, 'Semester', semester);
-                            yearFilter.value = schoolYear;
-                            semesterFilter.value = semester;
-                            
-                            // CRITICAL: Clear professor and section filters to show ALL schedules
-                            if (profFilter) profFilter.value = '';
-                            if (sectionFilter) sectionFilter.value = '';
-                        }
-
-                        // Update savedSchedules reference (for discard functionality)
-                        savedSchedules = JSON.parse(JSON.stringify(pendingSchedules));
-                        schedules = pendingSchedules;
-                        window.schedules = schedules;
-
-                        console.log('🎨 Starting render pipeline...');
-                        
-                        // Render timetable with generated schedules
-                        applyFilters();
-                        renderTimetable();
-                        renderReport();
-                        calculateAllocatedUnits();
-                        renderDraggableBlocks();
-                        
-                        console.log('✅ Loaded', pendingSchedules.length, 'generated schedules for', schoolYear, 'Semester', semester);
-                    } else {
-                        console.warn('⚠️ No generated schedules found for', schoolYear, 'Semester', semester);
-                        console.warn('⚠️ API returned:', data);
-                        loadSchedules(); // Fallback to regular schedules
-                    }
-                })
-                .catch(function (err) {
-                    console.error('Error loading generated schedules:', err);
-                    loadSchedules(); // Fallback
-                });
+            switchToTargetTerm(schoolYear, semester);
+            loadSchedules();
         }
 
         // Show re-generate button after successful generation
@@ -10301,13 +10296,7 @@
             var params = scheduleChatState.lastGenerationParams;
 
             // Switch to target semester view
-            var yearFilter = document.getElementById('school-year-filter');
-            var semesterFilter = document.getElementById('semester-filter');
-            if (yearFilter && semesterFilter) {
-                yearFilter.value = params.target_school_year;
-                semesterFilter.value = params.target_semester;
-                applyFilters();
-            }
+            switchToTargetTerm(params.target_school_year, params.target_semester);
 
             // Show progress
             showGenerationProgress();
@@ -10336,10 +10325,14 @@
         // Confirm generate schedule action
         window.confirmGenerateSchedule = function () {
             var refSemester = document.getElementById('ref-semester').value;
-            var refYear = document.getElementById('ref-year').value;
+            var refYear = document.getElementById('ref-year').value.trim();
             var targetSemester = document.getElementById('target-semester').value;
-            var targetYear = document.getElementById('target-year').value;
-            var saveToDb = document.getElementById('save-to-db').checked;
+            var targetYear = document.getElementById('target-year').value.trim();
+
+            if (!refYear || !targetYear) {
+                showScheduleAIMessage('Please enter both the reference and target school years.', true);
+                return;
+            }
 
             // Store generation params for re-generate
             scheduleChatState.lastGenerationParams = {
@@ -10347,7 +10340,7 @@
                 reference_school_year: refYear,
                 target_semester: targetSemester,
                 target_school_year: targetYear,
-                save_to_db: saveToDb
+                save_to_db: true
             };
             saveChatHistory();
 
@@ -10360,14 +10353,7 @@
                 setTimeout(function () { formCard.remove(); }, 150);
             }
 
-            // Switch to target semester view if filters exist
-            var yearFilter = document.getElementById('school-year-filter');
-            var semesterFilter = document.getElementById('semester-filter');
-            if (yearFilter && semesterFilter) {
-                yearFilter.value = targetYear;
-                semesterFilter.value = targetSemester;
-                applyFilters();
-            }
+            switchToTargetTerm(targetYear, targetSemester);
 
             // Show draggable progress indicator
             showGenerationProgress();
@@ -10381,7 +10367,7 @@
                     reference_school_year: refYear,
                     target_semester: targetSemester,
                     target_school_year: targetYear,
-                    save_to_db: saveToDb
+                    save_to_db: true
                 })
             })
                 .then(function (res) { return res.json(); })
@@ -10409,7 +10395,7 @@
         function showGenerationProgress() {
             // Reset completion flag when starting new generation
             generationCompletionShown = false;
-            
+
             // Create floating progress widget
             progressWidget = document.createElement('div');
             progressWidget.id = 'ga-progress-widget';
@@ -10476,7 +10462,7 @@
                 ? progress.best_fitness.toFixed(1)
                 : '∞';
             var conflicts = (progress.hard_viols || 0) + (progress.soft_viols || 0);
-            
+
             // If status is completed, animate to 100% regardless of generation count
             // Otherwise track the time budget, since the GA nearly always stops on time
             var percentage;
@@ -10495,7 +10481,7 @@
                 : gen + '/' + maxGen;
             document.getElementById('progress-fitness').textContent = fitness;
             document.getElementById('progress-conflicts').textContent = conflicts;
-            
+
             // Animate progress bar
             var progressBar = document.getElementById('progress-bar');
             progressBar.style.transition = 'width 0.5s ease-out';
@@ -10550,7 +10536,7 @@
 
                         // Track whether the backend is still making progress
                         var signature = [progress.status, progress.generation,
-                            progress.message].join('|');
+                        progress.message].join('|');
                         if (signature !== lastSignature) {
                             lastSignature = signature;
                             lastActivityAt = Date.now();
@@ -10606,10 +10592,8 @@
 
                             // Ask CHE if user is satisfied with the generated schedule
                             showScheduleAIMessage(
-                                'Schedule generation completed successfully!\n\n' +
-                                'Review the generated schedule below. Are you satisfied with this schedule?\n\n' +
-                                'If yes, click "Save Schedule" to commit it to the database.\n' +
-                                'If not, you can click "Re-Generate" to try again with different parameters.',
+                                (progress.message || 'Schedule generation finished.') +
+                                '\n\nReview the timetable for that term. Blocks labeled GA were produced by the genetic algorithm. Use Re-generate if you want another run (that replaces the target term).',
                                 false
                             );
 
@@ -10686,9 +10670,27 @@
         };
 
         // Generic action confirmation
-        window.confirmGenericAction = function (action) {
-            sendScheduleMessage('Executing action...');
-            // TODO: Implement action execution via /api/che/execute-action
+        window.confirmGenericAction = function () {
+            var action = window._pendingCheAction;
+            if (!action) {
+                showScheduleAIMessage('No action to confirm.', true);
+                return;
+            }
+            sendScheduleMessage('Confirm action');
+            fetch('/api/che/execute-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: action })
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    var ok = data.success !== false;
+                    showScheduleAIMessage(data.message || (ok ? 'Done.' : 'That action could not be completed.'), !ok);
+                    if (ok) loadSchedules();
+                })
+                .catch(function (err) {
+                    showScheduleAIMessage('Could not run that action: ' + err.message, true);
+                });
         };
 
         function renderAddScheduleForm(container, params) {

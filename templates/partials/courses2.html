@@ -1,0 +1,2545 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     COURSES V2 - MODERN REDESIGN
+     Production-quality interface with enhanced UX
+     ═══════════════════════════════════════════════════════════════ -->
+
+<div class="courses-v2">
+    <!-- ═══ ONBOARDING BANNER ═══ -->
+    <div class="onboarding-banner" id="onboarding-banner">
+        <div class="onboarding-content">
+            <div class="onboarding-icon">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="onboarding-text">
+                <h4>Welcome to Course Assignment!</h4>
+                <p>Follow the 3-step workflow below to assign courses to faculty members for this semester.</p>
+            </div>
+            <button class="onboarding-dismiss" onclick="dismissOnboarding()" aria-label="Dismiss">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══ WORKFLOW STEPPER ═══ -->
+    <div class="workflow-stepper">
+        <div class="step-item active" data-step="1" onclick="navigateToStep(1)">
+            <div class="step-number">
+                <span class="step-num">1</span>
+                <svg class="step-check" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <div class="step-content">
+                <div class="step-title">Define Eligibility</div>
+                <div class="step-desc">Who can teach what</div>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="step-item" data-step="2" onclick="navigateToStep(2)">
+            <div class="step-number">
+                <span class="step-num">2</span>
+                <svg class="step-check" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <div class="step-content">
+                <div class="step-title">Configure Sections</div>
+                <div class="step-desc">Add sections per course</div>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="step-item" data-step="3" onclick="navigateToStep(3)">
+            <div class="step-number">
+                <span class="step-num">3</span>
+                <svg class="step-check" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <div class="step-content">
+                <div class="step-title">Assign Faculty</div>
+                <div class="step-desc">Match courses to instructors</div>
+            </div>
+        </div>
+
+        <div class="step-connector"></div>
+
+        <div class="step-item" data-step="4" onclick="navigateToStep(4)">
+            <div class="step-number">
+                <span class="step-num">4</span>
+                <svg class="step-check" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <div class="step-content">
+                <div class="step-title">Allocate Rooms</div>
+                <div class="step-desc">Assign rooms to sections</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MAIN CONTENT AREA ═══ -->
+    <div class="courses-v2-content">
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 1: ELIGIBILITY CONFIGURATION
+             ══════════════════════════════════════════════════════════ -->
+        <div class="step-panel active" id="step-panel-1">
+            <div class="step-panel-header">
+                <div class="step-panel-title-group">
+                    <h2>Step 1: Define Course Eligibility</h2>
+                    <p class="step-panel-subtitle">Select which faculty members are qualified to teach each course</p>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button class="btn-save-all" id="save-all-eligibility" onclick="saveAllEligibility()" disabled>
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span class="btn-text">Save All</span>
+                        <span class="change-count" style="display: none;">0</span>
+                        <span class="btn-spinner" style="display: none;"></span>
+                    </button>
+                    <button class="btn-secondary-v2" onclick="navigateToStep(2)">
+                        Continue to Sections
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="step-filter-bar">
+                <select class="filter-select-v2" id="eligibility-dept-filter" onchange="filterEligibilityByDept()">
+                    <option value="all">All Departments</option>
+                    <option value="cerp">CERP Courses</option>
+                    <option value="hume">HUME Courses</option>
+                    <option value="nstp">NSTP Courses</option>
+                </select>
+                <div style="position: relative; flex: 1;">
+                    <input type="text" class="search-input-v2" placeholder="Search courses..." id="eligibility-search"
+                        oninput="filterEligibilityCards()">
+                    <svg class="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="eligibility-grid" id="eligibility-grid">
+                <!-- Course eligibility cards will load here -->
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 2: SECTION CONFIGURATION
+             ══════════════════════════════════════════════════════════ -->
+        <div class="step-panel" id="step-panel-2" style="display: none;">
+            <div class="step-panel-header">
+                <div class="step-panel-title-group">
+                    <h2>Step 2: Configure Course Sections</h2>
+                    <p class="step-panel-subtitle">Add sections for each course (e.g., A, B, BSCE-1A, etc.)</p>
+                </div>
+                <button class="btn-secondary-v2" onclick="navigateToStep(3)">
+                    Continue to Assignment
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="step-filter-bar">
+                <select class="filter-select-v2" id="sections-dept-filter" onchange="filterSectionsByDept()">
+                    <option value="all">All Departments</option>
+                    <option value="cerp">CERP Courses</option>
+                    <option value="hume">HUME Courses</option>
+                    <option value="nstp">NSTP Courses</option>
+                </select>
+                <div style="position: relative; flex: 1;">
+                    <input type="text" class="search-input-v2" placeholder="Search courses..." id="sections-search"
+                        oninput="filterSectionCards()">
+                    <svg class="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="sections-grid" id="sections-grid">
+                <!-- Section config cards will load here -->
+            </div>
+        </div>
+
+        <!-- Add Section Modal -->
+        <div class="modal-overlay" id="add-section-modal" onclick="closeAddSectionModal(event)">
+            <div class="modal-content-v2" onclick="event.stopPropagation()">
+                <div class="modal-header-v2">
+                    <h3>Add Section for <span id="modal-course-code"></span></h3>
+                    <button class="modal-close-btn" onclick="closeAddSectionModal()">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body-v2">
+                    <div class="form-group-v2">
+                        <label class="form-label-v2">Section Name</label>
+                        <input type="text" id="section-name-input" class="form-input-v2"
+                            placeholder="e.g., A, B, BSCE-1A, Workshop-1" maxlength="50">
+                        <p class="form-hint-v2">Enter any section identifier (letters, numbers, dashes allowed)</p>
+                    </div>
+
+                    <div class="form-group-v2">
+                        <label class="form-label-v2">Section Type</label>
+                        <div class="radio-group-v2">
+                            <label class="radio-item-v2">
+                                <input type="radio" name="section-type" value="regular" checked
+                                    onchange="toggleCustomBlockFields(false)">
+                                <div class="radio-content">
+                                    <div class="radio-title">Regular Lecture</div>
+                                    <div class="radio-desc">Standard class with MWF/TTH scheduling</div>
+                                </div>
+                            </label>
+                            <label class="radio-item-v2">
+                                <input type="radio" name="section-type" value="custom"
+                                    onchange="toggleCustomBlockFields(true)">
+                                <div class="radio-content">
+                                    <div class="radio-title">Seminar/Workshop/Custom Block 🎓</div>
+                                    <div class="radio-desc">Straight unit scheduling (no MWF/TTH split)</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="custom-block-fields" style="display: none;">
+                        <div class="form-group-v2">
+                            <label class="form-label-v2">Units (for custom block)</label>
+                            <input type="number" id="custom-units-input" class="form-input-v2" placeholder="e.g., 3"
+                                min="1" max="12">
+                            <p class="form-hint-v2">Leave empty to use course default units</p>
+                        </div>
+
+                        <div class="form-group-v2">
+                            <label class="form-label-v2">Custom Room (optional)</label>
+                            <input type="text" id="custom-room-input" class="form-input-v2"
+                                placeholder="e.g., Main Building 201">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer-v2">
+                    <button class="btn-tertiary-v2" onclick="closeAddSectionModal()">Cancel</button>
+                    <button class="btn-primary-v2" onclick="submitAddSection()">
+                        Add Section
+                        <span class="btn-spinner" id="add-section-spinner" style="display:none;"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 3: FACULTY ASSIGNMENT
+             ══════════════════════════════════════════════════════════ -->
+        <div class="step-panel" id="step-panel-3" style="display: none;">
+            <div class="step-panel-header">
+                <div class="step-panel-title-group">
+                    <h2>Step 3: Faculty Assignment</h2>
+                    <p class="step-panel-subtitle">Assign faculty to course sections</p>
+                </div>
+                <button class="btn-secondary-v2" onclick="navigateToStep(4)">
+                    Continue to Room Allocation
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Selection Header (Sticky) -->
+            <div class="assignment-header" id="assignment-header">
+                <div class="assignment-header-empty" id="assignment-header-empty">
+                    <div class="empty-icon">
+                        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                    </div>
+                    <div class="empty-text">
+                        <h3>Select a Faculty Member</h3>
+                        <p>Click any faculty card below to start assigning courses</p>
+                    </div>
+                </div>
+
+                <div class="assignment-header-active" id="assignment-header-active" style="display: none;">
+                    <div class="selected-faculty-badge">
+                        <div class="selected-faculty-avatar" id="selected-faculty-avatar">JD</div>
+                        <div class="selected-faculty-info">
+                            <div class="selected-faculty-name" id="selected-faculty-name">Jane Doe</div>
+                            <div class="selected-faculty-load">
+                                <span id="selected-faculty-units">0</span> units assigned
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="assignment-actions">
+                        <button class="btn-tertiary-v2" onclick="clearFacultySelection()">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Clear Selection
+                        </button>
+                        <button class="btn-primary-v2" onclick="saveAssignments()" id="btn-save-assignments">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Save Assignment
+                            <span class="btn-spinner" style="display:none;"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Two-Column Layout -->
+            <div class="assignment-layout">
+
+                <!-- LEFT: Course Selection -->
+                <div class="courses-panel">
+                    <div class="panel-header-v2">
+                        <h3>Available Courses</h3>
+                        <div class="panel-filter">
+                            <input type="text" class="search-input-v2" placeholder="Search courses..."
+                                id="course-search" oninput="filterCourses()">
+                            <svg class="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="courses-list" id="courses-list-v2">
+                        <!-- Courses load here dynamically -->
+                    </div>
+                </div>
+
+                <!-- RIGHT: Faculty Grid -->
+                <div class="faculty-panel-v2">
+                    <div class="panel-header-v2">
+                        <h3>Faculty Members</h3>
+                        <div class="faculty-stats">
+                            <span id="faculty-count-display">0 members</span>
+                        </div>
+                    </div>
+
+                    <div class="faculty-grid-v2" id="faculty-grid-v2">
+                        <!-- Faculty cards load here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             STEP 4: ROOM ALLOCATION
+             ══════════════════════════════════════════════════════════ -->
+        <div class="step-panel" id="step-panel-4" style="display: none;">
+
+            <!-- Prerequisites Warning -->
+            <div class="alert-warning" id="step4-prerequisites-warning" style="display: none; margin-bottom: 1.5rem;">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <strong>Prerequisites Required</strong>
+                    <p style="margin: 0.25rem 0 0; font-size: 0.875rem;">Complete Steps 1-3 before allocating rooms. You
+                        need to define eligibility, configure sections, and assign faculty first.</p>
+                </div>
+            </div>
+
+            <div class="step-panel-header">
+                <div class="step-panel-title-group">
+                    <h2>Step 4: Room Allocation</h2>
+                    <p class="step-panel-subtitle">Assign rooms to course sections</p>
+                </div>
+                <button class="btn-primary-v2" id="btn-complete-workflow" onclick="completeWorkflow()"
+                    style="display: none;">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Complete Setup
+                </button>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="step-filter-bar">
+                <select class="filter-select-v2" id="rooms-dept-filter" onchange="filterRoomsByDept()">
+                    <option value="all">All Departments</option>
+                    <option value="cerp">CERP Courses</option>
+                    <option value="hume">HUME Courses</option>
+                    <option value="nstp">NSTP Courses</option>
+                </select>
+                <div style="position: relative; flex: 1;">
+                    <input type="text" class="search-input-v2" placeholder="Search courses..." id="rooms-search"
+                        oninput="filterRoomCards()">
+                    <svg class="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="rooms-grid" id="rooms-grid">
+                <!-- Room allocation cards will load here -->
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ═══ LEGEND MODAL ═══ -->
+<div class="legend-modal" id="legend-modal" onclick="closeLegend(event)">
+    <div class="legend-content" onclick="event.stopPropagation()">
+        <div class="legend-header">
+            <h3>Section Button Guide</h3>
+            <button class="modal-close-btn" onclick="closeLegend()">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="legend-body">
+            <div class="legend-item">
+                <button class="section-btn-v2">A</button>
+                <span>Available - Click to select</span>
+            </div>
+            <div class="legend-item">
+                <button class="section-btn-v2 selected">B</button>
+                <span>Selected for current faculty</span>
+            </div>
+            <div class="legend-item">
+                <button class="section-btn-v2 custom-block">C🎓</button>
+                <span>Custom Block (seminar/workshop - straight scheduling)</span>
+            </div>
+            <div class="legend-item">
+                <button class="section-btn-v2 assigned">D</button>
+                <span>Assigned to another faculty</span>
+            </div>
+            <div class="legend-item">
+                <button class="section-btn-v2 shared">E</button>
+                <span>Team-taught (multiple faculty)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TOAST CONTAINER ═══ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══ SUCCESS MODAL ═══ -->
+<div class="success-modal-overlay" id="success-modal" style="display: none;">
+    <div class="success-modal-content">
+        <div class="success-icon-circle">
+            <svg class="success-checkmark" width="80" height="80" viewBox="0 0 80 80" fill="none">
+                <circle cx="40" cy="40" r="38" stroke="#059669" stroke-width="4" fill="white" />
+                <path d="M25 40l12 12 18-24" stroke="#059669" stroke-width="4" stroke-linecap="round"
+                    stroke-linejoin="round" fill="none" />
+            </svg>
+        </div>
+        <h2 class="success-title">Course Setup Complete!</h2>
+        <p class="success-message">All steps completed successfully. Faculty eligibility, sections, assignments, and
+            room allocations are now configured.</p>
+        <button class="btn-primary-v2" onclick="closeSuccessModal()" style="margin-top: 1.5rem;">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Done
+        </button>
+    </div>
+</div>
+
+<!-- ═══ STYLES ═══ -->
+<style>
+    /* ═══════════════════════════════════════════════════════════════
+       DESIGN SYSTEM TOKENS
+       ═══════════════════════════════════════════════════════════════ */
+    :root {
+        /* Colors */
+        --color-primary: #6b0f1a;
+        --color-primary-hover: #8b1424;
+        --color-primary-light: #fef2f2;
+        --color-primary-alpha: rgba(107, 15, 26, 0.1);
+
+        --color-success: #059669;
+        --color-success-light: #d1fae5;
+        --color-warning: #d97706;
+        --color-warning-light: #fef3c7;
+        --color-error: #dc2626;
+        --color-error-light: #fee2e2;
+
+        --color-grey-50: #f9fafb;
+        --color-grey-100: #f3f4f6;
+        --color-grey-200: #e5e7eb;
+        --color-grey-300: #d1d5db;
+        --color-grey-400: #9ca3af;
+        --color-grey-500: #6b7280;
+        --color-grey-600: #4b5563;
+        --color-grey-700: #374151;
+        --color-grey-800: #1f2937;
+        --color-grey-900: #111827;
+
+        /* Typography Scale */
+        --font-size-xs: 0.75rem;
+        /* 12px */
+        --font-size-sm: 0.875rem;
+        /* 14px */
+        --font-size-base: 1rem;
+        /* 16px */
+        --font-size-lg: 1.125rem;
+        /* 18px */
+        --font-size-xl: 1.25rem;
+        /* 20px */
+        --font-size-2xl: 1.5rem;
+        /* 24px */
+
+        /* Spacing Scale */
+        --space-1: 0.25rem;
+        /* 4px */
+        --space-2: 0.5rem;
+        /* 8px */
+        --space-3: 0.75rem;
+        /* 12px */
+        --space-4: 1rem;
+        /* 16px */
+        --space-5: 1.25rem;
+        /* 20px */
+        --space-6: 1.5rem;
+        /* 24px */
+        --space-8: 2rem;
+        /* 32px */
+        --space-10: 2.5rem;
+        /* 40px */
+        --space-12: 3rem;
+        /* 48px */
+
+        /* Border Radius */
+        --radius-sm: 0.375rem;
+        /* 6px */
+        --radius-md: 0.5rem;
+        /* 8px */
+        --radius-lg: 0.75rem;
+        /* 12px */
+        --radius-xl: 1rem;
+        /* 16px */
+        --radius-full: 9999px;
+
+        /* Shadows */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+        /* Transitions */
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BASE LAYOUT
+       ═══════════════════════════════════════════════════════════════ */
+    .courses-v2 {
+        padding: var(--space-6);
+        max-width: 1920px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+        min-height: 100%;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ONBOARDING BANNER
+       ═══════════════════════════════════════════════════════════════ */
+    .onboarding-banner {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border: 1px solid #93c5fd;
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-12px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 1;
+            max-height: 200px;
+            transform: translateY(0);
+        }
+
+        to {
+            opacity: 0;
+            max-height: 0;
+            transform: translateY(-12px);
+        }
+    }
+
+    .onboarding-content {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-4);
+    }
+
+    .onboarding-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        background: #3b82f6;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    .onboarding-text {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .onboarding-text h4 {
+        margin: 0 0 var(--space-1);
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: #1e40af;
+    }
+
+    .onboarding-text p {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        color: #1e3a8a;
+        line-height: 1.5;
+    }
+
+    .onboarding-dismiss {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        color: #60a5fa;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-fast);
+    }
+
+    .onboarding-dismiss:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       WORKFLOW STEPPER
+       ═══════════════════════════════════════════════════════════════ */
+    .workflow-stepper {
+        display: flex;
+        align-items: center;
+        background: white;
+        border: 1px solid var(--color-grey-200);
+        border-radius: var(--radius-xl);
+        padding: var(--space-6);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .step-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        cursor: pointer;
+        padding: var(--space-3);
+        border-radius: var(--radius-md);
+        transition: all var(--transition-base);
+        flex: 1;
+    }
+
+    .step-item:hover {
+        background: var(--color-grey-50);
+    }
+
+    .step-item.active {
+        background: var(--color-primary-light);
+    }
+
+    .step-item.completed .step-number {
+        background: var(--color-success);
+        border-color: var(--color-success);
+    }
+
+    .step-item.completed .step-num {
+        display: none;
+    }
+
+    .step-item.completed .step-check {
+        display: block;
+    }
+
+    .step-number {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-full);
+        background: white;
+        border: 2px solid var(--color-grey-300);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: var(--font-size-lg);
+        color: var(--color-grey-600);
+        flex-shrink: 0;
+        transition: all var(--transition-base);
+    }
+
+    .step-item.active .step-number {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+        box-shadow: 0 0 0 4px var(--color-primary-alpha);
+    }
+
+    .step-check {
+        display: none;
+        color: white;
+    }
+
+    .step-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .step-title {
+        font-size: var(--font-size-base);
+        font-weight: 600;
+        color: var(--color-grey-900);
+        margin-bottom: var(--space-1);
+    }
+
+    .step-desc {
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-500);
+    }
+
+    .step-connector {
+        height: 2px;
+        background: var(--color-grey-200);
+        flex: 0 0 64px;
+        margin: 0 var(--space-2);
+    }
+
+    .step-item.completed~.step-connector {
+        background: var(--color-success);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       STEP PANELS
+       ═══════════════════════════════════════════════════════════════ */
+    .step-panel {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .step-panel.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .step-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-6);
+        padding-bottom: var(--space-4);
+        border-bottom: 2px solid var(--color-grey-200);
+    }
+
+    .step-panel-title-group h2 {
+        margin: 0 0 var(--space-2);
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        color: var(--color-grey-900);
+    }
+
+    .step-panel-subtitle {
+        margin: 0;
+        font-size: var(--font-size-base);
+        color: var(--color-grey-500);
+    }
+
+    /* Step filter bar */
+    .step-filter-bar {
+        position: relative;
+        margin-bottom: var(--space-6);
+        display: flex;
+        gap: var(--space-3);
+        align-items: center;
+    }
+
+    .filter-select-v2 {
+        padding: var(--space-2) var(--space-4);
+        border: 1px solid var(--color-grey-300);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        color: var(--color-grey-700);
+        background: white;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        min-width: 180px;
+    }
+
+    .filter-select-v2:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .filter-select-v2:hover {
+        border-color: var(--color-primary);
+    }
+
+    /* Eligibility & Section Grids */
+    .eligibility-grid,
+    .sections-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: var(--space-5);
+    }
+
+    .eligibility-card,
+    .section-config-card {
+        background: white;
+        border: 2px solid var(--color-grey-200);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        transition: all var(--transition-base);
+    }
+
+    .eligibility-card.locked {
+        opacity: 0.85;
+        background: var(--color-grey-50);
+    }
+
+    .eligibility-card.editing {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(1, 68, 33, 0.1);
+    }
+
+    .eligibility-card.locked .faculty-checkbox-item {
+        cursor: not-allowed;
+    }
+
+    .eligibility-card.locked input[type="checkbox"] {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .eligibility-card:hover,
+    .section-config-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+    }
+
+    .eligibility-card-header,
+    .section-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-3);
+        border-bottom: 1px solid var(--color-grey-200);
+    }
+
+    .eligibility-course-info h4,
+    .section-course-info h4 {
+        margin: 0 0 var(--space-1);
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+
+    .eligibility-course-info p,
+    .section-course-info p {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-600);
+    }
+
+    .eligibility-count-badge,
+    .section-count-badge {
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+    }
+
+    .faculty-checklist {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        max-height: 300px;
+        overflow-y: auto;
+        padding: var(--space-1);
+    }
+
+    .faculty-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-2);
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+        cursor: pointer;
+    }
+
+    .faculty-checkbox-item:hover {
+        background: var(--color-grey-50);
+    }
+
+    .faculty-checkbox-item input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .faculty-checkbox-label {
+        flex: 1;
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-900);
+        cursor: pointer;
+    }
+
+    .section-checkboxes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+    }
+
+    .section-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        border: 2px solid var(--color-grey-300);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all var(--transition-base);
+        user-select: none;
+    }
+
+    .section-checkbox-item:hover {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+    }
+
+    .section-checkbox-item input[type="checkbox"]:checked+span {
+        color: var(--color-primary);
+        font-weight: 600;
+    }
+
+    .section-checkbox-item:has(input:checked) {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+    }
+
+    .section-checkbox-item:has(input:checked) span {
+        color: white;
+    }
+
+    .section-checkbox-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .section-checkbox-item span {
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-grey-700);
+        cursor: pointer;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BUTTONS (DESIGN SYSTEM)
+       ═══════════════════════════════════════════════════════════════ */
+    .btn-primary-v2,
+    .btn-secondary-v2,
+    .btn-tertiary-v2 {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-5);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        white-space: nowrap;
+        position: relative;
+    }
+
+    .btn-link-sm {
+        background: none;
+        border: none;
+        color: var(--color-primary);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .btn-link-sm:hover {
+        background: var(--color-primary-alpha);
+        text-decoration: underline;
+    }
+
+    .btn-primary-v2 {
+        background: var(--color-primary);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary-v2:hover:not(:disabled) {
+        background: var(--color-primary-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-primary-v2:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .btn-primary-v2:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary-v2 {
+        background: white;
+        color: var(--color-primary);
+        border: 1px solid var(--color-grey-300);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-secondary-v2:hover:not(:disabled) {
+        background: var(--color-grey-50);
+        border-color: var(--color-primary);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-tertiary-v2 {
+        background: transparent;
+        color: var(--color-grey-600);
+        border: 1px solid var(--color-grey-300);
+    }
+
+    .btn-tertiary-v2:hover:not(:disabled) {
+        background: var(--color-grey-100);
+        color: var(--color-grey-900);
+    }
+
+    /* Edit/Save button for eligibility cards */
+    .btn-edit-save {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-grey-300);
+        background: white;
+        color: var(--color-primary);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-edit-save:hover {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-edit-save:active {
+        transform: translateY(0);
+    }
+
+    /* Save All button */
+    .btn-save-all {
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        border: 2px solid var(--color-grey-300);
+        background: white;
+        color: var(--color-grey-400);
+        cursor: not-allowed;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+    }
+
+    .btn-save-all.has-changes {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+        cursor: pointer;
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .btn-save-all.has-changes:hover:not(:disabled) {
+        background: var(--color-primary-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-lg);
+        animation: none;
+    }
+
+    .btn-save-all:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-save-all .change-count {
+        background: rgba(255, 255, 255, 0.3);
+        padding: 0.125rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 rgba(107, 15, 26, 0.4);
+        }
+
+        50% {
+            box-shadow: 0 0 0 8px rgba(107, 15, 26, 0);
+        }
+    }
+
+    /* Step completion animation */
+    .step-item.completing {
+        animation: stepComplete 0.8s ease-out;
+    }
+
+    @keyframes stepComplete {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .btn-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        position: absolute;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ASSIGNMENT HEADER (STICKY)
+       ═══════════════════════════════════════════════════════════════ */
+    .assignment-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: white;
+        border: 1px solid var(--color-grey-200);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        margin-bottom: var(--space-6);
+        box-shadow: var(--shadow-md);
+    }
+
+    .assignment-header-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-6) 0;
+    }
+
+    .empty-icon {
+        width: 64px;
+        height: 64px;
+        background: var(--color-grey-100);
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-grey-400);
+    }
+
+    .empty-text {
+        text-align: center;
+    }
+
+    .empty-text h3 {
+        margin: 0 0 var(--space-1);
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--color-grey-900);
+    }
+
+    .empty-text p {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-500);
+    }
+
+    .assignment-header-active {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-4);
+    }
+
+    .selected-faculty-badge {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        flex: 1;
+    }
+
+    .selected-faculty-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-full);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        flex-shrink: 0;
+        box-shadow: 0 0 0 4px var(--color-primary-alpha);
+    }
+
+    .selected-faculty-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .selected-faculty-name {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--color-grey-900);
+        margin-bottom: var(--space-1);
+    }
+
+    .selected-faculty-load {
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-500);
+    }
+
+    .assignment-actions {
+        display: flex;
+        gap: var(--space-3);
+        flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       TWO-COLUMN LAYOUT
+       ═══════════════════════════════════════════════════════════════ */
+    .assignment-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-6);
+        align-items: start;
+    }
+
+    .courses-panel,
+    .faculty-panel-v2 {
+        background: white;
+        border: 1px solid var(--color-grey-200);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 420px);
+        min-height: 600px;
+    }
+
+    .panel-header-v2 {
+        padding: var(--space-5);
+        border-bottom: 1px solid var(--color-grey-200);
+        background: var(--color-grey-50);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-4);
+        flex-shrink: 0;
+    }
+
+    .panel-header-v2 h3 {
+        margin: 0;
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--color-grey-900);
+    }
+
+    .panel-filter {
+        position: relative;
+        flex: 0 0 280px;
+    }
+
+    .search-input-v2 {
+        width: 100%;
+        padding: var(--space-2) var(--space-3) var(--space-2) var(--space-10);
+        border: 1px solid var(--color-grey-300);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        transition: all var(--transition-base);
+    }
+
+    .search-input-v2:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: var(--space-3);
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-grey-400);
+        pointer-events: none;
+    }
+
+    .faculty-stats {
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-500);
+        font-weight: 500;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       COURSES LIST
+       ═══════════════════════════════════════════════════════════════ */
+    .courses-list {
+        padding: var(--space-4);
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .course-card-v2 {
+        background: white;
+        border: 2px solid var(--color-grey-200);
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        margin-bottom: var(--space-3);
+        transition: all var(--transition-base);
+        cursor: pointer;
+    }
+
+    .course-card-v2:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .course-card-v2.expanded {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+    }
+
+    .course-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-3);
+    }
+
+    .course-title-group {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .course-code-v2 {
+        font-size: var(--font-size-base);
+        font-weight: 700;
+        color: var(--color-primary);
+        margin-bottom: var(--space-1);
+    }
+
+    .course-name-v2 {
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-600);
+        margin: 0;
+    }
+
+    .course-units-badge {
+        flex-shrink: 0;
+        background: var(--color-grey-100);
+        color: var(--color-grey-700);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+    }
+
+    .course-card-v2.expanded .course-units-badge {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .section-selector-v2 {
+        border-top: 1px solid var(--color-grey-200);
+        padding-top: var(--space-4);
+        margin-top: var(--space-3);
+    }
+
+    .section-selector-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-3);
+    }
+
+    .section-selector-title {
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-grey-700);
+    }
+
+    .legend-trigger {
+        font-size: var(--font-size-xs);
+        color: var(--color-primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: var(--space-1) var(--space-2);
+        border-radius: var(--radius-sm);
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+    }
+
+    .legend-trigger:hover {
+        background: var(--color-primary-alpha);
+    }
+
+    .section-buttons-v2 {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .section-btn-v2 {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-md);
+        border: 2px solid var(--color-grey-300);
+        background: white;
+        color: var(--color-grey-700);
+        font-size: var(--font-size-sm);
+        font-weight: 700;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .section-btn-v2:hover:not(:disabled) {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+        transform: scale(1.05);
+    }
+
+    .section-btn-v2.selected {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+        box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .section-btn-v2.disabled {
+        background: var(--color-grey-100);
+        border-color: var(--color-grey-200);
+        color: var(--color-grey-400);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .section-btn-v2.assigned {
+        background: var(--color-grey-200);
+        border-color: var(--color-grey-300);
+        color: var(--color-grey-600);
+        cursor: help;
+    }
+
+    .section-btn-v2.shared {
+        background: var(--color-warning-light);
+        border-color: var(--color-warning);
+        color: var(--color-warning);
+    }
+
+    .section-btn-v2.custom-block {
+        background: #fef3c7;
+        border-color: #f59e0b;
+        color: #d97706;
+        font-weight: 700;
+    }
+
+    .section-btn-v2.custom-block.selected {
+        background: #f59e0b;
+        border-color: #f59e0b;
+        color: white;
+    }
+
+    .no-sections-warning {
+        margin: var(--space-2) 0 0;
+        padding: var(--space-2);
+        background: var(--color-warning-light);
+        color: #92400e;
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        text-align: center;
+        border-radius: var(--radius-sm);
+    }
+
+    .course-card-v2.no-sections {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .course-card-v2.no-sections:hover {
+        border-color: var(--color-grey-200);
+        box-shadow: none;
+        transform: none;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FACULTY GRID
+       ═══════════════════════════════════════════════════════════════ */
+    .faculty-grid-v2 {
+        padding: var(--space-4);
+        overflow-y: auto;
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: var(--space-4);
+        align-content: start;
+    }
+
+    .faculty-card-v2 {
+        background: white;
+        border: 2px solid var(--color-grey-200);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5) var(--space-4);
+        cursor: pointer;
+        transition: all var(--transition-base);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        position: relative;
+    }
+
+    .faculty-card-v2:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-4px);
+    }
+
+    .faculty-card-v2.selected {
+        border-color: var(--color-primary);
+        border-width: 3px;
+        background: var(--color-primary-light);
+        box-shadow: 0 0 0 4px var(--color-primary-alpha);
+    }
+
+    .faculty-avatar-v2 {
+        width: 72px;
+        height: 72px;
+        border-radius: var(--radius-full);
+        background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        margin-bottom: var(--space-3);
+        flex-shrink: 0;
+        border: 3px solid var(--color-grey-100);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .faculty-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: var(--radius-full);
+    }
+
+    .faculty-avatar-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+    }
+
+    .faculty-card-v2.selected .faculty-avatar-v2 {
+        border-color: var(--color-primary);
+    }
+
+    .faculty-name-v2 {
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-grey-900);
+        margin-bottom: var(--space-2);
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    .faculty-load-v2 {
+        font-size: var(--font-size-xs);
+        color: var(--color-primary);
+        font-weight: 600;
+        background: var(--color-primary-alpha);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+    }
+
+    .faculty-card-v2.selected .faculty-load-v2 {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       LEGEND MODAL
+       ═══════════════════════════════════════════════════════════════ */
+    .legend-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .legend-modal.active {
+        display: flex;
+    }
+
+    .legend-content {
+        background: white;
+        border-radius: var(--radius-xl);
+        max-width: 480px;
+        width: calc(100% - var(--space-8));
+        box-shadow: var(--shadow-xl);
+        animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(24px) scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .legend-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-6);
+        border-bottom: 1px solid var(--color-grey-200);
+    }
+
+    .legend-header h3 {
+        margin: 0;
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        color: var(--color-grey-900);
+    }
+
+    .modal-close-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-md);
+        border: none;
+        background: transparent;
+        color: var(--color-grey-400);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-fast);
+    }
+
+    .modal-close-btn:hover {
+        background: var(--color-grey-100);
+        color: var(--color-grey-900);
+    }
+
+    .legend-body {
+        padding: var(--space-6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+    }
+
+    .legend-item span {
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-700);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       TOAST NOTIFICATIONS
+       ═══════════════════════════════════════════════════════════════ */
+    .toast-container {
+        position: fixed;
+        bottom: var(--space-6);
+        right: var(--space-6);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        pointer-events: none;
+    }
+
+    .toast {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-4) var(--space-5);
+        box-shadow: var(--shadow-xl);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        min-width: 320px;
+        max-width: 480px;
+        pointer-events: all;
+        animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        border-left: 4px solid var(--color-grey-400);
+    }
+
+    .toast.toast-success {
+        border-left-color: var(--color-success);
+    }
+
+    .toast.toast-error {
+        border-left-color: var(--color-error);
+    }
+
+    .toast.toast-warning {
+        border-left-color: var(--color-warning);
+    }
+
+    .toast.toast-info {
+        border-left-color: #3b82f6;
+    }
+
+    @keyframes toastSlideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .toast-icon {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .toast-success .toast-icon {
+        background: var(--color-success-light);
+        color: var(--color-success);
+    }
+
+    .toast-error .toast-icon {
+        background: var(--color-error-light);
+        color: var(--color-error);
+    }
+
+    .toast-warning .toast-icon {
+        background: var(--color-warning-light);
+        color: var(--color-warning);
+    }
+
+    .toast-info .toast-icon {
+        background: #dbeafe;
+        color: #3b82f6;
+    }
+
+    .toast-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .toast-message {
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        color: var(--color-grey-900);
+        margin: 0;
+    }
+
+    .toast-close {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: transparent;
+        color: var(--color-grey-400);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-fast);
+    }
+
+    .toast-close:hover {
+        background: var(--color-grey-100);
+        color: var(--color-grey-900);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SUCCESS MODAL
+       ═══════════════════════════════════════════════════════════════ */
+    .success-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: modalFadeIn 0.3s ease-out;
+    }
+
+    .success-modal-content {
+        background: white;
+        border-radius: var(--radius-xl);
+        padding: var(--space-8);
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .success-icon-circle {
+        display: inline-flex;
+        margin-bottom: var(--space-4);
+        animation: successPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+    }
+
+    .success-checkmark {
+        filter: drop-shadow(0 4px 12px rgba(5, 150, 105, 0.3));
+    }
+
+    .success-title {
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        color: var(--color-grey-900);
+        margin: 0 0 var(--space-3) 0;
+    }
+
+    .success-message {
+        font-size: var(--font-size-base);
+        color: var(--color-grey-600);
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes modalSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes successPop {
+        0% {
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        50% {
+            transform: scale(1.1);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       RESPONSIVE
+       ═══════════════════════════════════════════════════════════════ */
+    @media (max-width: 1280px) {
+        .assignment-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .faculty-panel-v2 {
+            order: -1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .courses-v2 {
+            padding: var(--space-4);
+        }
+
+        .workflow-stepper {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .step-connector {
+            width: 2px;
+            height: 32px;
+            flex: none;
+            margin: var(--space-2) 0 var(--space-2) var(--space-6);
+        }
+
+        .assignment-header-active {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .assignment-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .btn-primary-v2,
+        .btn-secondary-v2,
+        .btn-tertiary-v2 {
+            width: 100%;
+        }
+
+        .panel-header-v2 {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .panel-filter {
+            flex: 1 1 auto;
+        }
+
+        .faculty-grid-v2 {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       UTILITIES
+       ═══════════════════════════════════════════════════════════════ */
+    .hidden {
+        display: none !important;
+    }
+
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+        cursor: wait;
+    }
+
+    /* Empty States */
+    .empty-state-full {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-12) var(--space-6);
+        text-align: center;
+    }
+
+    .empty-state-full svg {
+        margin-bottom: var(--space-6);
+        opacity: 0.9;
+    }
+
+    .empty-state-full h3 {
+        margin: 0 0 var(--space-2);
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        color: var(--color-grey-900);
+    }
+
+    .empty-state-full p {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-500);
+        max-width: 400px;
+    }
+
+    /* Disabled card state */
+    .course-card-v2.disabled-card {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .course-card-v2.disabled-card:hover {
+        border-color: var(--color-grey-200);
+        box-shadow: none;
+        transform: none;
+    }
+
+    /* No sections message */
+    .no-sections-msg {
+        text-align: center;
+        color: var(--color-grey-500);
+        font-size: var(--font-size-sm);
+        font-style: italic;
+        padding: var(--space-4) 0;
+    }
+
+    /* Pulse animation for loading */
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+    }
+
+    .loading-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Loading Skeletons */
+    @keyframes shimmer {
+        0% {
+            background-position: -1000px 0;
+        }
+
+        100% {
+            background-position: 1000px 0;
+        }
+    }
+
+    .skeleton-course-card,
+    .skeleton-faculty-card {
+        background: linear-gradient(90deg, var(--color-grey-100) 25%, var(--color-grey-200) 50%, var(--color-grey-100) 75%);
+        background-size: 1000px 100%;
+        animation: shimmer 2s infinite;
+        border-radius: var(--radius-lg);
+    }
+
+    .skeleton-course-card {
+        height: 120px;
+        margin-bottom: var(--space-3);
+    }
+
+    .skeleton-faculty-card {
+        height: 200px;
+    }
+
+    .loading-skeleton-list {
+        padding: var(--space-4);
+    }
+
+    /* Success/Error states */
+    .alert-success {
+        background: var(--color-success-light);
+        border: 1px solid var(--color-success);
+        color: #065f46;
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .alert-error {
+        background: var(--color-error-light);
+        border: 1px solid var(--color-error);
+        color: #991b1b;
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .alert-warning {
+        background: var(--color-warning-light);
+        border: 1px solid var(--color-warning);
+        color: #92400e;
+        padding: var(--space-3) var(--space-4);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    /* Custom scrollbar */
+    .courses-list::-webkit-scrollbar,
+    .faculty-grid-v2::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .courses-list::-webkit-scrollbar-track,
+    .faculty-grid-v2::-webkit-scrollbar-track {
+        background: var(--color-grey-100);
+        border-radius: var(--radius-full);
+    }
+
+    .courses-list::-webkit-scrollbar-thumb,
+    .faculty-grid-v2::-webkit-scrollbar-thumb {
+        background: var(--color-grey-300);
+        border-radius: var(--radius-full);
+    }
+
+    .courses-list::-webkit-scrollbar-thumb:hover,
+    .faculty-grid-v2::-webkit-scrollbar-thumb:hover {
+        background: var(--color-grey-400);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ADD SECTION MODAL & FORMS
+       ═══════════════════════════════════════════════════════════════ */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-content-v2 {
+        background: white;
+        border-radius: var(--radius-xl);
+        max-width: 560px;
+        width: calc(100% - var(--space-8));
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-xl);
+        animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-header-v2 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-6);
+        border-bottom: 1px solid var(--color-grey-200);
+    }
+
+    .modal-header-v2 h3 {
+        margin: 0;
+        font-size: var(--font-size-xl);
+        font-weight: 700;
+        color: var(--color-grey-900);
+    }
+
+    .modal-body-v2 {
+        padding: var(--space-6);
+    }
+
+    .modal-footer-v2 {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-3);
+        padding: var(--space-6);
+        border-top: 1px solid var(--color-grey-200);
+    }
+
+    .form-group-v2 {
+        margin-bottom: var(--space-5);
+    }
+
+    .form-label-v2 {
+        display: block;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        color: var(--color-grey-900);
+        margin-bottom: var(--space-2);
+    }
+
+    .form-input-v2 {
+        width: 100%;
+        padding: var(--space-3) var(--space-4);
+        border: 2px solid var(--color-grey-300);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-base);
+        color: var(--color-grey-900);
+        transition: all var(--transition-base);
+    }
+
+    .form-input-v2:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .form-hint-v2 {
+        margin: var(--space-2) 0 0;
+        font-size: var(--font-size-xs);
+        color: var(--color-grey-500);
+    }
+
+    .radio-group-v2 {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .radio-item-v2 {
+        display: flex;
+        gap: var(--space-3);
+        padding: var(--space-4);
+        border: 2px solid var(--color-grey-300);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all var(--transition-base);
+    }
+
+    .radio-item-v2:hover {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+    }
+
+    .radio-item-v2 input[type="radio"] {
+        margin-top: 2px;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .radio-item-v2:has(input:checked) {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+        border-width: 3px;
+    }
+
+    .radio-content {
+        flex: 1;
+    }
+
+    .radio-title {
+        font-size: var(--font-size-base);
+        font-weight: 600;
+        color: var(--color-grey-900);
+        margin-bottom: var(--space-1);
+    }
+
+    .radio-desc {
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-600);
+    }
+
+    /* Section badges in cards */
+    .section-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: var(--space-1) var(--space-3);
+        background: var(--color-grey-100);
+        color: var(--color-grey-700);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+    }
+
+    .section-badge.custom-block {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .section-badge button {
+        background: none;
+        border: none;
+        padding: 0;
+        margin-left: var(--space-1);
+        cursor: pointer;
+        color: inherit;
+        opacity: 0.6;
+        transition: opacity var(--transition-fast);
+    }
+
+    .section-badge button:hover {
+        opacity: 1;
+    }
+
+    .add-section-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        background: white;
+        border: 2px dashed var(--color-grey-300);
+        border-radius: var(--radius-md);
+        color: var(--color-primary);
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition-base);
+    }
+
+    .add-section-btn:hover {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+    }
+
+    .sections-list-v2 {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        padding: var(--space-4) 0 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ROOM ALLOCATION CARDS
+       ═══════════════════════════════════════════════════════════════ */
+    .rooms-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: var(--space-5);
+    }
+
+    .room-allocation-card {
+        background: white;
+        border: 2px solid var(--color-grey-200);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        transition: all var(--transition-base);
+    }
+
+    .room-allocation-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+    }
+
+    .room-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-3);
+        border-bottom: 1px solid var(--color-grey-200);
+    }
+
+    .room-course-info h4 {
+        margin: 0 0 var(--space-1);
+        font-size: var(--font-size-lg);
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+
+    .room-course-info p {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-600);
+    }
+
+    .room-count-badge {
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+    }
+
+    .room-allocations-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .room-allocation-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: var(--space-3);
+        align-items: center;
+    }
+
+    .section-label-v2 {
+        display: flex;
+        align-items: center;
+    }
+
+    .room-select-v2,
+    .room-input-v2 {
+        width: 100%;
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid var(--color-grey-300);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        color: var(--color-grey-900);
+        background: white;
+        transition: all var(--transition-base);
+        cursor: pointer;
+    }
+
+    .room-select-v2:focus,
+    .room-input-v2:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-alpha);
+    }
+
+    .room-input-v2[readonly] {
+        background: var(--color-grey-100);
+        cursor: not-allowed;
+        color: var(--color-grey-600);
+    }
+</style>
+
+<!-- ═══ JAVASCRIPT ═══ -->
+<script src="/static/js/courses_v2.js"></script>
