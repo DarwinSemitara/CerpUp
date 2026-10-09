@@ -664,8 +664,13 @@
             letter-spacing: 0.04em;
         }
 
-        .forecast-table td.is-up { color: #014421; }
-        .forecast-table td.is-down { color: #6b0f1a; }
+        .forecast-table td.is-up {
+            color: #014421;
+        }
+
+        .forecast-table td.is-down {
+            color: #6b0f1a;
+        }
 
         .forecast-plot {
             position: relative;
@@ -2088,19 +2093,19 @@
                             console.warn('⚠️ Failed to set member filter after 10 attempts');
                             return;
                         }
-                        
+
                         // Check if dropdown is populated
                         if (profSelect.options.length === 0) {
                             console.log('⏳ Dropdown not ready, retrying... (attempt', attempts + 1, ')');
                             setTimeout(() => attemptSetFilter(attempts + 1), 200);
                             return;
                         }
-                        
+
                         // Find member's name in dropdown
-                        const option = Array.from(profSelect.options).find(opt => 
+                        const option = Array.from(profSelect.options).find(opt =>
                             opt.textContent.trim().includes(currentMember.fullName.trim())
                         );
-                        
+
                         if (option) {
                             console.log('✅ Found member in dropdown:', option.textContent);
                             profSelect.value = option.value;
@@ -2109,7 +2114,7 @@
                             console.warn('⚠️ Member not found in dropdown:', currentMember.fullName);
                             console.log('Available options:', Array.from(profSelect.options).map(o => o.textContent));
                         }
-                        
+
                         // Disable the dropdown
                         profSelect.disabled = true;
                         profSelect.style.background = '#f9fafb';
@@ -2117,7 +2122,7 @@
                         profSelect.style.cursor = 'not-allowed';
                         console.log('🔒 Professor dropdown disabled for member');
                     };
-                    
+
                     attemptSetFilter();
                 }
             }
@@ -2393,11 +2398,11 @@
         async function loadFSRContent(cardId) {
             let fsrData;
             let staffList = [];
-            
+
             // Use selected values or defaults (1st semester 2026-2027)
             const selectedSemester = window._selectedFSRSemester || '1';
             const selectedYear = window._selectedFSRYear || '2026-2027';
-            
+
             console.log('Loading FSR with filters:', { selectedSemester, selectedYear });
 
             try {
@@ -2407,32 +2412,32 @@
                     fetch('/api/staff'),
                     fetch('/api/schedules')  // Fetch ALL schedules
                 ]);
-                
+
                 if (!fsrRes.ok) throw new Error('Failed to load FSR data');
                 fsrData = await fsrRes.json();
                 if (staffRes.ok) staffList = await staffRes.json();
-                
+
                 // Get member's last name for filtering
                 const member = fsrData.member || {};
                 const lastName = (member.last || '').toLowerCase();
-                
+
                 // Filter schedules CLIENT-SIDE (like admin FSR does)
                 let allSchedules = [];
                 if (schedulesRes.ok) {
                     allSchedules = await schedulesRes.json();
                     console.log('All schedules fetched:', allSchedules.length);
-                    
+
                     // Debug: Log first schedule to see structure
                     if (allSchedules.length > 0) {
                         console.log('Sample schedule structure:', allSchedules[0]);
                     }
-                    
+
                     // Filter by professor name, year, and semester
                     fsrData.schedules = allSchedules.filter(s => {
                         const profMatch = lastName && (s.prof || '').toLowerCase().includes(lastName);
                         const yearMatch = s.school_year === selectedYear || s.schoolYear === selectedYear;
                         const semesterMatch = s.semester === selectedSemester;
-                        
+
                         // Debug first few matches
                         if (profMatch) {
                             console.log('Prof match found:', {
@@ -2446,10 +2451,10 @@
                                 semesterMatch
                             });
                         }
-                        
+
                         return profMatch && yearMatch && semesterMatch;
                     });
-                    
+
                     console.log('Filtered schedules:', fsrData.schedules.length, 'matches for', lastName, selectedYear, selectedSemester);
                 } else {
                     fsrData.schedules = [];
@@ -2468,7 +2473,7 @@
             const research = fsrData.research || [];
             const extensions = fsrData.extensions || [];
             const schedules = fsrData.schedules || [];
-            
+
             // Use selected semester/year
             const currentSemester = selectedSemester;
             const currentSchoolYear = selectedYear;
@@ -2524,14 +2529,14 @@
             const DAY = { Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'TH', Friday: 'F', Saturday: 'S' };
 
             console.log('Consolidating schedules:', schedules.length);
-            
+
             // Consolidate schedule rows BY COURSE+SECTION (not by time/room)
             const consolidated = {};
             schedules.forEach(s => {
                 const key = `${s.subjCode}||${s.section}`;  // Group by course code + section only
                 if (!consolidated[key]) {
-                    consolidated[key] = { 
-                        ...s, 
+                    consolidated[key] = {
+                        ...s,
                         days: [],
                         timeSlots: []  // Track multiple time slots
                     };
@@ -2547,7 +2552,7 @@
                 }
             });
             const teachingRows = Object.values(consolidated).sort((a, b) => (a.subjCode || '').localeCompare(b.subjCode || ''));
-            
+
             console.log('Teaching rows after consolidation:', teachingRows.length);
 
             // Teaching load rows
@@ -2557,12 +2562,12 @@
                     // All courses are 3 hours per week and 3 course credits
                     const hoursPerWeek = 3;
                     const courseCredit = 3;
-                    
+
                     // Handle time display - use timeSlots array or fall back to single time
-                    const timeDisplay = (r.timeSlots && r.timeSlots.length > 0) 
-                        ? r.timeSlots.join(', ') 
+                    const timeDisplay = (r.timeSlots && r.timeSlots.length > 0)
+                        ? r.timeSlots.join(', ')
                         : fmtRange(r.start, r.end);
-                    
+
                     teachHtml += `<tr>
                         <td colspan="2" style="font-weight:600;">${r.subjCode || ''}</td>
                         <td style="text-align:center;">${r.section || '—'}</td>
@@ -3214,23 +3219,23 @@
             // Get selected values
             const yearSelect = document.getElementById('fsr-year-select');
             const semesterSelect = document.getElementById('fsr-semester-select');
-            
+
             if (!yearSelect || !semesterSelect) {
                 console.error('FSR selectors not found');
                 return;
             }
-            
+
             // Store selected values globally
             window._selectedFSRYear = yearSelect.value;
             window._selectedFSRSemester = semesterSelect.value;
-            
+
             console.log('Filters changed to:', yearSelect.value, semesterSelect.value);
-            
+
             // Find the FSR card (could be dashboard or page)
             const dashboardCard = document.getElementById('dashboard-fsr-card');
             const pageCard = document.getElementById('fsr-page-card');
             const cardId = dashboardCard ? 'dashboard-fsr-card' : 'fsr-page-card';
-            
+
             // Reload FSR content with new filters
             if (dashboardCard || pageCard) {
                 await loadFSRContent(cardId);
@@ -3972,6 +3977,7 @@
 
         async function submitResearchForm(event, type) {
             event.preventDefault();
+            event.stopPropagation();  // Stop event from bubbling
 
             // Prevent double submission
             const submitBtn = event.target.querySelector('.btn-submit');
@@ -4438,6 +4444,7 @@
 
         async function submitExtensionForm(event, type) {
             event.preventDefault();
+            event.stopPropagation();  // Stop event from bubbling
 
             // Use the actual selected type (overrides form-level type for shared forms)
             const actualType = window._currentExtensionType || type;

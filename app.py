@@ -1240,84 +1240,49 @@ def che_execute_action():
                 result['message'] = f"Deleted {len(result['data']['schedules_to_delete'])} schedule(s)."
 
             elif action_type == 'generate_full_schedule' and result['data'].get('redirect_to_endpoint'):
-                # Execute full generation directly here
-                from services.scheduler_service import run_full_ga_v3, FullGAConfig, SubjectInput
-
+                # Instead of executing synchronously (which times out), redirect to async generation
                 gen_params = result['data']['params']
 
-                # Load reference semester
-                reference_schedules = []
-                ref_sem = gen_params.get('reference_semester')
+                # Start async generation by calling the async endpoint internally
+                # This returns immediately and lets the frontend poll for progress
+                target_sy = gen_params.get('target_school_year')
+                target_sem = gen_params.get('target_semester')
                 ref_sy = gen_params.get('reference_school_year')
-                if ref_sem and ref_sy:
+                ref_sem = gen_params.get('reference_semester')
+
+                # Trigger async generation in background thread
+                import threading
+
+                def start_async_generation():
                     try:
-                        ref_result = supabase.table('schedules').select('*').eq(
-                            'semester', ref_sem).eq('school_year', ref_sy).execute()
-                        for rd in ref_result.data:
-                            reference_schedules.append({
-                                'subjCode': rd.get('subj_code', rd.get('subjCode', '')),
-                                'subjName': rd.get('subj_name', rd.get('subjName', '')),
-                                'prof': rd.get('prof', ''),
-                                'room': rd.get('room', ''),
-                                'section': rd.get('section', ''),
-                                'units': rd.get('units', 3),
-                                'day': rd.get('day', ''),
-                                'start': str(rd.get('start', '')).rsplit(':', 1)[0] if rd.get('start') and str(rd.get('start')).count(':') > 1 else rd.get('start', ''),
-                                'end': str(rd.get('end', '')).rsplit(':', 1)[0] if rd.get('end') and str(rd.get('end')).count(':') > 1 else rd.get('end', ''),
-                            })
+                        # Import here to avoid circular dependencies
+                        from flask import current_app
+                        with current_app.app_context():
+                            # Call the async generation endpoint logic
+                            from services.scheduler_service import run_full_ga_schedule_generation
+                            run_full_ga_schedule_generation(
+                                target_sy, target_sem, ref_sy, ref_sem,
+                                save_to_db=True, max_minutes=5
+                            )
                     except Exception as e:
-                        logger.warning(f"Ref semester load error: {e}")
+                        logger.error(f"Async generation error: {e}")
+                        update_ga_progress(status='error', message=str(e))
 
-                # Load faculty data
-                prof_availability = {}
-                teaching_loads_map = {}
-                try:
-                    member_docs = db.collection('members').where(
-                        'is_faculty', '==', True).stream()
-                    for d in member_docs:
-                        md = d.to_dict()
-                        full_name = f"{md.get('first', '')} {md.get('last', '')}".strip(
-                        )
-                        if md.get('suffix'):
-                            full_name += f", {md['suffix']}"
-                        avail = md.get('availability', [])
-                        if avail:
-                            prof_availability[full_name] = avail
-                        load = md.get('teaching_load')
-                        if load:
-                            teaching_loads_map[full_name] = int(load)
-                except Exception:
-                    pass
+                # Start in background
+                thread = threading.Thread(
+                    target=start_async_generation, daemon=True)
+                thread.start()
 
-                # Parse subjects
-                subjects_input = []
-                for s in gen_params.get('subjects', []):
-                    subjects_input.append(SubjectInput(
-                        code=s.get('code', s.get('subjCode', '')),
-                        name=s.get('name', s.get('subjName', '')),
-                        section=s.get('section', 'A'),
-                        units=int(s.get('units', 3)),
-                        weekly_hours=float(
-                            s.get('weekly_hours', s.get('units', 3))),
-                        allocated_professors=s.get('professors', []),
-                        is_custom=bool(s.get('is_custom')),
-                        preferred_room=s.get(
-                            'preferred_room') or s.get('room'),
-                    ))
-
-                config = FullGAConfig(
-                    subjects=subjects_input,
-                    rooms=gen_params.get('rooms', []),
-                    prof_availability=prof_availability,
-                    teaching_loads=teaching_loads_map,
-                    subject_allocations=gen_params.get(
-                        'subject_allocations', {}),
-                    reference_schedules=reference_schedules,
-                    faculty_overrides=gen_params.get('faculty_overrides', {}),
-                )
-
-                ga_result = run_full_ga_v3(config)
-                result = ga_result
+                result = {
+                    'success': True,
+                    'message': f'Started generating schedule for {target_sy} Semester {target_sem}. This will take 1-3 minutes.',
+                    'data': {
+                        'async': True,
+                        'poll_endpoint': '/api/schedule/generate-progress',
+                        'target_school_year': target_sy,
+                        'target_semester': target_sem
+                    }
+                }
 
                 # Save if requested
                 if gen_params.get('save_to_db', False) and ga_result.get('success'):
@@ -5608,7 +5573,7 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']                          : c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:
