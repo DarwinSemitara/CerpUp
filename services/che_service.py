@@ -786,9 +786,10 @@ def chat(
     # Try Gemini first (if available)
     if gemini_key:
         try:
+            logger.info("Attempting Gemini API call...")
             return _chat_with_gemini(message, history, context_data, is_system_conversation, user_role, user_name, gemini_key)
         except Exception as e:
-            logger.warning(f"Gemini failed, trying Groq: {e}")
+            logger.warning(f"Gemini failed: {str(e)[:200]}, trying Groq...")
             if groq_key:
                 return _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, groq_key)
             else:
@@ -844,12 +845,16 @@ def _chat_with_gemini(message, history, context_data, is_system_conversation, us
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
-        # Fast and generous free tier (use latest stable version)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
         # Build system prompt
         system_content = _build_system_prompt(
             is_system_conversation, user_role, user_name, context_data)
+
+        # Configure model with system instruction
+        model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash-latest',
+            system_instruction=system_content
+        )
 
         # Build conversation history for Gemini
         gemini_history = []
@@ -864,9 +869,8 @@ def _chat_with_gemini(message, history, context_data, is_system_conversation, us
         # Start chat with history
         chat = model.start_chat(history=gemini_history)
 
-        # Send message with system context prepended
-        full_prompt = f"{system_content}\n\nUser: {message}"
-        response = chat.send_message(full_prompt)
+        # Send just the user message (system instruction is in model config)
+        response = chat.send_message(message)
 
         reply = response.text.strip()
 
