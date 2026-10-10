@@ -386,12 +386,17 @@ def build_context_block(context_data: dict) -> str:
 
     if context_data.get("schedules"):
         schedules = context_data["schedules"]
-        lines.append(
-            f"\n### Class Schedules ({len(schedules)} total):")
 
-        # Show all schedules (not just first 40) to ensure complete data for queries
-        # But format them more concisely to save tokens
-        for s in schedules:
+        # Limit schedules to prevent token overflow (max 100 schedules to keep under 8k token limit)
+        # Prioritize schedules already filtered by smart filtering in _chat_with_groq
+        max_schedules = 100
+        schedules_to_show = schedules[:max_schedules]
+
+        lines.append(
+            f"\n### Class Schedules ({len(schedules_to_show)} shown, {len(schedules)} total):")
+
+        # Format concisely to save tokens
+        for s in schedules_to_show:
             subj = s.get("subjCode", "")
             prof = s.get("prof", "")
             day = s.get("day", "")
@@ -399,7 +404,6 @@ def build_context_block(context_data: dict) -> str:
             end = s.get("end", "")
             room = s.get("room", "")
             sec = s.get("section", "")
-            sid = s.get("id", "")
             lines.append(
                 f"- {prof} | {day} {start}-{end} | {subj} | {room} | Sec:{sec}")
 
@@ -840,8 +844,8 @@ def _chat_with_gemini(message, history, context_data, is_system_conversation, us
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
-        # Fast and generous free tier
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Fast and generous free tier (use latest stable version)
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
         # Build system prompt
         system_content = _build_system_prompt(
