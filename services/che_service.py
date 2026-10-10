@@ -1,15 +1,14 @@
 """
 CHE (CERP AI Assistant) Service
-Uses Groq API with Llama 3.3 70B for full language understanding.
-Responses are restricted to CERP-related topics only.
-Now integrated with Genetic Algorithm scheduling capabilities.
+Supports multiple LLM providers with automatic fallback:
+- Google Gemini (primary, generous free tier)
+- Groq API (fallback, fast but rate-limited)
 """
 
 import os
 import json
 import logging
 from typing import Optional
-from groq import Groq
 
 logger = logging.getLogger(__name__)
 
@@ -770,14 +769,124 @@ def chat(
     Returns:
         dict with 'reply' (str), 'error' (bool), and optionally 'action' (dict)
     """
-    api_key = os.getenv("GROQ_API_KEY", "").strip()
-    if not api_key:
+    # Try Gemini first (better free tier), fallback to Groq
+    gemini_key = os.getenv("GOOGLE_API_KEY", "").strip()
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+
+    if not gemini_key and not groq_key:
         return {
-            "reply": "CHE is not configured yet. Ask your administrator to add the GROQ_API_KEY to the environment.",
+            "reply": "CHE is not configured. Please add GOOGLE_API_KEY or GROQ_API_KEY to environment variables.",
             "error": True
         }
 
+    # Try Gemini first (if available)
+    if gemini_key:
+        try:
+            return _chat_with_gemini(message, history, context_data, is_system_conversation, user_role, user_name, gemini_key)
+        except Exception as e:
+            logger.warning(f"Gemini failed, trying Groq: {e}")
+            if groq_key:
+                return _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, groq_key)
+            else:
+                return {"reply": f"Gemini error: {str(e)[:100]}", "error": True}
+
+    # Fallback to Groq
+    if groq_key:
+        return _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, groq_key)
+
+    return {"reply": "No API key configured", "error": True}
+
+
+def _build_system_prompt(is_system_conversation, user_role, user_name, context_data):
+    """Build system prompt based on conversation type and role"""
+    if user_role == 'user':
+        system_content = MEMBER_QUERY_SYSTEM_PROMPT
+        if context_data and 'schedules' in context_data and user_name:
+            user_name_normalized = user_name.split(
+                ',')[0].strip() if ',' in user_name else user_name.strip()
+            member_schedules = [
+                s for s in context_data['schedules']
+                if s.get('prof', '').split(',')[0].strip() == user_name_normalized
+            ]
+            context_data['schedules'] = member_schedules
+            context_data['member_name'] = user_name
+    elif is_system_conversation:
+        system_content = SCHEDULE_SYSTEM_PROMPT
+    else:
+        system_content = BASE_SYSTEM_PROMPT + SCHEDULE_REDIRECT_PROMPT
+
+    if context_data:
+        system_content += build_context_block(context_data)
+
+    return system_content
+
+
+def _clean_reply_from_json(reply):
+    """Remove JSON action blocks from reply text"""
+    import re
+    reply = re.sub(r'```json\s*\{.*?\}\s*```', '',
+                   reply, flags=re.DOTALL).strip()
+    reply = re.sub(r'```json\s*\{[^`]*$', '', reply, flags=re.DOTALL).strip()
+    reply = re.sub(r"Here's the plan.*$", '', reply,
+                   flags=re.DOTALL | re.IGNORECASE).strip()
+    reply = re.sub(r"Here is the.*$", '', reply,
+                   flags=re.DOTALL | re.IGNORECASE).strip()
+    return reply
+
+
+def _chat_with_gemini(message, history, context_data, is_system_conversation, user_role, user_name, api_key):
+    """Chat using Google Gemini API"""
     try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=api_key)
+        # Fast and generous free tier
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        # Build system prompt
+        system_content = _build_system_prompt(
+            is_system_conversation, user_role, user_name, context_data)
+
+        # Build conversation history for Gemini
+        gemini_history = []
+        for turn in history[-20:]:
+            role = turn.get("role")
+            content = turn.get("content", "")
+            if role == "user":
+                gemini_history.append({"role": "user", "parts": [content]})
+            elif role == "assistant":
+                gemini_history.append({"role": "model", "parts": [content]})
+
+        # Start chat with history
+        chat = model.start_chat(history=gemini_history)
+
+        # Send message with system context prepended
+        full_prompt = f"{system_content}\n\nUser: {message}"
+        response = chat.send_message(full_prompt)
+
+        reply = response.text.strip()
+
+        # Extract action and clean reply
+        action = extract_action(reply)
+        if action:
+            reply = _clean_reply_from_json(reply)
+
+        result = {"reply": reply, "error": False, "provider": "gemini"}
+        if action:
+            result["action"] = action
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Gemini error: {e}")
+        raise
+
+
+def _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, api_key):
+    """Chat using Groq API (original implementation)"""
+    try:
+        from groq import Groq
+
         client = Groq(api_key=api_key)
 
         # Smart schedule filtering: If the message asks about a specific faculty, prioritize their schedules
