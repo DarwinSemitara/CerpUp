@@ -757,7 +757,8 @@ def chat(
     context_data: Optional[dict] = None,
     is_system_conversation: bool = False,
     user_role: str = 'admin',
-    user_name: Optional[str] = None
+    user_name: Optional[str] = None,
+    intelligent_context: Optional[dict] = None
 ) -> dict:
     """
     Send a message to CHE and get a response.
@@ -769,6 +770,7 @@ def chat(
         is_system_conversation: True if this is the Schedule Generation conversation
         user_role:              'admin' or 'user' (member)
         user_name:              Full name of the member (for filtering schedules)
+        intelligent_context:    Second brain analysis with intent and minimal prompts
 
     Returns:
         dict with 'reply' (str), 'error' (bool), and optionally 'action' (dict)
@@ -783,27 +785,40 @@ def chat(
             "error": True
         }
 
+    # 🧠 Use intelligent context if provided (second brain approach)
+    if intelligent_context:
+        logger.info(
+            f"🧠 Using Second Brain context - Intent: {intelligent_context.get('intent')}")
+        system_prompt_override = intelligent_context.get('system_prompt')
+    else:
+        system_prompt_override = None
+
     # Try Gemini first (if available)
     if gemini_key:
         try:
             logger.info("Attempting Gemini API call...")
-            return _chat_with_gemini(message, history, context_data, is_system_conversation, user_role, user_name, gemini_key)
+            return _chat_with_gemini(message, history, context_data, is_system_conversation, user_role, user_name, gemini_key, system_prompt_override)
         except Exception as e:
             logger.warning(f"Gemini failed: {str(e)[:200]}, trying Groq...")
             if groq_key:
-                return _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, groq_key)
+                return _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, groq_key, system_prompt_override)
             else:
                 return {"reply": f"Gemini error: {str(e)[:100]}", "error": True}
 
     # Fallback to Groq
     if groq_key:
-        return _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, groq_key)
+        return _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, groq_key, system_prompt_override)
 
     return {"reply": "No API key configured", "error": True}
 
 
-def _build_system_prompt(is_system_conversation, user_role, user_name, context_data):
+def _build_system_prompt(is_system_conversation, user_role, user_name, context_data, system_prompt_override=None):
     """Build system prompt based on conversation type and role"""
+    # 🧠 If second brain provided a custom prompt, use it (already includes context)
+    if system_prompt_override:
+        return system_prompt_override
+
+    # Otherwise use the old large prompts
     if user_role == 'user':
         system_content = MEMBER_QUERY_SYSTEM_PROMPT
         if context_data and 'schedules' in context_data and user_name:
@@ -839,16 +854,16 @@ def _clean_reply_from_json(reply):
     return reply
 
 
-def _chat_with_gemini(message, history, context_data, is_system_conversation, user_role, user_name, api_key):
+def _chat_with_gemini(message, history, context_data, is_system_conversation, user_role, user_name, api_key, system_prompt_override=None):
     """Chat using Google Gemini API"""
     try:
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
 
-        # Build system prompt
+        # Build system prompt (using second brain if available)
         system_content = _build_system_prompt(
-            is_system_conversation, user_role, user_name, context_data)
+            is_system_conversation, user_role, user_name, context_data, system_prompt_override)
 
         # Configure model with system instruction
         model = genai.GenerativeModel(
@@ -890,7 +905,7 @@ def _chat_with_gemini(message, history, context_data, is_system_conversation, us
         raise
 
 
-def _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, api_key):
+def _chat_with_groq(message, history, context_data, is_system_conversation, user_role, user_name, api_key, system_prompt_override=None):
     """Chat using Groq API (original implementation)"""
     try:
         from groq import Groq
@@ -931,32 +946,9 @@ def _chat_with_groq(message, history, context_data, is_system_conversation, user
                     f"Total schedules in context: {len(context_data['schedules'])}")
 
         # Build the messages list for the API call
-        # Choose system prompt based on user role and conversation type
-        if user_role == 'user':
-            # MEMBER: Use query assistant prompt
-            system_content = MEMBER_QUERY_SYSTEM_PROMPT
-
-            # Filter context_data to include only member's own schedules
-            if context_data and 'schedules' in context_data and user_name:
-                # Normalize user name (remove suffix for comparison)
-                user_name_normalized = user_name.split(
-                    ',')[0].strip() if ',' in user_name else user_name.strip()
-                member_schedules = [
-                    s for s in context_data['schedules']
-                    if s.get('prof', '').split(',')[0].strip() == user_name_normalized
-                ]
-                context_data['schedules'] = member_schedules
-                context_data['member_name'] = user_name
-
-        elif is_system_conversation:
-            # ADMIN: Schedule generation prompt
-            system_content = SCHEDULE_SYSTEM_PROMPT
-        else:
-            # ADMIN: General prompt with schedule redirect
-            system_content = BASE_SYSTEM_PROMPT + SCHEDULE_REDIRECT_PROMPT
-
-        if context_data:
-            system_content += build_context_block(context_data)
+        # Choose system prompt based on user role and conversation type (or use second brain override)
+        system_content = _build_system_prompt(
+            is_system_conversation, user_role, user_name, context_data, system_prompt_override)
 
         messages = [{"role": "system", "content": system_content}]
 

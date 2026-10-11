@@ -973,6 +973,7 @@ def che_chat():
     """
     try:
         from services.che_service import chat as che_chat_fn, extract_action, execute_schedule_action
+        from services.knowledge_base import build_intelligent_context
 
         data = request.get_json(silent=True) or {}
         message = data.get('message', '').strip()
@@ -996,6 +997,19 @@ def che_chat():
         if len(history) > 4:
             history = history[-4:]
 
+        # 🧠 SECOND BRAIN: Use knowledge base to determine what data is actually needed
+        intelligent_context = build_intelligent_context(
+            message=message,
+            user_role=user_role,
+            is_system_conversation=is_schedule_page
+        )
+
+        logger.info(f"🧠 Second Brain Analysis:")
+        logger.info(f"   Intent: {intelligent_context['intent']}")
+        logger.info(f"   Data needed: {intelligent_context['requires_data']}")
+        logger.info(
+            f"   Estimated tokens: {intelligent_context['token_estimate']:.0f}")
+
         # Check if this is the system "Schedule Generation" conversation
         # Default to True if from schedule page
         is_system_conversation = is_schedule_page
@@ -1017,30 +1031,22 @@ def che_chat():
                 logger.warning(
                     f"Could not check conversation type: {conv_err}")
 
-        # OPTIMIZATION: Detect if user needs schedule data (lazy loading)
-        # Only load schedules when user asks about scheduling/availability
-        schedule_keywords = ['schedule', 'generate', 'free', 'available', 'teach', 'class',
-                             'conflict', 'move', 'add', 'delete', 'monday', 'tuesday',
-                             'wednesday', 'thursday', 'friday', 'saturday', 'time', 'room']
-        needs_schedules = any(keyword in message.lower()
-                              for keyword in schedule_keywords)
-
-        logger.info(
-            f"CHE Chat - Needs schedules: {needs_schedules} for message: '{message[:50]}...'")
-
         # Initialize context with minimal data
         context_data = {}
 
-        # Room list for CHE awareness (only if schedules are needed)
-        if needs_schedules:
+        # 🧠 SECOND BRAIN: Only load data that's actually needed based on intent
+        data_requirements = intelligent_context['requires_data']
+
+        # Room list (only if needed)
+        if 'rooms' in data_requirements:
             try:
                 context_data['available_rooms'] = get_all_rooms()
             except Exception as room_err:
                 logger.warning(f"CHE room context fetch: {room_err}")
                 context_data['available_rooms'] = list(DEFAULT_ROOMS)
 
-        # OPTIMIZATION: Only load schedules if user is asking about scheduling
-        if needs_schedules:
+        # Schedules (only if needed)
+        if 'schedules' in data_requirements:
             try:
                 # Schedules - FROM SUPABASE
                 query = supabase.table('schedules').select('*')
@@ -1124,9 +1130,10 @@ def che_chat():
             message=message,
             history=history,
             context_data=context_data,
-            is_system_conversation=is_system_conversation,  # Pass conversation type flag
-            user_role=user_role,  # Pass user role (admin or user/member)
-            user_name=user_name  # Pass user name for filtering member schedules
+            is_system_conversation=is_system_conversation,
+            user_role=user_role,
+            user_name=user_name,
+            intelligent_context=intelligent_context  # 🧠 Pass the second brain context
         )
 
         # If CHE returned a scheduling action, pre-execute it for preview
@@ -5570,7 +5577,7 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']                          : c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:
