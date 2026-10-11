@@ -991,6 +991,11 @@ def che_chat():
         if not message:
             return jsonify({'reply': 'Please send a message.', 'error': True}), 400
 
+        # OPTIMIZATION: Limit conversation history to last 2 turns only (4 messages total)
+        # This reduces token usage from ~2000 to ~200 tokens
+        if len(history) > 4:
+            history = history[-4:]
+
         # Check if this is the system "Schedule Generation" conversation
         # Default to True if from schedule page
         is_system_conversation = is_schedule_page
@@ -1012,78 +1017,70 @@ def che_chat():
                 logger.warning(
                     f"Could not check conversation type: {conv_err}")
 
-        # Always inject schedule context for scheduling awareness
+        # OPTIMIZATION: Detect if user needs schedule data (lazy loading)
+        # Only load schedules when user asks about scheduling/availability
+        schedule_keywords = ['schedule', 'generate', 'free', 'available', 'teach', 'class',
+                             'conflict', 'move', 'add', 'delete', 'monday', 'tuesday',
+                             'wednesday', 'thursday', 'friday', 'saturday', 'time', 'room']
+        needs_schedules = any(keyword in message.lower()
+                              for keyword in schedule_keywords)
+
+        logger.info(
+            f"CHE Chat - Needs schedules: {needs_schedules} for message: '{message[:50]}...'")
+
+        # Initialize context with minimal data
         context_data = {}
 
-        # Room list for CHE awareness, including rooms added on the courses page
-        try:
-            context_data['available_rooms'] = get_all_rooms()
-        except Exception as room_err:
-            logger.warning(f"CHE room context fetch: {room_err}")
-            context_data['available_rooms'] = list(DEFAULT_ROOMS)
+        # Room list for CHE awareness (only if schedules are needed)
+        if needs_schedules:
+            try:
+                context_data['available_rooms'] = get_all_rooms()
+            except Exception as room_err:
+                logger.warning(f"CHE room context fetch: {room_err}")
+                context_data['available_rooms'] = list(DEFAULT_ROOMS)
 
-        try:
-            # Schedules (always loaded for GA awareness) - FROM SUPABASE
-            query = supabase.table('schedules').select('*')
+        # OPTIMIZATION: Only load schedules if user is asking about scheduling
+        if needs_schedules:
+            try:
+                # Schedules - FROM SUPABASE
+                query = supabase.table('schedules').select('*')
 
-            # Filter by semester/year if provided (from schedule page context)
-            if current_school_year:
-                query = query.eq('school_year', current_school_year)
-            if current_semester:
-                query = query.eq('semester', str(current_semester))
+                # Filter by semester/year if provided (from schedule page context)
+                if current_school_year:
+                    query = query.eq('school_year', current_school_year)
+                if current_semester:
+                    query = query.eq('semester', str(current_semester))
 
-            # DEBUG LOGGING
-            print(f"\n=== CHE CHAT DEBUG ===")
-            print(f"Message: '{message}'")
-            print(f"School Year: {current_school_year}")
-            print(f"Semester: {current_semester}")
+                logger.info(
+                    f"Loading schedules - School Year: {current_school_year}, Semester: {current_semester}")
 
-            result = query.execute()
+                result = query.execute()
+                logger.info(
+                    f"Loaded {len(result.data)} schedules for CHE context")
 
-            print(f"Total schedules fetched: {len(result.data)}")
-            if result.data:
-                print(
-                    f"Sample schedule: prof='{result.data[0].get('prof')}', day='{result.data[0].get('day')}', school_year='{result.data[0].get('school_year')}', semester='{result.data[0].get('semester')}'")
-
-                # Check Aaron Joseph specifically
-                aaron_schedules = [s for s in result.data if 'aaron' in s.get(
-                    'prof', '').lower() and 'joseph' in s.get('prof', '').lower()]
-                print(
-                    f"Aaron Joseph total schedules in this semester: {len(aaron_schedules)}")
-                if aaron_schedules:
-                    monday_aaron = [s for s in aaron_schedules if s.get(
-                        'day', '').lower() == 'monday']
-                    print(
-                        f"Aaron Joseph Monday schedules: {len(monday_aaron)}")
-                    if monday_aaron:
-                        for s in monday_aaron:
-                            print(
-                                f"  - {s.get('start')} to {s.get('end')}: {s.get('subj_code')} ({s.get('prof')})")
-                    else:
-                        print(
-                            "  - No Monday classes for Aaron Joseph in this semester")
-                        print(
-                            f"  - Aaron's days this semester: {list(set([s.get('day') for s in aaron_schedules]))}")
-
-            schedules_raw = []
-            for data in result.data:
-                # Normalize to camelCase for consistency with GA functions
-                schedules_raw.append({
-                    'id': data.get('id'),
-                    'prof': data.get('prof', ''),
-                    'subjCode': data.get('subj_code', data.get('subjCode', '')),
-                    'subjName': data.get('subj_name', data.get('subjName', '')),
-                    'day': data.get('day', ''),
-                    'start': str(data.get('start', '')).rsplit(':', 1)[0] if data.get('start') and str(data.get('start')).count(':') > 1 else data.get('start', ''),
-                    'end': str(data.get('end', '')).rsplit(':', 1)[0] if data.get('end') and str(data.get('end')).count(':') > 1 else data.get('end', ''),
-                    'room': data.get('room', ''),
-                    'section': data.get('section', ''),
-                    'units': data.get('units', ''),
-                })
-            context_data['schedules'] = schedules_raw
-        except Exception as ctx_err:
-            logger.warning(f"CHE schedule context fetch: {ctx_err}")
+                schedules_raw = []
+                for data in result.data:
+                    # Normalize to camelCase for consistency with GA functions
+                    schedules_raw.append({
+                        'id': data.get('id'),
+                        'prof': data.get('prof', ''),
+                        'subjCode': data.get('subj_code', data.get('subjCode', '')),
+                        'subjName': data.get('subj_name', data.get('subjName', '')),
+                        'day': data.get('day', ''),
+                        'start': str(data.get('start', '')).rsplit(':', 1)[0] if data.get('start') and str(data.get('start')).count(':') > 1 else data.get('start', ''),
+                        'end': str(data.get('end', '')).rsplit(':', 1)[0] if data.get('end') and str(data.get('end')).count(':') > 1 else data.get('end', ''),
+                        'room': data.get('room', ''),
+                        'section': data.get('section', ''),
+                        'units': data.get('units', ''),
+                    })
+                context_data['schedules'] = schedules_raw
+            except Exception as ctx_err:
+                logger.warning(f"CHE schedule context fetch: {ctx_err}")
+                context_data['schedules'] = []
+        else:
+            # No schedules needed for general queries
             context_data['schedules'] = []
+            logger.info("Skipping schedule load - not needed for this query")
 
         if include_context:
             # Try to load additional context data, but don't fail if tables don't exist
@@ -5573,7 +5570,7 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']                          : c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:

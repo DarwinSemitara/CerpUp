@@ -856,9 +856,9 @@ def _chat_with_gemini(message, history, context_data, is_system_conversation, us
             system_instruction=system_content
         )
 
-        # Build conversation history for Gemini
+        # Build conversation history for Gemini (limit to last 2 turns = 4 messages)
         gemini_history = []
-        for turn in history[-20:]:
+        for turn in history[-4:]:
             role = turn.get("role")
             content = turn.get("content", "")
             if role == "user":
@@ -960,8 +960,8 @@ def _chat_with_groq(message, history, context_data, is_system_conversation, user
 
         messages = [{"role": "system", "content": system_content}]
 
-        # Add conversation history (cap at last 20 turns to control token usage)
-        for turn in history[-20:]:
+        # Add conversation history (limit to last 2 turns = 4 messages)
+        for turn in history[-4:]:
             role = turn.get("role")
             content = turn.get("content", "")
             if role in ("user", "assistant") and content:
