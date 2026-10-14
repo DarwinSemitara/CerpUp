@@ -1,35 +1,598 @@
 {% extends 'admin_base.html' %}
 
 {% block content %}
-<div class="welcome-section">
-    <div class="welcome-title">Admin Page</div>
-    <div class="welcome-text">
-        This page is under construction. Admin features will be added here soon.
+<div class="admin-work-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Administrative Work</h1>
+            <p class="page-subtitle">View and manage faculty administrative responsibilities</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #dbeafe;">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#0ea5e9" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Total Submissions</div>
+                <div class="stat-value" id="stat-total">-</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #d1fae5;">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#10b981" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Ongoing Roles</div>
+                <div class="stat-value" id="stat-ongoing">-</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #fef3c7;">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#f59e0b" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">Completed</div>
+                <div class="stat-value" id="stat-completed">-</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e0e7ff;">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#6366f1" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <div class="stat-content">
+                <div class="stat-label">This Year</div>
+                <div class="stat-value" id="stat-this-year">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="filters-row">
+            <select id="filter-type" class="filter-select" onchange="filterTable()">
+                <option value="">All Types</option>
+                <option value="department">Department Admin</option>
+                <option value="committee">Committee</option>
+                <option value="special">Special Assignment</option>
+                <option value="organization">Organization Adviser</option>
+                <option value="college_level">College/University Level</option>
+            </select>
+
+            <select id="filter-status" class="filter-select" onchange="filterTable()">
+                <option value="">All Status</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+            </select>
+
+            <select id="filter-year" class="filter-select" onchange="filterTable()">
+                <!-- Populated dynamically -->
+            </select>
+
+            <select id="filter-faculty" class="filter-select" onchange="filterTable()">
+                <option value="">All Faculty</option>
+                <!-- Populated dynamically -->
+            </select>
+
+            <div class="search-box">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="text" id="search-input" placeholder="Search by title, role..." oninput="filterTable()">
+            </div>
+
+            <button class="btn-export" onclick="exportToExcel()">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Faculty Name</th>
+                        <th>Type</th>
+                        <th>Title/Position</th>
+                        <th>Role</th>
+                        <th>Department/Committee</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Duration</th>
+                        <th>Credit Units</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-work-tbody">
+                    <tr>
+                        <td colspan="10" class="loading-cell">
+                            <div class="loading-spinner"></div>
+                            Loading administrative work...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state" style="display: none;">
+        <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p>No administrative work found</p>
+        <small>Try adjusting your filters or search criteria</small>
     </div>
 </div>
 
 <style>
-    .welcome-section {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 60vh;
-        text-align: center;
-        padding: 24px;
+    .admin-work-container {
+        padding: 32px;
+        max-width: 1600px;
+        margin: 0 auto;
     }
 
-    .welcome-title {
-        font-size: 2rem;
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+    }
+
+    .page-title {
+        font-size: 1.875rem;
         font-weight: 700;
         color: #111827;
-        margin-bottom: 12px;
+        margin: 0 0 4px 0;
     }
 
-    .welcome-text {
-        font-size: 1.1rem;
+    .page-subtitle {
+        font-size: 0.95rem;
         color: #6b7280;
-        max-width: 600px;
+        margin: 0;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 32px;
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .filters-section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .filter-select {
+        padding: 10px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #374151;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-width: 160px;
+    }
+
+    .filter-select:hover {
+        border-color: #9ca3af;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+
+    .search-box {
+        position: relative;
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .search-box svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 10px 16px 10px 44px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+
+    .btn-export {
+        padding: 10px 20px;
+        background: #0ea5e9;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-export:hover {
+        background: #0284c7;
+    }
+
+    .table-container {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table thead {
+        background: #f9fafb;
+    }
+
+    .data-table th {
+        padding: 16px;
+        text-align: left;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .data-table td {
+        padding: 16px;
+        font-size: 0.9rem;
+        color: #4b5563;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .data-table tbody tr {
+        transition: background 0.15s;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .loading-cell {
+        text-align: center;
+        padding: 60px 20px !important;
+        color: #6b7280;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f4f6;
+        border-top-color: #0ea5e9;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .status-ongoing {
+        background: #d1fae5;
+        color: #047857;
+    }
+
+    .status-completed {
+        background: #e0e7ff;
+        color: #4f46e5;
+    }
+
+    .type-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .type-department { background: #dbeafe; color: #1e40af; }
+    .type-committee { background: #fef3c7; color: #92400e; }
+    .type-special { background: #fce7f3; color: #9f1239; }
+    .type-organization { background: #d1fae5; color: #065f46; }
+    .type-college_level { background: #e0e7ff; color: #4338ca; }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: #9ca3af;
+    }
+
+    .empty-state svg {
+        margin: 0 auto 16px;
+        opacity: 0.3;
+    }
+
+    .empty-state p {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #6b7280;
+        margin: 0 0 8px 0;
+    }
+
+    .empty-state small {
+        font-size: 0.9rem;
+        color: #9ca3af;
     }
 </style>
+
+<script>
+    let allAdminWork = [];
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadStatistics();
+        loadAdminWork();
+        populateYearFilter();
+    });
+
+    async function loadStatistics() {
+        try {
+            const response = await fetch('/api/admin-work/statistics');
+            if (!response.ok) throw new Error('Failed to load statistics');
+            
+            const stats = await response.json();
+            
+            document.getElementById('stat-total').textContent = stats.total || 0;
+            document.getElementById('stat-ongoing').textContent = stats.ongoing || 0;
+            document.getElementById('stat-completed').textContent = stats.completed || 0;
+            document.getElementById('stat-this-year').textContent = stats.this_year || 0;
+        } catch (error) {
+            console.error('Error loading statistics:', error);
+        }
+    }
+
+    async function loadAdminWork() {
+        try {
+            const response = await fetch('/api/admin-work?all=true');
+            if (!response.ok) throw new Error('Failed to load admin work');
+            
+            allAdminWork = await response.json();
+            populateFacultyFilter();
+            renderTable();
+        } catch (error) {
+            console.error('Error loading admin work:', error);
+            document.getElementById('admin-work-tbody').innerHTML = `
+                <tr><td colspan="10" class="loading-cell" style="color: #ef4444;">
+                    Error loading data. Please refresh the page.
+                </td></tr>
+            `;
+        }
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('admin-work-tbody');
+        const typeFilter = document.getElementById('filter-type').value;
+        const statusFilter = document.getElementById('filter-status').value;
+        const yearFilter = document.getElementById('filter-year').value;
+        const facultyFilter = document.getElementById('filter-faculty').value;
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+        let filtered = allAdminWork.filter(work => {
+            if (typeFilter && work.type !== typeFilter) return false;
+            if (statusFilter === 'ongoing' && !work.is_ongoing) return false;
+            if (statusFilter === 'completed' && work.is_ongoing) return false;
+            if (yearFilter && !work.start_date.startsWith(yearFilter)) return false;
+            if (facultyFilter && work.uid !== facultyFilter) return false;
+            if (searchTerm) {
+                const searchable = `${work.title} ${work.role} ${work.member_name}`.toLowerCase();
+                if (!searchable.includes(searchTerm)) return false;
+            }
+            return true;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            document.querySelector('.table-container').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'block';
+            return;
+        }
+
+        document.querySelector('.table-container').style.display = 'block';
+        document.getElementById('empty-state').style.display = 'none';
+
+        tbody.innerHTML = filtered.map(work => {
+            const typeLabels = {
+                'department': 'Department Admin',
+                'committee': 'Committee',
+                'special': 'Special Assignment',
+                'organization': 'Organization Adviser',
+                'college_level': 'College/University'
+            };
+
+            const duration = calculateDuration(work.start_date, work.end_date, work.is_ongoing);
+            const status = work.is_ongoing ? 
+                '<span class="status-badge status-ongoing">● Ongoing</span>' :
+                '<span class="status-badge status-completed">● Completed</span>';
+
+            const deptOrCommittee = work.department || work.committee_name || work.organization_name || '-';
+
+            return `
+                <tr>
+                    <td style="font-weight: 500;">${work.member_name || 'Unknown'}</td>
+                    <td><span class="type-badge type-${work.type}">${typeLabels[work.type] || work.type}</span></td>
+                    <td>${work.title}</td>
+                    <td>${work.role || '-'}</td>
+                    <td>${deptOrCommittee}</td>
+                    <td>${formatDate(work.start_date)}</td>
+                    <td>${work.end_date ? formatDate(work.end_date) : '-'}</td>
+                    <td>${duration}</td>
+                    <td>${work.credit_units || '-'}</td>
+                    <td>${status}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function calculateDuration(startDate, endDate, isOngoing) {
+        if (!startDate) return '-';
+        
+        const start = new Date(startDate);
+        const end = endDate ? new Date(endDate) : new Date();
+        
+        const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+        
+        if (months < 1) return '< 1 month';
+        if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'}`;
+        
+        const years = Math.floor(months / 12);
+        const remainingMonths = months % 12;
+        
+        if (remainingMonths === 0) return `${years} ${years === 1 ? 'year' : 'years'}`;
+        return `${years}y ${remainingMonths}m`;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    }
+
+    function populateYearFilter() {
+        const yearSelect = document.getElementById('filter-year');
+        const currentYear = new Date().getFullYear();
+        let options = '<option value="">All Years</option>';
+        
+        for (let year = currentYear; year >= currentYear - 10; year--) {
+            options += `<option value="${year}">${year}</option>`;
+        }
+        
+        yearSelect.innerHTML = options;
+    }
+
+    function populateFacultyFilter() {
+        const facultySet = new Map();
+        allAdminWork.forEach(work => {
+            if (work.uid && work.member_name) {
+                facultySet.set(work.uid, work.member_name);
+            }
+        });
+
+        const facultySelect = document.getElementById('filter-faculty');
+        let options = '<option value="">All Faculty</option>';
+        
+        Array.from(facultySet.entries())
+            .sort((a, b) => a[1].localeCompare(b[1]))
+            .forEach(([uid, name]) => {
+                options += `<option value="${uid}">${name}</option>`;
+            });
+        
+        facultySelect.innerHTML = options;
+    }
+
+    function filterTable() {
+        renderTable();
+    }
+
+    function exportToExcel() {
+        alert('Export functionality coming soon!');
+    }
+</script>
 {% endblock %}

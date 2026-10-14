@@ -5577,7 +5577,8 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']
+            : c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:
@@ -7586,3 +7587,238 @@ register_forgot_password_routes(app, db)
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+# ── Administrative Work API ──────────────────────────────────────────────
+
+@app.route('/api/admin-work', methods=['GET'])
+@login_required
+def get_admin_work():
+    """Get administrative work submissions (all for admin, own for members)"""
+    try:
+        uid = session.get('uid')
+        role = session.get('role', 'user')
+
+        # Check if requesting all (admin only) or specific user
+        get_all = request.args.get('all') == 'true' and role == 'admin'
+        # For admin viewing specific faculty
+        target_uid = request.args.get('uid')
+
+        query = supabase.table('administrative_works').select('*')
+
+        if get_all:
+            # Admin viewing all submissions
+            pass
+        elif target_uid and role == 'admin':
+            # Admin viewing specific faculty's work
+            query = query.eq('uid', target_uid)
+        else:
+            # Member viewing own work
+            query = query.eq('uid', uid)
+
+        # Apply filters
+        work_type = request.args.get('type')
+        if work_type:
+            query = query.eq('type', work_type)
+
+        year = request.args.get('year')
+        if year:
+            query = query.gte(
+                'start_date', f'{year}-01-01').lte('start_date', f'{year}-12-31')
+
+        status = request.args.get('status')
+        if status == 'ongoing':
+            query = query.eq('is_ongoing', True)
+        elif status == 'completed':
+            query = query.eq('is_ongoing', False)
+
+        # Order by most recent first
+        query = query.order('created_at', desc=True)
+
+        result = query.execute()
+
+        # If admin, enrich with member names
+        if get_all or (target_uid and role == 'admin'):
+            for work in result.data:
+                try:
+                    member_response = supabase.table('members').select(
+                        'name').eq('uid', work['uid']).single().execute()
+                    if member_response.data:
+                        work['member_name'] = member_response.data['name']
+                    else:
+                        work['member_name'] = 'Unknown'
+                except:
+                    work['member_name'] = 'Unknown'
+
+        return jsonify(result.data), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching admin work: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin-work', methods=['POST'])
+@login_required
+def add_admin_work():
+    """Submit new administrative work"""
+    try:
+        uid = session.get('uid')
+        data = request.get_json()
+
+        # Get member info
+        member_response = supabase.table('members').select(
+            'id, name').eq('uid', uid).single().execute()
+        if not member_response.data:
+            return jsonify({'error': 'Member not found'}), 404
+
+        member = member_response.data
+        member_name = member.get('name', 'Unknown')
+
+        # Prepare admin work document
+        admin_work_doc = {
+            'uid': uid,
+            'type': data.get('type'),
+            'type_code': data.get('type_code'),
+            'title': data.get('title'),
+            'role': data.get('role'),
+            'description': data.get('description', ''),
+            'start_date': data.get('start_date'),
+            'end_date': data.get('end_date') if not data.get('is_ongoing') else None,
+            'is_ongoing': data.get('is_ongoing', False),
+            'department': data.get('department', ''),
+            'committee_name': data.get('committee_name', ''),
+            'organization_name': data.get('organization_name', ''),
+            'scope': data.get('scope', ''),
+            'members': data.get('members', ''),
+            'accomplishments': data.get('accomplishments', ''),
+            'credit_units': data.get('credit_units'),
+            'hours_per_week': data.get('hours_per_week'),
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }
+
+        # Insert into Supabase
+        logger.info(f"📄 Inserting administrative work for {member_name}...")
+        insert_response = supabase.table(
+            'administrative_works').insert(admin_work_doc).execute()
+
+        if not insert_response.data:
+            raise Exception("Failed to insert administrative work")
+
+        new_work = insert_response.data[0]
+        logger.info(
+            f"✅ Administrative work added with ID: {new_work.get('id')}")
+
+        # Log audit action
+        try:
+            log_audit_action(
+                user_id=uid,
+                action=AuditAction.CREATE,
+                target_type='administrative_work',
+                target_id=new_work.get('id'),
+                target_name=data.get('title', 'Administrative Work'),
+                metadata={'type': data.get('type'), 'role': data.get('role')}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit log failed: {audit_err}")
+
+        return jsonify(new_work), 201
+
+    except Exception as e:
+        logger.error(f"Error adding admin work: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin-work/<work_id>', methods=['DELETE'])
+@login_required
+def delete_admin_work(work_id):
+    """Delete administrative work submission"""
+    try:
+        uid = session.get('uid')
+        role = session.get('role', 'user')
+
+        # Verify ownership or admin
+        if role != 'admin':
+            check_response = supabase.table('administrative_works').select(
+                'uid').eq('id', work_id).single().execute()
+            if not check_response.data or check_response.data['uid'] != uid:
+                return jsonify({'error': 'Unauthorized'}), 403
+
+        # Get work details for audit log
+        work_response = supabase.table('administrative_works').select(
+            '*').eq('id', work_id).single().execute()
+        work_data = work_response.data if work_response.data else {}
+
+        # Delete from Supabase
+        delete_response = supabase.table(
+            'administrative_works').delete().eq('id', work_id).execute()
+
+        logger.info(f"✅ Administrative work deleted: {work_id}")
+
+        # Log audit action
+        try:
+            log_audit_action(
+                user_id=uid,
+                action=AuditAction.DELETE,
+                target_type='administrative_work',
+                target_id=work_id,
+                target_name=work_data.get('title', 'Administrative Work'),
+                metadata={'type': work_data.get('type')}
+            )
+        except Exception as audit_err:
+            logger.warning(f"Audit log failed: {audit_err}")
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting admin work: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin-work/statistics', methods=['GET'])
+@login_required
+@admin_required
+def get_admin_work_statistics():
+    """Get summary statistics for all administrative work"""
+    try:
+        # Get all admin work
+        all_work = supabase.table('administrative_works').select('*').execute()
+        data = all_work.data
+
+        # Calculate statistics
+        total = len(data)
+        ongoing = len([w for w in data if w.get('is_ongoing')])
+        completed = total - ongoing
+
+        # Current year submissions
+        current_year = datetime.now().year
+        this_year = len([w for w in data if w.get(
+            'start_date', '').startswith(str(current_year))])
+
+        # By type
+        by_type = {}
+        for work in data:
+            work_type = work.get('type', 'unknown')
+            by_type[work_type] = by_type.get(work_type, 0) + 1
+
+        # By faculty
+        by_faculty = {}
+        for work in data:
+            uid = work.get('uid')
+            by_faculty[uid] = by_faculty.get(uid, 0) + 1
+
+        stats = {
+            'total': total,
+            'ongoing': ongoing,
+            'completed': completed,
+            'this_year': this_year,
+            'by_type': by_type,
+            'faculty_count': len(by_faculty),
+            'average_per_faculty': round(total / len(by_faculty), 1) if by_faculty else 0
+        }
+
+        return jsonify(stats), 200
+
+    except Exception as e:
+        logger.error(f"Error getting admin work statistics: {e}")
+        return jsonify({'error': str(e)}), 500
