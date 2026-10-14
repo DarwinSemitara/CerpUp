@@ -7585,10 +7585,6 @@ def user_admin_page():
 register_forgot_password_routes(app, db)
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
 # ── Administrative Work API ──────────────────────────────────────────────
 
 @app.route('/api/admin-work', methods=['GET'])
@@ -7777,7 +7773,6 @@ def delete_admin_work(work_id):
 
 @app.route('/api/admin-work/statistics', methods=['GET'])
 @login_required
-@admin_required
 def get_admin_work_statistics():
     """Get summary statistics for all administrative work"""
     try:
@@ -7822,3 +7817,11 @@ def get_admin_work_statistics():
     except Exception as e:
         logger.error(f"Error getting admin work statistics: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Run Flask Application
+# ══════════════════════════════════════════════════════════════════════════════
+
+if __name__ == '__main__':
+    app.run(debug=True)
