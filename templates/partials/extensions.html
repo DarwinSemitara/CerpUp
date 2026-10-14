@@ -24,6 +24,14 @@
         justify-content: space-between;
     }
 
+    .extensions-filters-left {
+        display: flex;
+        gap: 14px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        flex: 1;
+    }
+
     .extensions-filters-right {
         display: flex;
         gap: 10px;
@@ -377,31 +385,33 @@
     <div class="extensions-main-card">
         <!-- Filters Toolbar -->
         <div class="extensions-filters-toolbar">
-            <div class="extensions-filter-group">
-                <label class="extensions-filter-label">Type</label>
-                <select class="extensions-filter-select" id="ext-filter-type" onchange="applyExtensionFilters()">
-                    <option value="">All Types</option>
-                    <option value="extensions">Extensions</option>
-                    <option value="training">Training</option>
-                    <option value="information_dissemination">Information Dissemination</option>
-                    <option value="workshop">Workshop</option>
-                    <option value="symposium">Symposium</option>
-                    <option value="others">Others</option>
-                </select>
-            </div>
+            <div class="extensions-filters-left">
+                <div class="extensions-filter-group">
+                    <label class="extensions-filter-label">Type</label>
+                    <select class="extensions-filter-select" id="ext-filter-type" onchange="applyExtensionFilters()">
+                        <option value="">All Types</option>
+                        <option value="extensions">Extensions</option>
+                        <option value="training">Training</option>
+                        <option value="information_dissemination">Information Dissemination</option>
+                        <option value="workshop">Workshop</option>
+                        <option value="symposium">Symposium</option>
+                        <option value="others">Others</option>
+                    </select>
+                </div>
 
-            <div class="extensions-filter-group">
-                <label class="extensions-filter-label">Submitted By</label>
-                <select class="extensions-filter-select" id="ext-filter-member" onchange="applyExtensionFilters()">
-                    <option value="">All Members</option>
-                </select>
-            </div>
+                <div class="extensions-filter-group">
+                    <label class="extensions-filter-label">Submitted By</label>
+                    <select class="extensions-filter-select" id="ext-filter-member" onchange="applyExtensionFilters()">
+                        <option value="">All Members</option>
+                    </select>
+                </div>
 
-            <div class="extensions-filter-group">
-                <label class="extensions-filter-label">Year Submitted</label>
-                <select class="extensions-filter-select" id="ext-filter-year" onchange="applyExtensionFilters()">
-                    <option value="">All Years</option>
-                </select>
+                <div class="extensions-filter-group">
+                    <label class="extensions-filter-label">Year Submitted</label>
+                    <select class="extensions-filter-select" id="ext-filter-year" onchange="applyExtensionFilters()">
+                        <option value="">All Years</option>
+                    </select>
+                </div>
             </div>
 
             <div class="extensions-filters-right">
