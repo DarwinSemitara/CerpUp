@@ -547,11 +547,13 @@
             background: rgba(230, 184, 0, 0.12);
         }
 
-        html, body {
+        html,
+        body {
             overflow-x: hidden;
         }
 
         @media (min-width: 880px) {
+
             .mobile-nav,
             .nav-backdrop {
                 display: none !important;
@@ -710,6 +712,7 @@
         }
 
         @media (min-width: 640px) and (max-width: 879px) {
+
             .split-media,
             .split-media--slideshow {
                 height: 300px;
@@ -835,7 +838,8 @@
         <div id="progress-right"></div>
 
         <!-- Nav left (rendered after logo so dropdowns paint on top) -->
-        <div class="header-nav header-nav-left absolute top-1/2 -translate-y-1/2 flex items-center gap-6" style="right: calc(50% + 60px);">
+        <div class="header-nav header-nav-left absolute top-1/2 -translate-y-1/2 flex items-center gap-6"
+            style="right: calc(50% + 60px);">
             <a href="#" class="nav-btn">HOME</a>
             <div class="nav-item" style="position:relative;">
                 <a href="#about" class="nav-btn" data-dropdown="dd-about">ABOUT US</a>
@@ -843,18 +847,22 @@
         </div>
 
         <!-- Nav right (rendered after logo so dropdowns paint on top) -->
-        <div class="header-nav header-nav-right absolute top-1/2 -translate-y-1/2 flex items-center gap-6" style="left: calc(50% + 60px);">
+        <div class="header-nav header-nav-right absolute top-1/2 -translate-y-1/2 flex items-center gap-6"
+            style="left: calc(50% + 60px);">
             <div class="nav-item" style="position:relative;">
                 <a href="#research" class="nav-btn" data-dropdown="dd-research">RESEARCH</a>
             </div>
-            <a href="/login" class="nav-btn">CERP-UP</a>
+            <a href="#extensions" class="nav-btn">EXTENSIONS</a>
         </div>
 
-        <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
-            <svg id="nav-toggle-open" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false"
+            aria-controls="mobile-nav">
+            <svg id="nav-toggle-open" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
             </svg>
-            <svg id="nav-toggle-close" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" style="display:none;">
+            <svg id="nav-toggle-close" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="1.8" style="display:none;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
         </button>
@@ -890,7 +898,7 @@
                 <a href="/publications">Publications</a>
             </div>
         </div>
-        <a href="/login" class="mobile-nav-cerp">CERP-UP</a>
+        <a href="#extensions" class="mobile-nav-cerp">EXTENSIONS</a>
     </nav>
 
     <!-- Hero Section -->
@@ -1385,6 +1393,63 @@
             vmGoTo(vmCurrent + dir);
         }
     </script>
+
+    <!-- Floating Login Button -->
+    <a href="/login" class="login-widget" aria-label="Login" title="Login to CERP">
+        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+        </svg>
+    </a>
+
+    <style>
+        .login-widget {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #6b0f1a 0%, #8b1a2d 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 8px 24px rgba(107, 15, 26, 0.4);
+            z-index: 9999;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+        }
+
+        .login-widget:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 12px 32px rgba(107, 15, 26, 0.6);
+            background: linear-gradient(135deg, #8b1a2d 0%, #6b0f1a 100%);
+        }
+
+        .login-widget:active {
+            transform: scale(0.95);
+        }
+
+        .login-widget svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        @media (max-width: 768px) {
+            .login-widget {
+                width: 56px;
+                height: 56px;
+                bottom: 24px;
+                right: 24px;
+            }
+
+            .login-widget svg {
+                width: 24px;
+                height: 24px;
+            }
+        }
+    </style>
 </body>
 
 </html>

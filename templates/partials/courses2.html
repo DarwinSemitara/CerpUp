@@ -4,27 +4,6 @@
      ═══════════════════════════════════════════════════════════════ -->
 
 <div class="courses-v2">
-    <!-- ═══ ONBOARDING BANNER ═══ -->
-    <div class="onboarding-banner" id="onboarding-banner">
-        <div class="onboarding-content">
-            <div class="onboarding-icon">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div class="onboarding-text">
-                <h4>Welcome to Course Assignment!</h4>
-                <p>Follow the 3-step workflow below to assign courses to faculty members for this semester.</p>
-            </div>
-            <button class="onboarding-dismiss" onclick="dismissOnboarding()" aria-label="Dismiss">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-    </div>
-
     <!-- ═══ WORKFLOW STEPPER ═══ -->
     <div class="workflow-stepper">
         <div class="step-item active" data-step="1" onclick="navigateToStep(1)">
@@ -577,100 +556,6 @@
         flex-direction: column;
         gap: var(--space-6);
         min-height: 100%;
-    }
-
-    /* ═══════════════════════════════════════════════════════════════
-       ONBOARDING BANNER
-       ═══════════════════════════════════════════════════════════════ */
-    .onboarding-banner {
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-        border: 1px solid #93c5fd;
-        border-radius: var(--radius-lg);
-        padding: var(--space-4);
-        animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-12px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes slideUp {
-        from {
-            opacity: 1;
-            max-height: 200px;
-            transform: translateY(0);
-        }
-
-        to {
-            opacity: 0;
-            max-height: 0;
-            transform: translateY(-12px);
-        }
-    }
-
-    .onboarding-content {
-        display: flex;
-        align-items: flex-start;
-        gap: var(--space-4);
-    }
-
-    .onboarding-icon {
-        flex-shrink: 0;
-        width: 40px;
-        height: 40px;
-        background: #3b82f6;
-        border-radius: var(--radius-md);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-    }
-
-    .onboarding-text {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .onboarding-text h4 {
-        margin: 0 0 var(--space-1);
-        font-size: var(--font-size-lg);
-        font-weight: 600;
-        color: #1e40af;
-    }
-
-    .onboarding-text p {
-        margin: 0;
-        font-size: var(--font-size-sm);
-        color: #1e3a8a;
-        line-height: 1.5;
-    }
-
-    .onboarding-dismiss {
-        flex-shrink: 0;
-        width: 32px;
-        height: 32px;
-        border: none;
-        background: transparent;
-        color: #60a5fa;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all var(--transition-fast);
-    }
-
-    .onboarding-dismiss:hover {
-        background: rgba(59, 130, 246, 0.1);
-        color: #3b82f6;
     }
 
     /* ═══════════════════════════════════════════════════════════════

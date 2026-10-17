@@ -669,6 +669,21 @@ def admin_page():
                            active_page='admin')
 
 
+@app.route('/display/')
+@login_required
+def display_page():
+    """Display page for managing landing page content"""
+    if is_partial():
+        return render_template('partials/display.html')
+    email = session.get('email', '')
+    initial = email[0].upper() if email else 'A'
+    return render_template('pages/display.html',
+                           email=email,
+                           initial=initial,
+                           page_title='Display',
+                           active_page='display')
+
+
 @app.route('/extensions/public-engagements/')
 @login_required
 def section_pub_eng():
