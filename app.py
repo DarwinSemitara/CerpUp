@@ -7838,8 +7838,8 @@ def get_admin_work_statistics():
 # Landing Page Content API
 # ══════════════════════════════════════════════════════════════════════════════
 
-@app.route('/api/news', methods=['GET'])
-def get_news():
+@app.route('/api/landing/news', methods=['GET'])
+def get_landing_news():
     """Get all published news for landing page"""
     try:
         result = supabase.table('landing_news')\
@@ -7854,9 +7854,9 @@ def get_news():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/news', methods=['POST'])
+@app.route('/api/landing/news', methods=['POST'])
 @login_required
-def create_news():
+def create_landing_news():
     """Create new news item with image upload"""
     try:
         uid = session.get('uid')
@@ -7888,9 +7888,9 @@ def create_news():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/news/<news_id>', methods=['DELETE'])
+@app.route('/api/landing/news/<news_id>', methods=['DELETE'])
 @login_required
-def delete_news(news_id):
+def delete_landing_news(news_id):
     """Delete a news item"""
     try:
         uid = session.get('uid')
@@ -7918,9 +7918,9 @@ def delete_news(news_id):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/news/<news_id>', methods=['PUT'])
+@app.route('/api/landing/news/<news_id>', methods=['PUT'])
 @login_required
-def update_news(news_id):
+def update_landing_news(news_id):
     """Update a news item"""
     try:
         uid = session.get('uid')

@@ -692,7 +692,7 @@
         formData.append('description', document.getElementById('news-description').value);
 
         try {
-            const response = await fetch('/api/news', {
+            const response = await fetch('/api/landing/news', {
                 method: 'POST',
                 body: formData
             });
@@ -715,7 +715,7 @@
     // Load news
     async function loadNews() {
         try {
-            const response = await fetch('/api/news');
+            const response = await fetch('/api/landing/news');
             if (!response.ok) throw new Error('Failed to load news');
 
             allNews = await response.json();
