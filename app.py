@@ -7835,6 +7835,134 @@ def get_admin_work_statistics():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Landing Page Content API
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/news', methods=['GET'])
+def get_news():
+    """Get all published news for landing page"""
+    try:
+        result = supabase.table('landing_news')\
+            .select('*')\
+            .eq('is_published', True)\
+            .order('created_at', desc=True)\
+            .execute()
+
+        return jsonify(result.data), 200
+    except Exception as e:
+        logger.error(f"Error fetching news: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/news', methods=['POST'])
+@login_required
+def create_news():
+    """Create new news item with image upload"""
+    try:
+        uid = session.get('uid')
+
+        # Get form data
+        title = request.form.get('title')
+        description = request.form.get('description')
+        image = request.files.get('image')
+
+        if not all([title, description, image]):
+            return jsonify({'error': 'Missing required fields'}), 400
+
+        # Upload image to Cloudinary
+        from services.cloudinary_service import upload_to_cloudinary
+        image_url = upload_to_cloudinary(image, folder='landing/news')
+
+        # Insert into database
+        result = supabase.table('landing_news').insert({
+            'title': title,
+            'description': description,
+            'image_url': image_url,
+            'created_by': uid,
+            'is_published': True
+        }).execute()
+
+        return jsonify(result.data[0]), 201
+    except Exception as e:
+        logger.error(f"Error creating news: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/news/<news_id>', methods=['DELETE'])
+@login_required
+def delete_news(news_id):
+    """Delete a news item"""
+    try:
+        uid = session.get('uid')
+        role = session.get('role')
+
+        # Check ownership or admin role
+        news = supabase.table('landing_news')\
+            .select('created_by')\
+            .eq('id', news_id)\
+            .single()\
+            .execute()
+
+        if not news.data:
+            return jsonify({'error': 'News not found'}), 404
+
+        if role != 'admin' and news.data['created_by'] != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Delete
+        supabase.table('landing_news').delete().eq('id', news_id).execute()
+
+        return jsonify({'message': 'News deleted successfully'}), 200
+    except Exception as e:
+        logger.error(f"Error deleting news: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/news/<news_id>', methods=['PUT'])
+@login_required
+def update_news(news_id):
+    """Update a news item"""
+    try:
+        uid = session.get('uid')
+        role = session.get('role')
+
+        # Check ownership or admin role
+        news = supabase.table('landing_news')\
+            .select('created_by')\
+            .eq('id', news_id)\
+            .single()\
+            .execute()
+
+        if not news.data:
+            return jsonify({'error': 'News not found'}), 404
+
+        if role != 'admin' and news.data['created_by'] != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Get update data
+        data = request.get_json()
+        update_data = {}
+
+        if 'title' in data:
+            update_data['title'] = data['title']
+        if 'description' in data:
+            update_data['description'] = data['description']
+        if 'is_published' in data:
+            update_data['is_published'] = data['is_published']
+
+        # Update
+        result = supabase.table('landing_news')\
+            .update(update_data)\
+            .eq('id', news_id)\
+            .execute()
+
+        return jsonify(result.data[0]), 200
+    except Exception as e:
+        logger.error(f"Error updating news: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Run Flask Application
 # ══════════════════════════════════════════════════════════════════════════════
 
