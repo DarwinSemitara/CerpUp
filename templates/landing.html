@@ -1288,9 +1288,12 @@
         // Load news from API
         async function loadNews() {
             try {
-                const res = await fetch('/api/news');
+                const res = await fetch('/api/landing/news');
                 if (!res.ok) throw new Error();
-                const newsData = await res.json();
+                let newsData = await res.json();
+
+                // Limit to 5 news items max
+                newsData = newsData.slice(0, 5);
 
                 if (newsData.length === 0) {
                     // Show default placeholder
@@ -1350,9 +1353,9 @@
 
                 newsSlides = newsData;
 
-                // Start auto-slide if more than one slide
+                // Start auto-slide every 6 seconds if more than one slide
                 if (newsData.length > 1) {
-                    setInterval(() => goToSlide(current + 1), 4000);
+                    setInterval(() => goToSlide(current + 1), 6000);
                 }
             } catch (e) {
                 console.error('Failed to load news:', e);
