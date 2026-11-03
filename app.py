@@ -974,6 +974,93 @@ def che_delete_conversation(conv_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ── CHE Conversation Persistence ────────────────────────────────
+
+def get_or_create_conversation(user_id, conversation_id=None):
+    """
+    Get existing conversation or create new one.
+    Returns: conversation_id (str)
+    """
+    try:
+        if conversation_id:
+            # Verify conversation exists and belongs to user
+            result = (supabase.table('che_conversations')
+                      .select('id')
+                      .eq('id', conversation_id)
+                      .eq('user_id', user_id)
+                      .single()
+                      .execute())
+            if result.data:
+                return conversation_id
+
+        # Create new conversation
+        new_conv = {
+            'user_id': user_id,
+            'title': 'New Conversation',
+            'is_system': False,
+            'is_archived': False
+        }
+        result = supabase.table('che_conversations').insert(new_conv).execute()
+        return result.data[0]['id']
+    except Exception as e:
+        logger.error(f"Error in get_or_create_conversation: {e}")
+        raise
+
+
+def save_message(conversation_id, role, content, metadata=None):
+    """
+    Save a message to the conversation.
+    """
+    try:
+        message = {
+            'conversation_id': conversation_id,
+            'role': role,
+            'content': content,
+            'metadata': metadata or {}
+        }
+        supabase.table('che_messages').insert(message).execute()
+    except Exception as e:
+        logger.error(f"Error saving message: {e}")
+        # Don't raise - message saving should not break the chat flow
+
+
+def load_conversation_history(conversation_id, limit=10):
+    """
+    Load recent messages from a conversation.
+    Returns: list of {'role': str, 'content': str}
+    """
+    try:
+        result = (supabase.table('che_messages')
+                  .select('role, content, created_at')
+                  .eq('conversation_id', conversation_id)
+                  .order('created_at', desc=False)
+                  .limit(limit)
+                  .execute())
+
+        return [{'role': msg['role'], 'content': msg['content']}
+                for msg in result.data]
+    except Exception as e:
+        logger.error(f"Error loading conversation history: {e}")
+        return []
+
+
+def delete_conversation(user_id, conversation_id):
+    """
+    Delete a conversation and all its messages.
+    """
+    try:
+        # Verify ownership before deleting
+        result = (supabase.table('che_conversations')
+                  .delete()
+                  .eq('id', conversation_id)
+                  .eq('user_id', user_id)
+                  .execute())
+        return True
+    except Exception as e:
+        logger.error(f"Error deleting conversation: {e}")
+        return False
+
+
 # ── CHE AI Chat API ──────────────────────────────────────────
 
 @app.route('/api/che/chat', methods=['POST'])
@@ -1338,8 +1425,8 @@ def che_execute_action():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@app.route('/api/che/conversation/delete', methods=['POST'])
 # ── Staff API ────────────────────────────────────────────────
-
 @app.route('/api/staff', methods=['GET'])
 @login_required
 def get_staff():

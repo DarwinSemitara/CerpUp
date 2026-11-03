@@ -16,10 +16,17 @@
         <aside id="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-title">CERP</div>
-                <div class="sidebar-subtitle">Admin Dashboard</div>
+                <div class="sidebar-subtitle">
+                    {% if session.get('account_type') == 'it_staff' %}
+                    IT Staff Dashboard
+                    {% else %}
+                    Admin Dashboard
+                    {% endif %}
+                </div>
             </div>
 
             <nav class="sidebar-nav">
+                <!-- Dashboard - visible to all -->
                 <a href="/dashboard/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -28,6 +35,26 @@
                     Dashboard
                 </a>
 
+                {% if session.get('account_type') == 'it_staff' %}
+                <!-- IT Staff sees only Extensions and Research -->
+                <a href="/extensions/" class="nav-item {% if active_page == 'extensions' %}active{% endif %}">
+                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Extensions
+                </a>
+
+                <a href="/research/" class="nav-item {% if active_page == 'research' %}active{% endif %}">
+                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Research
+                </a>
+
+                {% else %}
+                <!-- Admin sees all menu items -->
                 <a href="/research/" class="nav-item {% if active_page == 'research' %}active{% endif %}">
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -92,6 +119,7 @@
                     </svg>
                     Manage
                 </a>
+                {% endif %}
             </nav>
 
             <div class="sidebar-footer">
@@ -110,30 +138,42 @@
             <header id="header">
                 <div class="page-title" id="page-title">{{ page_title }}</div>
                 <div class="user-info">
-                    <!-- Notification Bell -->
-                    <button class="notification-bell" onclick="toggleNotifications()" id="notification-bell">
+                    <!-- Admin/IT Label -->
+                    <div class="user-email">
+                        {% if session.get('account_type') == 'it_staff' %}
+                        IT Staff
+                        {% else %}
+                        Admin
+                        {% endif %}
+                    </div>
+
+                    <!-- Notification Bell (Audit Trail) -->
+                    <button class="notification-bell" onclick="toggleAuditTrail()" id="audit-bell">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        <span class="notification-badge" id="notification-badge" style="display:none;">0</span>
+                        <span class="audit-badge" id="audit-badge">0</span>
                     </button>
 
-                    <!-- Notification Dropdown -->
-                    <div class="notification-dropdown" id="notification-dropdown">
-                        <div class="notification-header">
-                            <h3>Activity Log</h3>
-                            <button class="mark-all-read" onclick="markAllAsRead()">Mark all as read</button>
+                    <!-- Audit Trail Dropdown -->
+                    <div class="audit-dropdown" id="audit-dropdown">
+                        <div class="audit-header">
+                            <h3>Actions</h3>
+                            <span class="audit-count" id="audit-count">0 actions</span>
                         </div>
-                        <div class="notification-list" id="notification-list">
-                            <div class="notification-loading">
+                        <div class="audit-list" id="audit-list">
+                            <div class="audit-loading">
                                 <div class="content-spinner"></div>
-                                <div style="margin-top:8px;font-size:0.85rem;">Loading...</div>
+                                <div style="margin-top:8px;font-size:0.85rem;">Loading actions...</div>
                             </div>
+                        </div>
+                        <div class="audit-footer">
+                            <button class="audit-view-all" onclick="openAuditModal()">View All</button>
+                            <button class="audit-mark-read" onclick="markAllAsRead()">Mark as Read</button>
                         </div>
                     </div>
 
-                    <div class="user-email">{{ email }}</div>
                     <div class="user-avatar-logo">
                         <img src="/static/images/dcerp logo.png" alt="DCERP"
                             style="width: 100%; height: 100%; object-fit: contain;">
@@ -145,6 +185,32 @@
                 {% block content %}{% endblock %}
             </div>
         </main>
+    </div>
+
+    <!-- Audit Trail Modal -->
+    <div id="audit-modal"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+        <div
+            style="background:white; border-radius:16px; width:90%; max-width:800px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div
+                style="padding:24px 28px; border-bottom:2px solid #6b0f1a; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg, #fef3f2 0%, #ffffff 100%);">
+                <h2 style="margin:0; font-size:1.25rem; font-weight:700; color:#6b0f1a;">All Actions</h2>
+                <button onclick="closeAuditModal()"
+                    style="width:32px; height:32px; border-radius:8px; border:none; background:#f3f4f6; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#6b7280; transition:all 0.2s;">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="audit-modal-list" style="flex:1; overflow-y:auto; padding:8px;">
+                <div
+                    style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; color:#9ca3af;">
+                    <div class="content-spinner" style="margin-bottom:16px;"></div>
+                    <p style="margin:0; font-size:0.875rem;">Loading all actions...</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Logout Modal - Universal Design -->
@@ -242,7 +308,1638 @@
         })();
     </script>
 
+    <!-- Audit Trail JavaScript -->
+    <script>
+        // Audit Trail Functionality
+        let auditDropdownOpen = false;
+
+        function toggleAuditTrail() {
+            const dropdown = document.getElementById('audit-dropdown');
+            auditDropdownOpen = !auditDropdownOpen;
+
+            if (auditDropdownOpen) {
+                dropdown.classList.add('active');
+                loadAuditTrail();
+            } else {
+                dropdown.classList.remove('active');
+            }
+        }
+
+        function loadAuditTrail() {
+            const auditList = document.getElementById('audit-list');
+
+            // Load only 4 most recent actions
+            fetch('/api/audit-log?limit=4')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logs && data.logs.length > 0) {
+                        renderAuditLogs(data.logs);
+                        updateAuditBadge(data.unread_count || 0);
+                        document.getElementById('audit-count').textContent =
+                            `${data.total_count || data.logs.length} action${(data.total_count || data.logs.length) !== 1 ? 's' : ''}`;
+                    } else {
+                        showEmptyAuditState();
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to load audit trail:', err);
+                    showEmptyAuditState();
+                });
+        }
+
+        function openAuditModal() {
+            const modal = document.getElementById('audit-modal');
+            modal.style.display = 'flex';
+            loadAllAuditActions();
+        }
+
+        function closeAuditModal() {
+            const modal = document.getElementById('audit-modal');
+            modal.style.display = 'none';
+        }
+
+        function loadAllAuditActions() {
+            const modalList = document.getElementById('audit-modal-list');
+
+            fetch('/api/audit-log?limit=100')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logs && data.logs.length > 0) {
+                        const html = data.logs.map(log => {
+                            const date = new Date(log.created_at);
+                            const timeStr = formatAuditTime(date);
+
+                            return `
+                                <div class="audit-item">
+                                    <div class="audit-item-header">
+                                        <div class="audit-action">${escapeHtml(log.description)}</div>
+                                        <div class="audit-timestamp">${timeStr}</div>
+                                    </div>
+                                    ${log.target_name ? `<div class="audit-details">${escapeHtml(log.target_name)}</div>` : ''}
+                                    <div class="audit-user">by ${escapeHtml(log.performed_by)}</div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        modalList.innerHTML = html;
+                    } else {
+                        modalList.innerHTML = `
+                            <div class="audit-empty">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p>No actions yet</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    console.error('Failed to load all actions:', err);
+                    modalList.innerHTML = `
+                        <div class="audit-empty">
+                            <p>Failed to load actions</p>
+                        </div>
+                    `;
+                });
+        }
+
+        function markAllAsRead() {
+            fetch('/api/audit-log/mark-all-read', {
+                method: 'POST'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    updateAuditBadge(0);
+                    loadAuditTrail();
+                })
+                .catch(err => console.error('Failed to mark as read:', err));
+        }
+
+        function renderAuditLogs(logs) {
+            const auditList = document.getElementById('audit-list');
+
+            const html = logs.map(log => {
+                const date = new Date(log.created_at);
+                const timeStr = formatAuditTime(date);
+
+                return `
+                    <div class="audit-item">
+                        <div class="audit-item-header">
+                            <div class="audit-action">${escapeHtml(log.description)}</div>
+                            <div class="audit-timestamp">${timeStr}</div>
+                        </div>
+                        ${log.target_name ? `<div class="audit-details">${escapeHtml(log.target_name)}</div>` : ''}
+                        <div class="audit-user">by ${escapeHtml(log.performed_by)}</div>
+                    </div>
+                `;
+            }).join('');
+
+            auditList.innerHTML = html;
+        }
+
+        function showEmptyAuditState() {
+            const auditList = document.getElementById('audit-list');
+            auditList.innerHTML = `
+                <div class="audit-empty">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p>No actions yet</p>
+                </div>
+            `;
+            document.getElementById('audit-count').textContent = '0 actions';
+            updateAuditBadge(0);
+        }
+
+        function formatAuditTime(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+
+            // Format as date and time
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const hours = date.getHours().toString().padStart(2, '0');
+            const mins = date.getMinutes().toString().padStart(2, '0');
+
+            return `${month}/${day} ${hours}:${mins}`;
+        }
+
+        function updateAuditBadge(count) {
+            const badge = document.getElementById('audit-badge');
+            badge.textContent = count;
+
+            if (count > 0) {
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (event) {
+            const bell = document.getElementById('audit-bell');
+            const dropdown = document.getElementById('audit-dropdown');
+
+            if (bell && dropdown && auditDropdownOpen) {
+                if (!bell.contains(event.target) && !dropdown.contains(event.target)) {
+                    dropdown.classList.remove('active');
+                    auditDropdownOpen = false;
+                }
+            }
+        });
+
+        // Load audit trail on page load
+        window.addEventListener('DOMContentLoaded', function () {
+            // Initial load to update badge
+            fetch('/api/audit-log?limit=1')
+                .then(res => res.json())
+                .then(data => {
+                    updateAuditBadge(data.unread_count || 0);
+                })
+                .catch(err => console.error('Failed to load audit count:', err));
+        });
+    </script>
+
     {% block scripts %}{% endblock %}
+
+    <!-- CHE Chatbot - Global Floating Assistant -->
+    <button id="che-float-btn" class="che-float-btn" onclick="toggleCHE()">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+    </button>
+
+    <div id="che-chat-panel">
+        <div class="che-chat-header">
+            <div class="che-header-icon">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+            </div>
+            <div>
+                <div class="che-header-title">CHE</div>
+                <div class="che-header-sub">Your DCERP Assistant</div>
+            </div>
+            <button class="che-delete-btn" onclick="deleteCHEConversation()" id="che-delete-btn"
+                title="Delete conversation">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </button>
+            <button class="che-close-btn" onclick="toggleCHE()">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="che-messages" id="che-messages"></div>
+        <div class="che-suggestions" id="che-suggestions"></div>
+        <div class="che-input-area">
+            <textarea class="che-input" id="che-input" rows="1" placeholder="Ask CHE anything about DCERP…"
+                onkeydown="cheKeyDown(event)"
+                oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+            <button class="che-send-btn" onclick="sendCHEMessage()">
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Permission Modal -->
+    <div id="che-nav-modal" class="che-modal">
+        <div class="che-modal-box">
+            <h3 class="che-modal-title">Navigate to Schedule?</h3>
+            <p class="che-modal-text">To complete this action, I need to take you to the Schedule page. Is that okay?
+            </p>
+            <div class="che-modal-actions">
+                <button class="che-modal-cancel" onclick="closeCHENavModal()">Not Now</button>
+                <button class="che-modal-confirm" onclick="confirmCHENavigation()">Let's Go! →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Conversation Warning Modal -->
+    <div id="che-delete-modal" class="che-modal">
+        <div class="che-modal-box">
+            <h3 class="che-modal-title">Cannot Delete Conversation</h3>
+            <p class="che-modal-text">A schedule is currently being generated. Please wait until it completes before
+                deleting the conversation.</p>
+            <div class="che-modal-actions">
+                <button class="che-modal-confirm" onclick="closeCHEDeleteModal()" style="width:100%;">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHE Table Modal -->
+    <div id="che-table-modal" class="che-table-modal">
+        <div class="che-table-modal-box">
+            <div class="che-table-modal-header">
+                <h3 class="che-table-modal-title" id="che-table-title">Results</h3>
+                <button class="che-table-modal-close" onclick="closeCHETableModal()">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="che-table-modal-body" id="che-table-body">
+                <div class="che-table-empty">
+                    <p>No data to display</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* CHE Floating Button */
+        .che-float-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(107, 15, 26, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 9998;
+        }
+
+        .che-float-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 20px rgba(107, 15, 26, 0.5);
+        }
+
+        .che-float-btn.hidden {
+            display: none;
+        }
+
+        /* CHE Chat Panel */
+        #che-chat-panel {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 380px;
+            height: 600px;
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            z-index: 9999;
+            transform: translateY(calc(100% + 24px));
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+        }
+
+        #che-chat-panel.open {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .che-chat-header {
+            padding: 16px 18px 14px;
+            border-bottom: 1px solid #f3f4f6;
+            border-radius: 16px 16px 0 0;
+            background: linear-gradient(135deg, #fef3f2 0%, #ffffff 100%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .che-header-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .che-header-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .che-header-sub {
+            font-size: 0.72rem;
+            color: #6b7280;
+            margin-top: 1px;
+        }
+
+        .che-delete-btn {
+            margin-left: auto;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            background: #fef2f2;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #dc2626;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .che-delete-btn:hover {
+            background: #fee2e2;
+        }
+
+        .che-delete-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .che-close-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            background: #f3f4f6;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            transition: background 0.15s;
+            flex-shrink: 0;
+        }
+
+        .che-close-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .che-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .che-msg {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .che-msg.user {
+            flex-direction: row-reverse;
+        }
+
+        .che-bubble {
+            max-width: 82%;
+            padding: 9px 13px;
+            border-radius: 14px;
+            font-size: 0.8rem;
+            line-height: 1.55;
+            color: #111827;
+            white-space: pre-wrap;
+        }
+
+        .che-msg.ai .che-bubble {
+            background: #f3f4f6;
+            border-bottom-left-radius: 4px;
+        }
+
+        .che-msg.user .che-bubble {
+            background: #6b0f1a;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .che-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .che-msg.ai .che-avatar {
+            background: linear-gradient(135deg, #6b0f1a, #9b1a2a);
+            color: white;
+        }
+
+        .che-msg.user .che-avatar {
+            display: none;
+            /* Hide user avatar */
+        }
+
+        .che-typing .che-bubble {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 14px;
+        }
+
+        .che-typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #9ca3af;
+            animation: cheTypingBounce 1.2s infinite ease-in-out;
+        }
+
+        .che-typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .che-typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes cheTypingBounce {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0)
+            }
+
+            30% {
+                transform: translateY(-5px)
+            }
+        }
+
+        .che-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 0 16px 10px;
+            flex-shrink: 0;
+        }
+
+        .che-sugg-chip {
+            padding: 6px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            color: #374151;
+            cursor: pointer;
+            background: white;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .che-sugg-chip:hover {
+            border-color: #6b0f1a;
+            color: #6b0f1a;
+            background: #fdf2f3;
+        }
+
+        .che-input-area {
+            padding: 12px 14px;
+            border-top: 1px solid #f3f4f6;
+            border-radius: 0 0 16px 16px;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+
+        .che-input {
+            flex: 1;
+            padding: 9px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-family: inherit;
+            color: #374151;
+            outline: none;
+            resize: none;
+            max-height: 100px;
+            line-height: 1.4;
+            transition: border-color 0.15s;
+        }
+
+        .che-input:focus {
+            border-color: #6b0f1a;
+        }
+
+        .che-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            background: #6b0f1a;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+
+        .che-send-btn:hover {
+            background: #850f20;
+        }
+
+        /* CHE Modals */
+        .che-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .che-modal.active {
+            display: flex;
+        }
+
+        .che-modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 28px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .che-modal-title {
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .che-modal-text {
+            margin: 0 0 24px;
+            font-size: 0.875rem;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .che-modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .che-modal-cancel {
+            padding: 9px 18px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .che-modal-cancel:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .che-modal-confirm {
+            padding: 9px 18px;
+            border-radius: 8px;
+            border: none;
+            background: #6b0f1a;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .che-modal-confirm:hover {
+            background: #850f20;
+        }
+
+        /* CHE Form Components */
+        .che-form-container {
+            margin: 10px 0 10px 34px;
+            max-width: 82%;
+        }
+
+        .che-form-card {
+            background: #fef3f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+
+        .che-form-text {
+            margin: 0 0 14px;
+            font-size: 0.85rem;
+            color: #374151;
+            line-height: 1.5;
+        }
+
+        .che-form-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .che-form-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+        }
+
+        .che-form-btn-primary {
+            background: #6b0f1a;
+            color: white;
+        }
+
+        .che-form-btn-primary:hover {
+            background: #850f20;
+        }
+
+        .che-form-btn-secondary {
+            background: white;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+
+        .che-form-btn-secondary:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        /* CHE Generation Form Fields */
+        .che-form-generation {
+            padding: 18px 20px;
+        }
+
+        .che-form-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .che-form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .che-form-field {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .che-form-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+        }
+
+        .che-form-input {
+            padding: 8px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            color: #374151;
+            outline: none;
+            transition: border-color 0.15s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .che-form-input:focus {
+            border-color: #6b0f1a;
+        }
+
+        /* CHE Table Modal */
+        .che-table-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .che-table-modal.active {
+            display: flex;
+        }
+
+        .che-table-modal-box {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .che-table-modal-header {
+            padding: 20px 24px;
+            border-bottom: 2px solid #6b0f1a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, #fef3f2 0%, #ffffff 100%);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .che-table-modal-title {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #6b0f1a;
+        }
+
+        .che-table-modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: #f3f4f6;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            transition: all 0.15s;
+        }
+
+        .che-table-modal-close:hover {
+            background: #e5e7eb;
+        }
+
+        .che-table-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+
+        .che-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .che-data-table thead {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .che-data-table th {
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .che-data-table td {
+            padding: 10px 14px;
+            color: #374151;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .che-data-table tr:hover td {
+            background: #fdf2f3;
+        }
+
+        .che-data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .che-table-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+
+        .che-table-empty p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+    </style>
+
+    <script>
+        // CHE Chatbot Global State
+        let cheOpen = false;
+        let cheHistory = [];
+        let cheConversationId = null; // NEW: Store conversation ID
+        let cheGeneratingSchedule = false;
+        let chePendingNavigationUrl = null;
+        let cheShowQuickActions = false; // Flag to track if quick actions should be shown
+        const CHE_MAX_HISTORY = 50;
+
+        // Get current page for contextual suggestions
+        function getCHECurrentPage() {
+            const path = window.location.pathname;
+            console.log('CHE Current Page Detection:', path);
+            if (path.includes('/dashboard')) return 'dashboard';
+            if (path.includes('/admin-page')) return 'admin';
+            if (path.includes('/research')) return 'research';
+            if (path.includes('/extensions')) return 'extensions';
+            if (path.includes('/schedule')) return 'schedule';
+            if (path.includes('/courses')) return 'courses';
+            if (path.includes('/display')) return 'display';
+            if (path.includes('/fsr')) return 'fsr';
+            if (path.includes('/manage')) return 'manage';
+            return 'general';
+        }
+
+        // Generate page-contextual quick actions (max 3)
+        function getCHEQuickActions() {
+            const page = getCHECurrentPage();
+            const actions = [];
+
+            // Always first: Generate schedule
+            actions.push('Generate a schedule');
+
+            // Page-contextual second action
+            const contextualActions = {
+                'dashboard': 'Show me member statistics',
+                'admin': 'How do I manage members?',
+                'research': 'Help me understand research tracking',
+                'extensions': 'Explain extension tracking',
+                'schedule': 'Show me scheduling conflicts',
+                'courses': 'How do I manage courses?',
+                'display': 'Help me update landing page content',
+                'fsr': 'How does FSR generation work?',
+                'manage': 'How do I add faculty members?',
+                'general': 'Tell me about DCERP features'
+            };
+            actions.push(contextualActions[page] || contextualActions['general']);
+
+            // Always third: What can you help with
+            actions.push('What can you help me with?');
+
+            return actions;
+        }
+
+        // Toggle CHE panel
+        function toggleCHE() {
+            const panel = document.getElementById('che-chat-panel');
+            const floatBtn = document.getElementById('che-float-btn');
+
+            cheOpen = !cheOpen;
+
+            if (cheOpen) {
+                panel.classList.add('open');
+                floatBtn.classList.add('hidden');
+                loadCHEHistory();
+            } else {
+                panel.classList.remove('open');
+                floatBtn.classList.remove('hidden');
+            }
+        }
+
+        // Load conversation history from sessionStorage
+        function loadCHEHistory() {
+            const stored = sessionStorage.getItem('che_history');
+            const showActions = sessionStorage.getItem('che_show_actions');
+
+            if (stored) {
+                try {
+                    cheHistory = JSON.parse(stored);
+                    // Trim to max history
+                    if (cheHistory.length > CHE_MAX_HISTORY) {
+                        cheHistory = cheHistory.slice(-CHE_MAX_HISTORY);
+                        sessionStorage.setItem('che_history', JSON.stringify(cheHistory));
+                    }
+                    renderCHEHistory();
+
+                    // Show quick actions if flag is set
+                    if (showActions === 'true') {
+                        showCHEQuickActions();
+                    }
+                } catch (e) {
+                    console.error('Failed to load CHE history:', e);
+                    cheHistory = [];
+                    showGreetingAndActions();
+                }
+            } else {
+                // First conversation, show greeting and quick actions
+                showGreetingAndActions();
+            }
+        }
+
+        // Show greeting message and quick actions (first conversation only)
+        function showGreetingAndActions() {
+            appendCHEMsg('ai', 'Hello! I\'m CHE, your friendly assistant here at DCERP. I\'m here to make your day easier, whether it\'s schedules, faculty info, or just finding your way around. What can I help you with today?');
+            showCHEQuickActions();
+            sessionStorage.setItem('che_show_actions', 'true');
+        }
+
+        // Save conversation history to sessionStorage
+        function saveCHEHistory() {
+            // Trim to max history before saving
+            if (cheHistory.length > CHE_MAX_HISTORY) {
+                cheHistory = cheHistory.slice(-CHE_MAX_HISTORY);
+            }
+            sessionStorage.setItem('che_history', JSON.stringify(cheHistory));
+        }
+
+        // Render entire conversation history
+        function renderCHEHistory() {
+            const msgs = document.getElementById('che-messages');
+            msgs.innerHTML = '';
+
+            cheHistory.forEach(msg => {
+                const div = createCHEMsgElement(msg.role, msg.text, false);
+                msgs.appendChild(div);
+            });
+
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        // Show quick action suggestions
+        function showCHEQuickActions() {
+            const sugg = document.getElementById('che-suggestions');
+            const actions = getCHEQuickActions();
+
+            sugg.innerHTML = actions.map(action =>
+                `<button class="che-sugg-chip" onclick="sendCHESuggestion(this)">${action}</button>`
+            ).join('');
+            sugg.style.display = 'flex';
+        }
+
+        // Hide quick action suggestions
+        function hideCHEQuickActions() {
+            const sugg = document.getElementById('che-suggestions');
+            sugg.style.display = 'none';
+            sessionStorage.setItem('che_show_actions', 'false');
+        }
+
+        // Send a suggestion
+        function sendCHESuggestion(btn) {
+            const text = btn.textContent;
+            hideCHEQuickActions();
+            sendCHEMessageText(text);
+        }
+
+        // Handle Enter key
+        function cheKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendCHEMessage();
+            }
+        }
+
+        // Send message from input
+        function sendCHEMessage() {
+            const input = document.getElementById('che-input');
+            const text = input ? input.value.trim() : '';
+            if (!text) return;
+            input.value = '';
+            input.style.height = 'auto';
+            hideCHEQuickActions();
+            sendCHEMessageText(text);
+        }
+
+        // Send message (core logic)
+        async function sendCHEMessageText(text) {
+            // Add to history and display
+            appendCHEMsg('user', text);
+
+            // Show typing indicator
+            const typingEl = appendCHEMsg('ai', '', true);
+
+            try {
+                const res = await fetch('/api/che/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        conversation_id: cheConversationId, // Send conversation ID
+                        history: cheHistory.slice(-10).map(msg => ({
+                            role: msg.role === 'ai' ? 'assistant' : 'user',
+                            content: msg.text
+                        })),
+                        page: getCHECurrentPage() // Pass current page context
+                    })
+                });
+
+                const data = await res.json();
+
+                // Store conversation ID from response
+                if (data.conversation_id) {
+                    cheConversationId = data.conversation_id;
+                }
+
+                // Remove typing indicator
+                if (typingEl) typingEl.remove();
+
+                if (!res.ok) {
+                    appendCHEMsg('ai', 'Sorry, I encountered an error: ' + (data.error || 'Unknown error'));
+                    return;
+                }
+
+                // Display AI response
+                appendCHEMsg('ai', data.reply || data.message);
+
+                // Handle actions
+                if (data.action) {
+                    await executeCHEAction(data.action);
+                }
+
+            } catch (err) {
+                if (typingEl) typingEl.remove();
+                appendCHEMsg('ai', 'Sorry, I encountered an error: ' + err.message);
+            }
+        }
+
+        // Execute CHE action
+        async function executeCHEAction(actionData) {
+            const action = actionData.action;
+
+            if (action === 'show_redirect_form') {
+                // Show redirect form for navigation to schedule page
+                showCHERedirectForm(actionData.message, actionData.target_page || 'schedule');
+            } else if (action === 'show_generation_form') {
+                // Show generation form with 4 fields
+                showCHEGenerationForm(actionData.message, actionData.form_fields);
+            } else if (action === 'show_table') {
+                // Show table data as "View" button
+                addCHEViewTableButton(actionData.table_data);
+            } else if (action === 'navigate_to_schedule') {
+                // Request permission to navigate
+                chePendingNavigationUrl = '/schedule/class/';
+                showCHENavModal();
+            } else if (action === 'start_schedule_generation') {
+                cheGeneratingSchedule = true;
+                document.getElementById('che-delete-btn').classList.add('disabled');
+                // Navigate to schedule page
+                chePendingNavigationUrl = '/schedule/class/';
+                showCHENavModal();
+            }
+        }
+
+        // Show redirect form
+        function showCHERedirectForm(message, targetPage) {
+            const msgs = document.getElementById('che-messages');
+            if (!msgs) return;
+
+            // Create form container
+            const formDiv = document.createElement('div');
+            formDiv.className = 'che-form-container';
+            formDiv.innerHTML = `
+                <div class="che-form-card">
+                    <p class="che-form-text">${escapeHtml(message)}</p>
+                    <div class="che-form-actions">
+                        <button class="che-form-btn che-form-btn-secondary" onclick="answerCHERedirect(false, this)">No</button>
+                        <button class="che-form-btn che-form-btn-primary" onclick="answerCHERedirect(true, this)">Yes</button>
+                    </div>
+                </div>
+            `;
+
+            // Store target page on the form
+            formDiv.dataset.targetPage = targetPage;
+
+            msgs.appendChild(formDiv);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        // Show generation form
+        function showCHEGenerationForm(message, formFields) {
+            const msgs = document.getElementById('che-messages');
+            if (!msgs) return;
+
+            // Create form container
+            const formDiv = document.createElement('div');
+            formDiv.className = 'che-form-container';
+            formDiv.innerHTML = `
+                <div class="che-form-card che-form-generation">
+                    <p class="che-form-text">${escapeHtml(message || 'Please provide the following information to generate a schedule:')}</p>
+                    
+                    <div class="che-form-fields">
+                        <div class="che-form-row">
+                            <div class="che-form-field">
+                                <label class="che-form-label">Target Semester</label>
+                                <select class="che-form-input" id="che-target-semester">
+                                    <option value="1">1st Semester</option>
+                                    <option value="2">2nd Semester</option>
+                                </select>
+                            </div>
+                            <div class="che-form-field">
+                                <label class="che-form-label">Target School Year</label>
+                                <input type="text" class="che-form-input" id="che-target-year" placeholder="e.g., 2026-2027" />
+                            </div>
+                        </div>
+                        
+                        <div class="che-form-row">
+                            <div class="che-form-field">
+                                <label class="che-form-label">Reference Semester</label>
+                                <select class="che-form-input" id="che-reference-semester">
+                                    <option value="1">1st Semester</option>
+                                    <option value="2">2nd Semester</option>
+                                </select>
+                            </div>
+                            <div class="che-form-field">
+                                <label class="che-form-label">Reference School Year</label>
+                                <input type="text" class="che-form-input" id="che-reference-year" placeholder="e.g., 2025-2026" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="che-form-actions">
+                        <button class="che-form-btn che-form-btn-secondary" onclick="cancelCHEGeneration(this)">Cancel</button>
+                        <button class="che-form-btn che-form-btn-primary" onclick="submitCHEGeneration(this)">Generate Schedule</button>
+                    </div>
+                </div>
+            `;
+
+            msgs.appendChild(formDiv);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        // Handle redirect form answer
+        function answerCHERedirect(accepted, button) {
+            const formContainer = button.closest('.che-form-container');
+            const targetPage = formContainer.dataset.targetPage;
+
+            // Show user's choice in chat
+            if (accepted) {
+                appendCHEMsg('user', 'Yes');
+            } else {
+                appendCHEMsg('user', 'No');
+            }
+
+            // Remove the form
+            formContainer.remove();
+
+            if (accepted) {
+                // User said yes, navigate to target page
+                appendCHEMsg('ai', 'Great! Taking you to the Schedule page now.');
+
+                // Set flags to auto-open CHE and show generation form on arrival
+                sessionStorage.setItem('che_auto_open', 'true');
+                sessionStorage.setItem('che_auto_generate', 'true'); // NEW: Flag to show generation form
+
+                // Navigate
+                setTimeout(() => {
+                    window.location.href = `/${targetPage}/class/`;
+                }, 500);
+            } else {
+                // User said no
+                appendCHEMsg('ai', 'Understood. Let me know if you need anything else.');
+            }
+        }
+
+        // Handle generation form cancel
+        function cancelCHEGeneration(button) {
+            const formContainer = button.closest('.che-form-container');
+
+            // Remove the form
+            formContainer.remove();
+
+            // Show confirmation message
+            appendCHEMsg('ai', 'No problem. Let me know if you need anything else.');
+        }
+
+        // Handle generation form submit
+        async function submitCHEGeneration(button) {
+            const formContainer = button.closest('.che-form-container');
+
+            // Get form values
+            const targetSemester = document.getElementById('che-target-semester').value;
+            const targetYear = document.getElementById('che-target-year').value.trim();
+            const referenceSemester = document.getElementById('che-reference-semester').value;
+            const referenceYear = document.getElementById('che-reference-year').value.trim();
+
+            // Validate
+            if (!targetYear || !referenceYear) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Disable button to prevent double submission
+            button.disabled = true;
+            button.textContent = 'Generating...';
+
+            try {
+                // Store parameters for regenerate button
+                sessionStorage.setItem('che_last_generation_params', JSON.stringify({
+                    targetSemester,
+                    targetYear,
+                    referenceSemester,
+                    referenceYear
+                }));
+
+                // Remove the form
+                formContainer.remove();
+
+                // Show processing message
+                appendCHEMsg('ai', 'I\'m generating the schedule now. This might take a moment...');
+
+                // Call the schedule generation API
+                const response = await fetch('/api/schedule/generate-full', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_sem: targetSemester,
+                        target_sy: targetYear,
+                        reference_sem: referenceSemester,
+                        reference_sy: referenceYear
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    appendCHEMsg('ai', `Schedule generated successfully! ${data.added || 0} schedules were created.`);
+
+                    // Show regenerate button
+                    showCHERegenerateButton();
+
+                    // Reload the page to show the new schedule
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    appendCHEMsg('ai', `Sorry, schedule generation failed: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                appendCHEMsg('ai', `Sorry, an error occurred: ${error.message}`);
+            }
+        }
+
+        // Show regenerate button
+        function showCHERegenerateButton() {
+            const msgs = document.getElementById('che-messages');
+            if (!msgs) return;
+
+            // Create button container
+            const buttonDiv = document.createElement('div');
+            buttonDiv.className = 'che-form-container';
+            buttonDiv.innerHTML = `
+                <div class="che-form-card">
+                    <p class="che-form-text">Would you like to regenerate the schedule with the same parameters?</p>
+                    <div class="che-form-actions">
+                        <button class="che-form-btn che-form-btn-primary" onclick="regenerateSchedule(this)">Regenerate Schedule</button>
+                    </div>
+                </div>
+            `;
+
+            msgs.appendChild(buttonDiv);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        // Regenerate schedule with same parameters
+        async function regenerateSchedule(button) {
+            const params = JSON.parse(sessionStorage.getItem('che_last_generation_params') || '{}');
+
+            if (!params.targetSemester || !params.targetYear) {
+                appendCHEMsg('ai', 'Sorry, I couldn\'t find the previous generation parameters. Please start a new generation.');
+                return;
+            }
+
+            // Remove the regenerate button
+            const formContainer = button.closest('.che-form-container');
+            formContainer.remove();
+
+            // Disable button
+            button.disabled = true;
+            button.textContent = 'Regenerating...';
+
+            // Show processing message
+            appendCHEMsg('ai', 'Regenerating the schedule with the same parameters...');
+
+            try {
+                const response = await fetch('/api/schedule/generate-full', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_sem: params.targetSemester,
+                        target_sy: params.targetYear,
+                        reference_sem: params.referenceSemester,
+                        reference_sy: params.referenceYear
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    appendCHEMsg('ai', `Schedule regenerated successfully! ${data.added || 0} schedules were created.`);
+
+                    // Show regenerate button again
+                    showCHERegenerateButton();
+
+                    // Reload the page
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    appendCHEMsg('ai', `Sorry, schedule regeneration failed: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                appendCHEMsg('ai', `Sorry, an error occurred: ${error.message}`);
+            }
+        }
+
+        // Navigation permission modal
+        function showCHENavModal() {
+            document.getElementById('che-nav-modal').classList.add('active');
+        }
+
+        function closeCHENavModal() {
+            document.getElementById('che-nav-modal').classList.remove('active');
+            chePendingNavigationUrl = null;
+        }
+
+        function confirmCHENavigation() {
+            if (chePendingNavigationUrl) {
+                window.location.href = chePendingNavigationUrl;
+            }
+            closeCHENavModal();
+        }
+
+        // Delete conversation
+        function deleteCHEConversation() {
+            if (cheGeneratingSchedule) {
+                document.getElementById('che-delete-modal').classList.add('active');
+                return;
+            }
+
+            // Call API to delete from database
+            if (cheConversationId) {
+                fetch('/api/che/conversation/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conversation_id: cheConversationId })
+                }).then(res => res.json()).then(data => {
+                    if (data.success) {
+                        console.log('Conversation deleted from database');
+                    }
+                }).catch(err => {
+                    console.error('Failed to delete conversation:', err);
+                });
+            }
+
+            // Clear local state
+            cheHistory = [];
+            cheConversationId = null;
+            sessionStorage.removeItem('che_history');
+            sessionStorage.setItem('che_show_actions', 'true');
+
+            // Clear messages
+            document.getElementById('che-messages').innerHTML = '';
+
+            // Show greeting and quick actions
+            showGreetingAndActions();
+        }
+
+        function closeCHEDeleteModal() {
+            document.getElementById('che-delete-modal').classList.remove('active');
+        }
+
+        // Append message to chat
+        function appendCHEMsg(role, text, isTyping = false) {
+            const msgs = document.getElementById('che-messages');
+            if (!msgs) return null;
+
+            const div = createCHEMsgElement(role, text, isTyping);
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
+
+            // Add to history (not typing indicators)
+            if (!isTyping && text) {
+                cheHistory.push({ role, text, timestamp: new Date().toISOString() });
+                saveCHEHistory();
+            }
+
+            return div;
+        }
+
+        // Create message element
+        function createCHEMsgElement(role, text, isTyping) {
+            const div = document.createElement('div');
+            div.className = 'che-msg ' + role + (isTyping ? ' che-typing' : '');
+
+            const av = document.createElement('div');
+            av.className = 'che-avatar';
+            av.textContent = role === 'ai' ? 'CHE' : 'You';
+
+            const bub = document.createElement('div');
+            bub.className = 'che-bubble';
+
+            if (isTyping) {
+                bub.innerHTML = '<div class="che-typing-dot"></div><div class="che-typing-dot"></div><div class="che-typing-dot"></div>';
+            } else {
+                bub.textContent = text;
+            }
+
+            div.appendChild(av);
+            div.appendChild(bub);
+
+            return div;
+        }
+
+        // Initialize CHE on page load
+        window.addEventListener('DOMContentLoaded', function () {
+            // Check if we should auto-open CHE (e.g., coming from navigation)
+            const shouldOpen = sessionStorage.getItem('che_auto_open');
+            const shouldGenerate = sessionStorage.getItem('che_auto_generate');
+
+            if (shouldOpen === 'true') {
+                sessionStorage.removeItem('che_auto_open');
+                toggleCHE();
+
+                // If also flagged for generation, show the generation form immediately
+                if (shouldGenerate === 'true') {
+                    sessionStorage.removeItem('che_auto_generate');
+
+                    // Wait for CHE to open, then show generation form
+                    setTimeout(() => {
+                        appendCHEMsg('ai', 'Now that we\'re on the Schedule page, let\'s generate your schedule.');
+
+                        // Show generation form directly
+                        showCHEGenerationForm(
+                            'Please fill in the following details to generate a schedule:',
+                            {
+                                target_semester: '1 or 2',
+                                target_school_year: 'e.g., 2026-2027',
+                                reference_semester: '1 or 2',
+                                reference_school_year: 'e.g., 2026-2027'
+                            }
+                        );
+                    }, 500);
+                }
+            }
+        });
+
+        // Mark schedule generation as complete (to be called from schedule page)
+        window.cheScheduleComplete = function () {
+            cheGeneratingSchedule = false;
+            document.getElementById('che-delete-btn').classList.remove('disabled');
+        };
+
+        // Show table modal with data
+        function showCHETableModal(tableData) {
+            if (!tableData || !tableData.rows || tableData.rows.length === 0) {
+                return;
+            }
+
+            const modal = document.getElementById('che-table-modal');
+            const title = document.getElementById('che-table-title');
+            const body = document.getElementById('che-table-body');
+
+            // Set title
+            title.textContent = tableData.title || 'Results';
+
+            // Build table HTML
+            let html = '<table class="che-data-table"><thead><tr>';
+
+            // Headers
+            tableData.columns.forEach(col => {
+                html += `<th>${escapeHtml(col)}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            // Rows
+            tableData.rows.forEach(row => {
+                html += '<tr>';
+                tableData.columns.forEach(col => {
+                    html += `<td>${escapeHtml(String(row[col] || ''))}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            body.innerHTML = html;
+
+            // Show modal
+            modal.classList.add('active');
+        }
+
+        // Close table modal
+        function closeCHETableModal() {
+            const modal = document.getElementById('che-table-modal');
+            modal.classList.remove('active');
+        }
+
+        // Add "View" button to chat instead of showing table directly
+        function addCHEViewTableButton(tableData) {
+            const msgs = document.getElementById('che-messages');
+            if (!msgs) return;
+
+            // Store table data globally for access when button is clicked
+            window.chePendingTableData = tableData;
+
+            // Create view button
+            const buttonDiv = document.createElement('div');
+            buttonDiv.className = 'che-form-container';
+            buttonDiv.innerHTML = `
+                <div class="che-form-card">
+                    <p class="che-form-text">I found ${tableData.rows.length} result${tableData.rows.length !== 1 ? 's' : ''}.</p>
+                    <div class="che-form-actions">
+                        <button class="che-form-btn che-form-btn-primary" onclick="showCHETableModal(window.chePendingTableData)">View Results</button>
+                    </div>
+                </div>
+            `;
+
+            msgs.appendChild(buttonDiv);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+    </script>
 </body>
 
 </html>

@@ -203,8 +203,10 @@ async function fsrDownload(format) {
     document.getElementById('fsrDownloadDropdown').classList.remove('open');
 
     const btn = document.getElementById('fsrDownloadBtn');
+    const originalHTML = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>';
+    // Show ONLY spinner icon, no text
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/><path d="M12 2a10 10 0 0110 10" stroke-width="2" stroke-linecap="round"/></svg>';
 
     try {
         if (format === 'pdf') {
@@ -244,6 +246,11 @@ async function fsrDownload(format) {
             URL.revokeObjectURL(url);
 
             console.log('✓ FSR downloaded:', data.file_name);
+
+            // Reload audit trail to show new action
+            if (typeof loadAuditTrail === 'function') {
+                setTimeout(() => loadAuditTrail(), 500);
+            }
         }
     } catch (e) {
         console.error('FSR download error:', e);
@@ -383,7 +390,7 @@ function fsrRender(member, research, extensions, schedules, unscheduledSubjects,
         teachingRows.forEach(row => {
             const hoursPerWeek = 3;  // All courses are 3 hours per week
             const courseCredit = 3;  // All courses have 3 credits
-            
+
             html += `<tr>
                 <td colspan="2" style="font-weight:600;">${row.subjCode || ''}</td>
                 <td style="text-align:center;">${row.section || '—'}</td>

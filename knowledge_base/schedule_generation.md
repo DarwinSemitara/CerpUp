@@ -3,40 +3,75 @@
 ## When to Use
 User wants to generate a complete semester schedule for all faculty and sections.
 
-## What You Need
-To generate a schedule, you MUST collect these 4 parameters:
-1. **reference_semester** - Which semester to copy from (1 or 2)
-2. **reference_school_year** - Which year to copy from (e.g., "2026-2027")
-3. **target_semester** - Which semester to generate for (1 or 2)
-4. **target_school_year** - Which year to generate for (e.g., "2027-2028")
+## CRITICAL: Check Current Page First!
 
-## Response Template
-When user asks to generate a schedule:
+Before doing anything, look at the BOTTOM of this message in the "Current System Data" section. Find the line that says "Current Page: [something]".
 
-"I'll generate a schedule for [target] using [reference] as the template. The system will create conflict-free timetables using the genetic algorithm."
+### If current page is NOT "schedule" (it says "dashboard", "admin", "general", etc.):
 
-Then output this JSON action (the form will appear automatically):
+**Step 1:** Write ONE sentence saying the redirect is needed.
+
+**Step 2:** IMMEDIATELY after your sentence, output EXACTLY this JSON block (copy it exactly):
+
 ```json
 {
-  "action": "generate_full_schedule",
-  "params": {
-    "reference_semester": "1",
-    "reference_school_year": "2026-2027",
-    "target_semester": "2",
-    "target_school_year": "2026-2027"
-  },
-  "confirm": true
+  "action": "show_redirect_form",
+  "message": "Schedule generation is only available on the Schedule page. Would you like me to take you there?",
+  "target_page": "schedule"
 }
 ```
 
-## Important Rules
-- NEVER load schedules into context for generation requests
-- The backend handles all data loading after user confirms
-- Keep response under 50 words
-- Don't explain how GA works unless asked
-- Parse year formats carefully: "2027-2028" or "2027"
+**Your complete response should look like:**
 
-## Example Queries
-- "generate schedule for 1st semester 2027-2028 using 2nd semester 2026-2027"
-- "create schedule for next semester"
-- "generate timetable for sem 2"
+Schedule generation is only available on the Schedule page. Would you like me to take you there?
+
+```json
+{
+  "action": "show_redirect_form",
+  "message": "Schedule generation is only available on the Schedule page. Would you like me to take you there?",
+  "target_page": "schedule"
+}
+```
+
+### If current page IS "schedule":
+
+**Step 1:** Write ONE sentence about helping with generation.
+
+**Step 2:** IMMEDIATELY after your sentence, output EXACTLY this JSON block:
+
+```json
+{
+  "action": "show_generation_form",
+  "message": "Please fill in the following details to generate a schedule:",
+  "form_fields": {
+    "target_semester": "1 or 2",
+    "target_school_year": "e.g., 2026-2027",
+    "reference_semester": "1 or 2",
+    "reference_school_year": "e.g., 2026-2027"
+  }
+}
+```
+
+**Your complete response should look like:**
+
+I'll help you generate a schedule. Please fill in the details in the form.
+
+```json
+{
+  "action": "show_generation_form",
+  "message": "Please fill in the following details to generate a schedule:",
+  "form_fields": {
+    "target_semester": "1 or 2",
+    "target_school_year": "e.g., 2026-2027",
+    "reference_semester": "1 or 2",
+    "reference_school_year": "e.g., 2026-2027"
+  }
+}
+```
+
+## CRITICAL RULES
+1. You MUST output the JSON code block (the part with ```json)
+2. The JSON must come AFTER your text message
+3. Do NOT explain the JSON or describe it - just output it
+4. Do NOT ask the user to type anything - the form will appear automatically
+5. Copy the JSON EXACTLY as shown above
