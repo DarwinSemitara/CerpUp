@@ -4304,9 +4304,13 @@
                 // Don't set filtered yet - let applyFilters do it to prevent flash of wrong data
                 applyFilters(); // This will set filtered array correctly
                 refreshFilterOptions();
-                renderTimetable();
-                renderReport();
-                if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
+
+                // Use requestAnimationFrame for smoother rendering
+                requestAnimationFrame(function () {
+                    renderTimetable();
+                    renderReport();
+                    if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
+                });
 
                 // Recalculate allocated units after loading schedules
                 if (unitConfigSaved) {
@@ -4315,10 +4319,10 @@
                     populateSubjectDropdowns(); // Update dropdown to show fully allocated subjects
                 }
 
-                // Apply initial filter to trigger FIC status update
+                // Apply initial filter to trigger FIC status update (reduced delay)
                 setTimeout(function () {
                     applySchedFilter();
-                }, 100);
+                }, 50);
 
                 // Update save button state
                 updateSaveButtonState();
@@ -5678,6 +5682,87 @@
                     // Trigger the lock function to apply locked state
                     scheduleLockedState = false; // Reset to opposite first
                     toggleScheduleLock(); // Then toggle to locked
+                }
+            });
+
+            // Listen for CHE schedule generation completion
+            window.addEventListener('che-schedule-generated', function (event) {
+                console.log('🔔 CHE schedule generation completed, auto-refreshing schedules...', event.detail);
+
+                // Show loading indicator
+                var timetableContainer = document.getElementById('sched-table');
+                if (timetableContainer) {
+                    var loadingOverlay = document.createElement('div');
+                    loadingOverlay.id = 'schedule-loading-overlay';
+                    loadingOverlay.style.cssText = `
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(255, 255, 255, 0.9);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 999;
+                        font-size: 14px;
+                        color: #6b0f1a;
+                        font-weight: 600;
+                    `;
+                    loadingOverlay.innerHTML = `
+                        <div style="text-align: center;">
+                            <div style="margin-bottom: 10px;">
+                                <div style="
+                                    width: 40px;
+                                    height: 40px;
+                                    border: 3px solid #f3f4f6;
+                                    border-top-color: #6b0f1a;
+                                    border-radius: 50%;
+                                    animation: spin 0.8s linear infinite;
+                                    margin: 0 auto;
+                                "></div>
+                            </div>
+                            <div>Loading ${event.detail.scheduleCount || 0} schedules...</div>
+                        </div>
+                    `;
+                    var parent = timetableContainer.parentElement;
+                    if (parent && parent.style.position !== 'relative') {
+                        parent.style.position = 'relative';
+                    }
+                    parent.appendChild(loadingOverlay);
+                }
+
+                // Update filters to the newly generated semester/year
+                if (event.detail.targetYear && event.detail.targetSemester) {
+                    var yearSelect = document.getElementById('year-filter');
+                    var semesterSelect = document.getElementById('semester-filter');
+
+                    if (yearSelect && semesterSelect) {
+                        yearSelect.value = event.detail.targetYear;
+                        semesterSelect.value = event.detail.targetSemester;
+
+                        // Update current state variables
+                        currentSchoolYear = event.detail.targetYear;
+                        currentSemester = event.detail.targetSemester;
+                    }
+                }
+
+                // Reload schedules immediately
+                if (typeof loadSchedules === 'function') {
+                    loadSchedules();
+                    console.log('✅ Schedules reloaded and filtered to', event.detail.targetYear, 'Semester', event.detail.targetSemester);
+
+                    // Remove loading overlay after a short delay
+                    setTimeout(function () {
+                        var overlay = document.getElementById('schedule-loading-overlay');
+                        if (overlay) {
+                            overlay.style.opacity = '0';
+                            overlay.style.transition = 'opacity 0.3s';
+                            setTimeout(function () {
+                                overlay.remove();
+                            }, 300);
+                        }
+                    }, 500);
                 }
             });
 
