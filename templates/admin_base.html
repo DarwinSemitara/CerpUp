@@ -1233,16 +1233,20 @@
         // Get current page for contextual suggestions
         function getCHECurrentPage() {
             const path = window.location.pathname;
-            console.log('CHE Current Page Detection:', path);
+            console.log('🔍 CHE Current Page Detection:', path);
             if (path.includes('/dashboard')) return 'dashboard';
             if (path.includes('/admin-page')) return 'admin';
             if (path.includes('/research')) return 'research';
             if (path.includes('/extensions')) return 'extensions';
-            if (path.includes('/schedule')) return 'schedule';
+            if (path.includes('/schedule') || path.includes('/class')) {
+                console.log('✅ Detected: schedule page');
+                return 'schedule';
+            }
             if (path.includes('/courses')) return 'courses';
             if (path.includes('/display')) return 'display';
             if (path.includes('/fsr')) return 'fsr';
             if (path.includes('/manage')) return 'manage';
+            console.log('⚠️ Detected: general page');
             return 'general';
         }
 
@@ -1403,6 +1407,13 @@
             // Show typing indicator
             const typingEl = appendCHEMsg('ai', '', true);
 
+            const currentPage = getCHECurrentPage();
+            console.log('📤 Sending CHE message:', {
+                message: text,
+                page: currentPage,
+                historyLength: cheHistory.length
+            });
+
             try {
                 const res = await fetch('/api/che/chat', {
                     method: 'POST',
@@ -1414,7 +1425,7 @@
                             role: msg.role === 'ai' ? 'assistant' : 'user',
                             content: msg.text
                         })),
-                        page: getCHECurrentPage() // Pass current page context
+                        page: currentPage // Pass current page context
                     })
                 });
 
@@ -1650,10 +1661,21 @@
                     // Show regenerate button
                     showCHERegenerateButton();
 
-                    // Reload the page to show the new schedule
+                    // Instead of reloading, trigger a custom event to refresh the schedule view
+                    // The schedule page can listen to this event and refresh its data
+                    const event = new CustomEvent('che-schedule-generated', {
+                        detail: {
+                            targetYear,
+                            targetSemester,
+                            scheduleCount: data.added || 0
+                        }
+                    });
+                    window.dispatchEvent(event);
+
+                    // Optionally show a message to manually refresh if the page doesn't auto-update
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                        appendCHEMsg('ai', 'The schedule has been generated. You may need to refresh the filter to see the new schedules.');
+                    }, 1000);
                 } else {
                     appendCHEMsg('ai', `Sorry, schedule generation failed: ${data.error || 'Unknown error'}`);
                 }

@@ -1082,8 +1082,13 @@ def che_chat():
         history = data.get('history', [])
         include_context = data.get('include_context', False)
         conversation_id = data.get('conversation_id')
-        # New: explicit flag for schedule page chat
-        is_schedule_page = data.get('is_schedule_page', False)
+
+        # Get current page from frontend
+        current_page = data.get('page', 'general')
+
+        # Determine if user is on schedule page
+        is_schedule_page = (current_page == 'schedule')
+
         # New: user role (admin vs user/member)
         user_role = data.get('user_role', 'admin')
         user_name = data.get('user_name', None)
@@ -1235,7 +1240,8 @@ def che_chat():
             is_system_conversation=is_system_conversation,
             user_role=user_role,
             user_name=user_name,
-            intelligent_context=intelligent_context  # 🧠 Pass the second brain context
+            intelligent_context=intelligent_context,  # 🧠 Pass the second brain context
+            current_page=current_page  # Pass current page to CHE
         )
 
         # If CHE returned a scheduling action, pre-execute it for preview
