@@ -1656,32 +1656,76 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    appendCHEMsg('ai', `Schedule generated successfully! ${data.added || 0} schedules were created.`);
-
-                    // Show regenerate button
-                    showCHERegenerateButton();
-
-                    // Instead of reloading, trigger a custom event to refresh the schedule view
-                    // The schedule page can listen to this event and refresh its data
-                    const event = new CustomEvent('che-schedule-generated', {
-                        detail: {
-                            targetYear,
-                            targetSemester,
-                            scheduleCount: data.added || 0
-                        }
-                    });
-                    window.dispatchEvent(event);
-
-                    // Optionally show a message to manually refresh if the page doesn't auto-update
-                    setTimeout(() => {
-                        appendCHEMsg('ai', 'The schedule has been generated. You may need to refresh the filter to see the new schedules.');
-                    }, 1000);
+                    // Generation started successfully - now poll for progress
+                    pollCHEGenerationProgress(targetYear, targetSemester);
                 } else {
-                    appendCHEMsg('ai', `Sorry, schedule generation failed: ${data.error || 'Unknown error'}`);
+                    appendCHEMsg('ai', `Sorry, schedule generation failed: ${data.error || data.message || 'Unknown error'}`);
                 }
             } catch (error) {
                 appendCHEMsg('ai', `Sorry, an error occurred: ${error.message}`);
             }
+        }
+
+        // Poll for generation progress
+        let cheProgressPollInterval = null;
+
+        function pollCHEGenerationProgress(targetYear, targetSemester) {
+            console.log('🔄 Starting progress polling...');
+
+            // Clear any existing poll interval
+            if (cheProgressPollInterval) {
+                clearInterval(cheProgressPollInterval);
+            }
+
+            cheProgressPollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/schedule/generate-progress');
+                    const progress = await response.json();
+
+                    console.log('📊 Progress status:', progress.status, progress.message);
+
+                    if (progress.status === 'completed') {
+                        clearInterval(cheProgressPollInterval);
+                        cheProgressPollInterval = null;
+
+                        // Count schedules from progress data or query API
+                        const scheduleCount = progress.schedules ? progress.schedules.length : 0;
+
+                        appendCHEMsg('ai', `Schedule generated successfully! ${scheduleCount} schedules were created.`);
+
+                        // Show regenerate button
+                        showCHERegenerateButton();
+
+                        // Trigger custom event for schedule page refresh
+                        const event = new CustomEvent('che-schedule-generated', {
+                            detail: {
+                                targetYear,
+                                targetSemester,
+                                scheduleCount
+                            }
+                        });
+                        window.dispatchEvent(event);
+
+                        // Show hint to refresh filter
+                        setTimeout(() => {
+                            appendCHEMsg('ai', 'The schedule has been generated. You may need to refresh the filter to see the new schedules.');
+                        }, 1000);
+
+                    } else if (progress.status === 'failed') {
+                        clearInterval(cheProgressPollInterval);
+                        cheProgressPollInterval = null;
+
+                        appendCHEMsg('ai', `Sorry, schedule generation failed: ${progress.message || 'Unknown error'}`);
+                    }
+                    // Otherwise keep polling while status is 'starting' or 'running'
+
+                } catch (error) {
+                    console.error('❌ Error polling progress:', error);
+                    clearInterval(cheProgressPollInterval);
+                    cheProgressPollInterval = null;
+                    appendCHEMsg('ai', `Sorry, an error occurred while monitoring progress: ${error.message}`);
+                }
+            }, 2000); // Poll every 2 seconds
         }
 
         // Show regenerate button
@@ -1740,17 +1784,10 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    appendCHEMsg('ai', `Schedule regenerated successfully! ${data.added || 0} schedules were created.`);
-
-                    // Show regenerate button again
-                    showCHERegenerateButton();
-
-                    // Reload the page
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                    // Generation started successfully - now poll for progress
+                    pollCHEGenerationProgress(params.targetYear, params.targetSemester);
                 } else {
-                    appendCHEMsg('ai', `Sorry, schedule regeneration failed: ${data.error || 'Unknown error'}`);
+                    appendCHEMsg('ai', `Sorry, schedule regeneration failed: ${data.error || data.message || 'Unknown error'}`);
                 }
             } catch (error) {
                 appendCHEMsg('ai', `Sorry, an error occurred: ${error.message}`);

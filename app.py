@@ -5679,7 +5679,7 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']                          : c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:
@@ -5864,10 +5864,15 @@ def api_generate_full_schedule():
         if not data:
             return jsonify({'success': False, 'message': 'No data provided.'}), 400
 
-        target_semester = data.get('target_semester', '1')
-        target_school_year = data.get('target_school_year', '2026-2027')
-        reference_semester = data.get('reference_semester', '1')
-        reference_school_year = data.get('reference_school_year', '2026-2027')
+        # Accept both old and new parameter names for backward compatibility
+        target_semester = data.get(
+            'target_sem') or data.get('target_semester', '1')
+        target_school_year = data.get('target_sy') or data.get(
+            'target_school_year', '2026-2027')
+        reference_semester = data.get(
+            'reference_sem') or data.get('reference_semester', '1')
+        reference_school_year = data.get('reference_sy') or data.get(
+            'reference_school_year', '2026-2027')
         save_to_db = data.get('save_to_db', True)
 
         print(
