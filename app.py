@@ -1063,6 +1063,67 @@ def delete_conversation(user_id, conversation_id):
 
 # ── CHE AI Chat API ──────────────────────────────────────────
 
+@app.route('/api/admin/import-csv-schedules', methods=['POST'])
+@login_required
+def import_csv_schedules():
+    """Import schedules from CSV file (admin only)"""
+    import csv
+
+    try:
+        # Get parameters from request
+        data = request.get_json() or {}
+        school_year = data.get('school_year', '2026-2027')
+        semester = data.get('semester', '1')
+
+        csv_path = 'static/reference/class_schedules.csv'
+        schedules = []
+
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+
+            for row in reader:
+                faculty = row['Faculty'].strip()
+                day = row['Day'].strip()
+                start_time = row['Start'].strip()
+                end_time = row['End'].strip()
+                course = row['Course'].strip()
+                section = row['Section'].strip()
+                room = row['Room'].strip()
+
+                schedules.append({
+                    'prof': faculty,
+                    'subj_code': course,
+                    'subj_name': '',
+                    'day': day,
+                    'start': start_time,
+                    'end': end_time,
+                    'room': room,
+                    'section': section,
+                    'units': '3',
+                    'semester': semester,
+                    'school_year': school_year
+                })
+
+        # Insert in batches
+        batch_size = 500
+        total_inserted = 0
+
+        for i in range(0, len(schedules), batch_size):
+            batch = schedules[i:i + batch_size]
+            result = supabase.table('schedules').insert(batch).execute()
+            total_inserted += len(batch)
+
+        return jsonify({
+            'success': True,
+            'message': f'Successfully imported {total_inserted} schedules',
+            'count': total_inserted
+        })
+
+    except Exception as e:
+        logger.error(f"CSV import error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/che/chat', methods=['POST'])
 @login_required
 def che_chat():
