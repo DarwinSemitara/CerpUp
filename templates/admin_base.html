@@ -1668,9 +1668,115 @@
 
         // Poll for generation progress
         let cheProgressPollInterval = null;
+        let cheProgressWidget = null;
+
+        function showCHEProgressWidget() {
+            // Don't create duplicate widgets
+            if (cheProgressWidget) return;
+
+            cheProgressWidget = document.createElement('div');
+            cheProgressWidget.id = 'che-progress-widget';
+            cheProgressWidget.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 300px;
+                background: white;
+                border: 2px solid #6b0f1a;
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                font-family: system-ui, -apple-system, sans-serif;
+            `;
+
+            cheProgressWidget.innerHTML = `
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                    <div class="che-spinner" style="
+                        width: 32px;
+                        height: 32px;
+                        border: 3px solid #f3f4f6;
+                        border-top-color: #6b0f1a;
+                        border-radius: 50%;
+                        animation: che-spin 1s linear infinite;
+                    "></div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;color:#111;font-size:14px;">Generating Schedule</div>
+                        <div id="che-progress-message" style="font-size:12px;color:#6b7280;margin-top:2px;">Starting...</div>
+                    </div>
+                </div>
+                <div style="background:#f3f4f6;border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px;">
+                    <div id="che-progress-bar" style="background:#6b0f1a;height:100%;width:0%;transition:width 0.3s;"></div>
+                </div>
+                <div style="display:flex;gap:8px;font-size:11px;color:#6b7280;">
+                    <span>Gen: <strong id="che-progress-gen">0</strong></span>
+                    <span>•</span>
+                    <span>Fitness: <strong id="che-progress-fitness">∞</strong></span>
+                    <span>•</span>
+                    <span>Time: <strong id="che-progress-time">0s</strong></span>
+                </div>
+            `;
+
+            // Add spin animation if not already present
+            if (!document.getElementById('che-spin-style')) {
+                const style = document.createElement('style');
+                style.id = 'che-spin-style';
+                style.textContent = '@keyframes che-spin { to { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(cheProgressWidget);
+        }
+
+        function updateCHEProgressWidget(progress) {
+            if (!cheProgressWidget) return;
+
+            const message = progress.message || 'Processing...';
+            const gen = progress.generation || 0;
+            const timeElapsed = Math.round(progress.time_elapsed || 0);
+            const timeLimit = Math.round(progress.time_limit_seconds || 240);
+            const fitness = progress.best_fitness !== undefined && progress.best_fitness !== null && progress.best_fitness !== Infinity
+                ? progress.best_fitness.toFixed(1)
+                : '∞';
+
+            // Calculate progress percentage based on time
+            let percentage;
+            if (progress.status === 'completed') {
+                percentage = 100;
+            } else if (timeLimit > 0) {
+                percentage = Math.min(99, (timeElapsed / timeLimit) * 100);
+            } else {
+                percentage = 0;
+            }
+
+            document.getElementById('che-progress-message').textContent = message;
+            document.getElementById('che-progress-gen').textContent = gen;
+            document.getElementById('che-progress-fitness').textContent = fitness;
+            document.getElementById('che-progress-time').textContent = `${timeElapsed}s / ${timeLimit}s`;
+
+            const progressBar = document.getElementById('che-progress-bar');
+            progressBar.style.width = percentage + '%';
+        }
+
+        function hideCHEProgressWidget() {
+            if (cheProgressWidget) {
+                cheProgressWidget.style.opacity = '0';
+                cheProgressWidget.style.transform = 'scale(0.9)';
+                cheProgressWidget.style.transition = 'all 0.2s';
+                setTimeout(() => {
+                    if (cheProgressWidget) {
+                        cheProgressWidget.remove();
+                        cheProgressWidget = null;
+                    }
+                }, 200);
+            }
+        }
 
         function pollCHEGenerationProgress(targetYear, targetSemester) {
             console.log('🔄 Starting progress polling...');
+
+            // Show progress widget
+            showCHEProgressWidget();
 
             // Clear any existing poll interval
             if (cheProgressPollInterval) {
@@ -1684,9 +1790,15 @@
 
                     console.log('📊 Progress status:', progress.status, progress.message);
 
+                    // Update widget
+                    updateCHEProgressWidget(progress);
+
                     if (progress.status === 'completed') {
                         clearInterval(cheProgressPollInterval);
                         cheProgressPollInterval = null;
+
+                        // Hide widget after showing 100%
+                        setTimeout(() => hideCHEProgressWidget(), 1500);
 
                         // Count schedules from progress data or query API
                         const scheduleCount = progress.schedules ? progress.schedules.length : 0;
@@ -1715,6 +1827,8 @@
                         clearInterval(cheProgressPollInterval);
                         cheProgressPollInterval = null;
 
+                        hideCHEProgressWidget();
+
                         appendCHEMsg('ai', `Sorry, schedule generation failed: ${progress.message || 'Unknown error'}`);
                     }
                     // Otherwise keep polling while status is 'starting' or 'running'
@@ -1723,6 +1837,7 @@
                     console.error('❌ Error polling progress:', error);
                     clearInterval(cheProgressPollInterval);
                     cheProgressPollInterval = null;
+                    hideCHEProgressWidget();
                     appendCHEMsg('ai', `Sorry, an error occurred while monitoring progress: ${error.message}`);
                 }
             }, 2000); // Poll every 2 seconds
