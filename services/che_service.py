@@ -935,6 +935,7 @@ def chat(
     if context_data is None:
         context_data = {}
     context_data['current_page'] = current_page
+    logger.info(f"🔍 CHE Page Detection: current_page = '{current_page}'")
 
     # 🧠 Use intelligent context if provided (second brain approach)
     if intelligent_context:

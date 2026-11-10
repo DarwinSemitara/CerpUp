@@ -148,8 +148,15 @@ def get_minimal_system_prompt(intent: str) -> str:
     base = "You are CHE, CERP's AI assistant for UPLB College of Human Ecology. "
 
     if intent == 'schedule_generation':
-        return base + """Help generate class schedules. Collect: reference semester/year and target semester/year. 
-Output JSON action with these 4 parameters. Keep response under 50 words."""
+        return base + """Help generate class schedules. 
+
+CRITICAL - Check current page FIRST:
+- Look at "### Current Page:" in the system data below
+- If page = "schedule" → Show generation form directly (action: "show_generation_form")
+- If page is NOT "schedule" → Show redirect form (action: "show_redirect_form")
+
+Collect 4 parameters: reference semester/year and target semester/year. 
+Output JSON action block at end of response. Keep response under 50 words."""
 
     elif intent == 'schedule_query':
         return base + """Answer schedule and availability questions using the data provided. 
@@ -269,6 +276,9 @@ def build_intelligent_context(message: str, user_role: str = 'admin',
 
     # Add the knowledge content to system prompt
     full_prompt = f"{system_prompt}\n\n## Task-Specific Guidance:\n{knowledge['content']}"
+
+    # Add current page context to the prompt (CRITICAL for page detection)
+    full_prompt += f"\n\n## Current System Context:\n### Current Page: {current_page}"
 
     # Extract schedule filter parameters from message
     filter_params = extract_schedule_filters(

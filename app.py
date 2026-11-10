@@ -1108,7 +1108,8 @@ def che_chat():
         intelligent_context = build_intelligent_context(
             message=message,
             user_role=user_role,
-            is_system_conversation=is_schedule_page
+            is_system_conversation=is_schedule_page,
+            current_page=current_page
         )
 
         logger.info(f"🧠 Second Brain Analysis:")
