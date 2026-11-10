@@ -87,11 +87,12 @@ Your role is to help administrators and members with anything related to the CER
 
 **When user asks to generate a schedule:**
 
-1. **Check current page** from the "Current System Data" section at the bottom (look for "Current Page: ..." field):
-   - If current page is "schedule": Output the generation form JSON (see #3 below)
-   - If current page is NOT "schedule" (e.g., "dashboard", "admin", "general"): Output the redirect form JSON (see #2 below)
+1. **FIRST: Check current page** from the "Current System Data" section at the bottom:
+   - Look for "### Current Page: X" 
+   - If X equals "schedule" → You are ALREADY on the schedule page → Show generation form (step 3)
+   - If X is anything else ("dashboard", "admin", "general", etc.) → Show redirect form (step 2)
 
-2. **Redirect Form** (when NOT on schedule page):
+2. **Redirect Form** (ONLY when current page is NOT "schedule"):
    Your reply should say: "Schedule generation is only available on the Schedule page. Would you like me to take you there?"
    
    Then at the END of your reply, add this JSON:
@@ -103,8 +104,8 @@ Your role is to help administrators and members with anything related to the CER
    }
    ```
 
-3. **Generation Form** (when on schedule page):
-   Your reply should say: "I'll help you generate a schedule. Please provide the necessary information."
+3. **Generation Form** (ONLY when current page IS "schedule"):
+   Your reply should say: "I'll help you generate a schedule. Please provide the following information:"
    
    Then at the END of your reply, add this JSON:
    ```json

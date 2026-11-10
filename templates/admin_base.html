@@ -1635,6 +1635,10 @@
                     referenceYear
                 }));
 
+                // Add user message showing what they clicked
+                const semesterName = targetSemester === '1' ? '1st' : '2nd';
+                appendCHEMsg('user', `Generate ${targetYear} ${semesterName} Semester (using ${referenceYear} ${referenceSemester === '1' ? '1st' : '2nd'} Semester as reference)`);
+
                 // Remove the form
                 formContainer.remove();
 
