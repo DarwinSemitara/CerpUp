@@ -68,8 +68,9 @@ PAIRED_DAYS = [
     ('Tuesday', 'Thursday'),
 ]
 
-SLOTS_PER_DAY = 28        # 30-min slots: 0=7:00 … 27=20:30 (ends 21:00)
-START_HOUR = 7             # 7:00 AM
+SLOTS_PER_DAY = 28        # 30-min slots: 0=8:00 … 27=21:30 (ends 22:00)
+START_HOUR = 8             # 8:00 AM
+END_HOUR = 22              # 10:00 PM
 MAX_BLOCK_SLOTS = 6        # 3 hours max per block
 HARD_PENALTY = 1000
 SOFT_PENALTY = 10
@@ -380,8 +381,8 @@ class Course:
 class Timeslot:
     """Timeslot configuration."""
     days: List[str] = field(default_factory=lambda: WEEKDAYS.copy())
-    start_hour: int = 7
-    end_hour: int = 21
+    start_hour: int = 8
+    end_hour: int = 22
     slots_per_day: int = 28
     break_periods: List[Tuple[int, int]] = field(
         default_factory=list)  # [(start_slot, end_slot)]
@@ -784,7 +785,7 @@ def check_saturday_custom_only(gene: 'Gene') -> Optional[ConstraintViolation]:
 def check_operating_hours(gene: 'Gene', timeslot_config: Optional[Timeslot]) -> Optional[ConstraintViolation]:
     """H8: Check if class falls within institutional operating hours."""
     if not timeslot_config:
-        # Default check: 7:00 AM to 9:00 PM
+        # Default check: 8:00 AM to 10:00 PM
         if gene.end_slot() > SLOTS_PER_DAY:
             return ConstraintViolation(
                 constraint_type='operating_hours',
@@ -2376,7 +2377,7 @@ def fitness_v2(chromosome: List[Gene],
     Soft constraints (10 penalty each):
       S1: All sessions of subject on same day
       S2: Professor has 4+ consecutive hours no break
-      S3: Class outside core hours (7:00-17:00)
+      S3: Class outside core hours (8:00-17:00)
       S4: Large gap (>2hrs) between section classes same day
       S5: Uneven weekly spread
     """
@@ -3309,7 +3310,7 @@ def seed_from_reference(reference_schedules: List[Dict],
     ref_genes = []
     for s in ref_data:
         try:
-            start_slot = time_to_slot(s.get('start', '7:00'))
+            start_slot = time_to_slot(s.get('start', '8:00'))
             end_slot = time_to_slot(s.get('end', '8:00'))
             duration = end_slot - start_slot
             if duration <= 0:
@@ -5733,8 +5734,8 @@ def move_schedule_smart(schedule_id: str, existing_schedules: List[Dict],
 
     target_start = target_end = None
     if target_time_period:
-        periods = {'morning': ('7:00', '12:00'), 'afternoon': ('12:00', '17:00'),
-                   'evening': ('17:00', '21:00')}
+        periods = {'morning': ('8:00', '12:00'), 'afternoon': ('12:00', '17:00'),
+                   'evening': ('17:00', '22:00')}
         if target_time_period in periods:
             target_start, target_end = periods[target_time_period]
 
