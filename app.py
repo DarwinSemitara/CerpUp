@@ -3230,7 +3230,7 @@ def get_schedules():
 
             # Minimal logging - just the summary
             logger.info(
-                f"📊 GET /api/schedules - Returning {len(entries)} schedules (SY: {sy}, Sem: {sem}, Prof: {prof_filter or 'all'})")
+                f"📊 GET /api/schedules - Returning {len(entries)} schedules (SY: {school_year or 'all'}, Sem: {semester or 'all'}, Prof: {prof_filter or 'all'})")
 
             return jsonify(entries)
 

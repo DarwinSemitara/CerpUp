@@ -10344,17 +10344,10 @@
             renderGenericConfirmation(container, { action: 'delete_schedule', params: params });
         }
 
-        // Toggle chat on bubble click
-        document.getElementById('schedule-chat-bubble').addEventListener('click', function () {
-            if (scheduleChatState.isOpen) {
-                closeScheduleChat();
-            } else {
-                openScheduleChat();
-            }
-        });
-
-        // Load chat history when page loads
-        loadChatHistory();
+        // Load chat history when page loads (if chat exists)
+        if (typeof loadChatHistory === 'function') {
+            loadChatHistory();
+        }
     </script>
 
 
