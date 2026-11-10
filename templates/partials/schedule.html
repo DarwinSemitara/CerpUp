@@ -5689,48 +5689,8 @@
             window.addEventListener('che-schedule-generated', function (event) {
                 console.log('🔔 CHE schedule generation completed, auto-refreshing schedules...', event.detail);
 
-                // Show loading indicator
-                var timetableContainer = document.getElementById('sched-table');
-                if (timetableContainer) {
-                    var loadingOverlay = document.createElement('div');
-                    loadingOverlay.id = 'schedule-loading-overlay';
-                    loadingOverlay.style.cssText = `
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background: rgba(255, 255, 255, 0.9);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        z-index: 999;
-                        font-size: 14px;
-                        color: #6b0f1a;
-                        font-weight: 600;
-                    `;
-                    loadingOverlay.innerHTML = `
-                        <div style="text-align: center;">
-                            <div style="margin-bottom: 10px;">
-                                <div style="
-                                    width: 40px;
-                                    height: 40px;
-                                    border: 3px solid #f3f4f6;
-                                    border-top-color: #6b0f1a;
-                                    border-radius: 50%;
-                                    animation: spin 0.8s linear infinite;
-                                    margin: 0 auto;
-                                "></div>
-                            </div>
-                            <div>Loading ${event.detail.scheduleCount || 0} schedules...</div>
-                        </div>
-                    `;
-                    var parent = timetableContainer.parentElement;
-                    if (parent && parent.style.position !== 'relative') {
-                        parent.style.position = 'relative';
-                    }
-                    parent.appendChild(loadingOverlay);
-                }
+                // Show full-screen loading modal (blocks all interactions)
+                showScheduleLoadingModal(event.detail.scheduleCount || 0);
 
                 // Update filters to the newly generated semester/year
                 if (event.detail.targetYear && event.detail.targetSemester) {
@@ -5752,19 +5712,160 @@
                     loadSchedules();
                     console.log('✅ Schedules reloaded and filtered to', event.detail.targetYear, 'Semester', event.detail.targetSemester);
 
-                    // Remove loading overlay after a short delay
+                    // Transition to success state after schedules are loaded
                     setTimeout(function () {
-                        var overlay = document.getElementById('schedule-loading-overlay');
-                        if (overlay) {
-                            overlay.style.opacity = '0';
-                            overlay.style.transition = 'opacity 0.3s';
-                            setTimeout(function () {
-                                overlay.remove();
-                            }, 300);
-                        }
-                    }, 500);
+                        transitionToSuccessModal();
+
+                        // Remove modal after showing success briefly
+                        setTimeout(function () {
+                            hideScheduleLoadingModal();
+                        }, 800);
+                    }, 1500); // Give time for schedules to render
                 }
             });
+
+            // Show loading modal (Stage 1: Loading)
+            function showScheduleLoadingModal(scheduleCount) {
+                // Remove any existing modal
+                var existingModal = document.getElementById('schedule-loading-modal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+
+                var modal = document.createElement('div');
+                modal.id = 'schedule-loading-modal';
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    backdrop-filter: blur(2px);
+                `;
+
+                modal.innerHTML = `
+                    <div id="modal-content" style="
+                        background: white;
+                        border-radius: 16px;
+                        padding: 48px 64px;
+                        text-align: center;
+                        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                        min-width: 400px;
+                        animation: modal-fade-in 0.3s ease-out;
+                    ">
+                        <div id="modal-icon-container" style="margin-bottom: 24px;">
+                            <div id="loading-spinner" style="
+                                width: 64px;
+                                height: 64px;
+                                border: 4px solid #f3f4f6;
+                                border-top-color: #6b0f1a;
+                                border-radius: 50%;
+                                animation: spin 0.8s linear infinite;
+                                margin: 0 auto;
+                            "></div>
+                        </div>
+                        <div id="modal-title" style="
+                            font-size: 20px;
+                            font-weight: 600;
+                            color: #111827;
+                            margin-bottom: 8px;
+                        ">Loading ${scheduleCount} schedules...</div>
+                        <div id="modal-subtitle" style="
+                            font-size: 14px;
+                            color: #6b7280;
+                        ">Please wait a moment</div>
+                    </div>
+                `;
+
+                // Add animations
+                var style = document.createElement('style');
+                style.textContent = `
+                    @keyframes modal-fade-in {
+                        from {
+                            opacity: 0;
+                            transform: scale(0.95);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: scale(1);
+                        }
+                    }
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                    @keyframes checkmark-draw {
+                        0% {
+                            stroke-dashoffset: 100;
+                        }
+                        100% {
+                            stroke-dashoffset: 0;
+                        }
+                    }
+                    @keyframes checkmark-scale {
+                        0%, 100% {
+                            transform: scale(1);
+                        }
+                        50% {
+                            transform: scale(1.1);
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+
+                document.body.appendChild(modal);
+
+                // Prevent scrolling while modal is open
+                document.body.style.overflow = 'hidden';
+            }
+
+            // Transition to success state (Stage 2: Checkmark)
+            function transitionToSuccessModal() {
+                var iconContainer = document.getElementById('modal-icon-container');
+                var title = document.getElementById('modal-title');
+                var subtitle = document.getElementById('modal-subtitle');
+
+                if (!iconContainer || !title || !subtitle) return;
+
+                // Replace spinner with checkmark
+                iconContainer.innerHTML = `
+                    <svg width="64" height="64" viewBox="0 0 64 64" style="margin: 0 auto; animation: checkmark-scale 0.6s ease-out;">
+                        <circle cx="32" cy="32" r="30" fill="#6b0f1a" />
+                        <path d="M 20 32 L 28 40 L 44 24" 
+                              stroke="white" 
+                              stroke-width="4" 
+                              stroke-linecap="round" 
+                              stroke-linejoin="round"
+                              fill="none"
+                              stroke-dasharray="100"
+                              stroke-dashoffset="100"
+                              style="animation: checkmark-draw 0.5s ease-out forwards;" />
+                    </svg>
+                `;
+
+                // Update text
+                title.textContent = 'Schedules loaded successfully!';
+                title.style.color = '#6b0f1a';
+                subtitle.textContent = 'Rendering timetable...';
+            }
+
+            // Hide modal
+            function hideScheduleLoadingModal() {
+                var modal = document.getElementById('schedule-loading-modal');
+                if (modal) {
+                    modal.style.opacity = '0';
+                    modal.style.transition = 'opacity 0.3s ease-out';
+                    setTimeout(function () {
+                        modal.remove();
+                        // Restore scrolling
+                        document.body.style.overflow = '';
+                    }, 300);
+                }
+            }
 
             window.toggleScheduleLock = function () {
                 scheduleLockedState = !scheduleLockedState;

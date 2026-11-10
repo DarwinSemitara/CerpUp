@@ -1797,18 +1797,24 @@
                         clearInterval(cheProgressPollInterval);
                         cheProgressPollInterval = null;
 
-                        // Hide widget after showing 100%
-                        setTimeout(() => hideCHEProgressWidget(), 1500);
+                        // Update widget to show 100% completion
+                        updateCHEProgressWidget(progress);
 
                         // Count schedules from progress data or query API
                         const scheduleCount = progress.schedules ? progress.schedules.length : 0;
 
+                        // Hide widget immediately after showing completion
+                        setTimeout(() => {
+                            hideCHEProgressWidget();
+                        }, 800);
+
+                        // Show success message in chat
                         appendCHEMsg('ai', `Schedule generated successfully! ${scheduleCount} schedules were created.`);
 
                         // Show regenerate button
                         showCHERegenerateButton();
 
-                        // Trigger custom event for schedule page refresh
+                        // Trigger custom event for schedule page refresh (modal will appear)
                         const event = new CustomEvent('che-schedule-generated', {
                             detail: {
                                 targetYear,
@@ -1817,11 +1823,6 @@
                             }
                         });
                         window.dispatchEvent(event);
-
-                        // Show hint to refresh filter
-                        setTimeout(() => {
-                            appendCHEMsg('ai', 'The schedule has been generated. You may need to refresh the filter to see the new schedules.');
-                        }, 1000);
 
                     } else if (progress.status === 'failed') {
                         clearInterval(cheProgressPollInterval);
