@@ -3228,15 +3228,9 @@ def get_schedules():
 
                 entries.append(entry)
 
-            logger.info(f"Found {len(entries)} schedules from Supabase")
-
-            # Detailed logging for debugging
-            print("\n" + "="*80)
-            print(f"📊 GET /api/schedules - Returning {len(entries)} schedules")
-            print("="*80)
-            for i, entry in enumerate(entries, 1):
-                print(f"{i}. {entry.get('subjCode')} | Day: {entry.get('day')} | Time: {entry.get('start')}-{entry.get('end')} | Section: {entry.get('section')} | Prof: {entry.get('prof')}")
-            print("="*80 + "\n")
+            # Minimal logging - just the summary
+            logger.info(
+                f"📊 GET /api/schedules - Returning {len(entries)} schedules (SY: {sy}, Sem: {sem}, Prof: {prof_filter or 'all'})")
 
             return jsonify(entries)
 
@@ -5685,8 +5679,7 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']
-            : c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']                          : c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:
