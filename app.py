@@ -1066,8 +1066,8 @@ def delete_conversation(user_id, conversation_id):
 @app.route('/api/admin/import-csv-schedules', methods=['POST'])
 @login_required
 def import_csv_schedules():
-    """Import schedules from CSV file (admin only)"""
-    import csv
+    """Import schedules from Excel file (admin only)"""
+    import openpyxl
 
     try:
         # Get parameters from request
@@ -1075,34 +1075,50 @@ def import_csv_schedules():
         school_year = data.get('school_year', '2026-2027')
         semester = data.get('semester', '1')
 
-        csv_path = 'static/reference/class_schedules.csv'
+        xlsx_path = 'static/reference/class_schedule_new.xlsx'
         schedules = []
 
-        with open(csv_path, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
+        # Load Excel file
+        wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+        sheet = wb.active
 
-            for row in reader:
-                faculty = row['Faculty'].strip()
-                day = row['Day'].strip()
-                start_time = row['Start'].strip()
-                end_time = row['End'].strip()
-                course = row['Course'].strip()
-                section = row['Section'].strip()
-                room = row['Room'].strip()
+        # Get header row (assumes first row is headers)
+        headers = []
+        for cell in sheet[1]:
+            headers.append(cell.value)
 
-                schedules.append({
-                    'prof': faculty,
-                    'subj_code': course,
-                    'subj_name': '',
-                    'day': day,
-                    'start': start_time,
-                    'end': end_time,
-                    'room': room,
-                    'section': section,
-                    'units': '3',
-                    'semester': semester,
-                    'school_year': school_year
-                })
+        # Process data rows
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            if not row[0]:  # Skip empty rows
+                continue
+
+            row_data = dict(zip(headers, row))
+
+            faculty = str(row_data.get('Faculty', '')).strip()
+            day = str(row_data.get('Day', '')).strip()
+            start_time = str(row_data.get('Start', '')).strip()
+            end_time = str(row_data.get('End', '')).strip()
+            course = str(row_data.get('Course', '')).strip()
+            section = str(row_data.get('Section', '')).strip()
+            room = str(row_data.get('Room', '')).strip()
+
+            # Keep TBA as is
+            if not room or room.lower() == 'none':
+                room = 'TBA'
+
+            schedules.append({
+                'prof': faculty,
+                'subj_code': course,
+                'subj_name': '',
+                'day': day,
+                'start': start_time,
+                'end': end_time,
+                'room': room,
+                'section': section,
+                'units': '3',
+                'semester': semester,
+                'school_year': school_year
+            })
 
         # Insert in batches
         batch_size = 500
@@ -1120,7 +1136,7 @@ def import_csv_schedules():
         })
 
     except Exception as e:
-        logger.error(f"CSV import error: {e}")
+        logger.error(f"Excel import error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
