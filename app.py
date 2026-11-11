@@ -1063,6 +1063,137 @@ def delete_conversation(user_id, conversation_id):
 
 # ── CHE AI Chat API ──────────────────────────────────────────
 
+@app.route('/api/admin/add-temp-members', methods=['POST'])
+@login_required
+def add_temp_members():
+    """Add temporary member entries for professors without accounts"""
+    try:
+        # Only add Mark Paulo and Mars (Mary Joy Ancheeta already exists)
+        temp_members = [
+            {
+                'first': 'Mark Paulo S.',
+                'last': 'Alcala',
+                'suffix': 'Engr., EnP.',
+                'email': 'markpaulo.alcala@temp.edu',
+                'is_faculty': True
+            },
+            {
+                'first': 'Mars V.',
+                'last': 'Arriesgado',
+                'suffix': 'EnP.',
+                'email': 'mars.arriesgado@temp.edu',
+                'is_faculty': True
+            }
+        ]
+
+        created = []
+        for member in temp_members:
+            # Check if already exists
+            existing = db.collection('members')\
+                .where('first', '==', member['first'])\
+                .where('last', '==', member['last'])\
+                .get()
+
+            if len(existing) > 0:
+                logger.info(
+                    f"Member {member['first']} {member['last']} already exists, skipping")
+                continue
+
+            # Create member document
+            member_data = {
+                'first': member['first'],
+                'last': member['last'],
+                'suffix': member['suffix'],
+                'email': member['email'],
+                'is_faculty': member['is_faculty'],
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'photo_url': '',
+                'availability': []
+            }
+
+            doc_ref = db.collection('members').add(member_data)
+            created.append(f"{member['first']} {member['last']}")
+            logger.info(
+                f"✅ Created temp member: {member['first']} {member['last']}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Created {len(created)} temporary members',
+            'created': created
+        })
+
+    except Exception as e:
+        logger.error(f"Error creating temp members: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/fix-schedule-names', methods=['POST'])
+@login_required
+def fix_schedule_names():
+    """Fix professor names in schedules to match members format"""
+    try:
+        # Direct mappings for the 3 problem names
+        # Excel format -> Database format
+        direct_mappings = {
+            'MARK PAULO S. ALCALA, Engr., EnP.': 'Mark Paulo S. Alcala, Engr., EnP.',
+            'MARS V. ARRIESGADO, EnP.': 'Mars V. Arriesgado, EnP.',
+            'MARY JOY J. ANCHETA': 'Mary Joy Ancheeta'
+        }
+
+        # Get all schedules for 2026-2027 Semester 1
+        schedules_result = supabase.table('schedules')\
+            .select('*')\
+            .eq('school_year', '2026-2027')\
+            .eq('semester', '1')\
+            .execute()
+
+        schedules = schedules_result.data
+        logger.info(f"📋 Found {len(schedules)} schedules to check")
+
+        # Update schedules with direct mappings
+        updates = []
+        for sched in schedules:
+            excel_name = sched.get('prof', '')
+            if excel_name in direct_mappings:
+                db_name = direct_mappings[excel_name]
+                updates.append({
+                    'id': sched['id'],
+                    'prof': db_name
+                })
+
+        logger.info(f"✅ Will update {len(updates)} schedules")
+
+        # Update in batches
+        if updates:
+            for update in updates:
+                supabase.table('schedules')\
+                    .update({'prof': update['prof']})\
+                    .eq('id', update['id'])\
+                    .execute()
+
+            return jsonify({
+                'success': True,
+                'message': f'Fixed {len(updates)} schedule names',
+                'matched': len(updates),
+                'unmatched': []
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'message': 'No names needed fixing',
+                'matched': 0,
+                'unmatched': []
+            })
+
+    except Exception as e:
+        logger.error(f"Fix names error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/admin/debug-excel-headers', methods=['GET'])
 @login_required
 def debug_excel_headers():

@@ -319,6 +319,20 @@
         background: rgba(0, 0, 0, 0.08);
     }
 
+    /* Custom multi-course blocks */
+    .sched-block-custom .sb-subj,
+    .sched-block-custom .sb-room,
+    .sched-block-custom .sb-section {
+        white-space: pre-line;
+        line-height: 1.4;
+        font-size: 0.68rem;
+    }
+
+    .sched-block-custom .sb-subj {
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
     .sched-block .sb-del {
         position: absolute;
         top: 3px;
@@ -6012,16 +6026,10 @@
                             grid[s.day][i] = Object.assign({}, s, { span: ei - si, isFirst: i === si, stack: [] });
                         } else if (i === si) {
                             var existing = grid[s.day][i];
-                            var satShare = s.day === 'Saturday';
-                            if (satShare) {
-                                existing.stack = existing.stack || [];
-                                existing.stack.push(s);
-                            } else {
-                                console.warn('⚠️ TIME CONFLICT DETECTED - Only one will render!');
-                                console.warn('  Slot:', s.day, 'at', slots[i]);
-                                console.warn('  Existing:', existing.subjCode, existing.prof);
-                                console.warn('  Dropped:', s.subjCode, s.prof);
-                            }
+                            // Allow stacking for all days (custom blocks with multiple courses)
+                            existing.stack = existing.stack || [];
+                            existing.stack.push(s);
+                            console.log('  📦 Stacked:', s.subjCode, 'onto', existing.subjCode, 'at', s.day, slots[i]);
                         }
                     }
                 });
@@ -6040,30 +6048,62 @@
                         if (entry && entry.isFirst) {
                             var span = entry.span;
                             var stacked = [entry].concat(entry.stack || []);
-                            var blockH = Math.max(18, Math.floor((span * SLOT_H - 3) / stacked.length) - 1);
-                            for (var k = 1; k < span; k++) covered[day + '-' + (si + k)] = true;
-                            rows += '<td rowspan="' + span + '" data-day="' + day + '" data-slot="' + si + '" data-id="' + entry.id + '" style="padding:0;position:relative;">';
-                            stacked.forEach(function (item) {
-                                var yearOrSchoolYear = item.schoolYear || item.year;
-                                var bg = colorFor(item.subjCode, yearOrSchoolYear, item.semester);
-                                var profName = item.prof || '';
+
+                            // If multiple courses in same slot, combine into one block
+                            if (stacked.length > 1) {
+                                // Combine all course info with " / " separator
+                                var combinedSubj = stacked.map(function (item) { return item.subjCode; }).join(' / ');
+                                var combinedRoom = stacked.map(function (item) { return item.room || ''; }).join(' / ');
+                                var combinedSection = stacked.map(function (item) { return item.section || ''; }).join(' / ');
+
+                                var yearOrSchoolYear = entry.schoolYear || entry.year;
+                                var bg = colorFor(entry.subjCode, yearOrSchoolYear, entry.semester);
+                                var profName = entry.prof || '';
                                 if (profName.indexOf(',') > -1) {
                                     profName = profName.split(',')[0].trim();
                                 }
                                 var nameParts = profName.split(' ');
                                 var shortProf = nameParts.slice(-2).join(' ');
-                                rows += '<div class="sched-block" id="blk-' + item.id + '" data-id="' + item.id + '" style="background:' + bg + ';height:' + blockH + 'px;">'
-                                    + '<span class="sb-del" onclick="deleteEntry(\'' + item.id + '\',event)">&#x2715;</span>'
-                                    + '<span class="sb-subj">' + item.subjCode
-                                    + (item.source === 'GA Generated' ? '<span class="sb-ga">GA</span>' : '')
+
+                                for (var k = 1; k < span; k++) covered[day + '-' + (si + k)] = true;
+                                rows += '<td rowspan="' + span + '" data-day="' + day + '" data-slot="' + si + '" data-id="' + entry.id + '" style="padding:0;position:relative;">';
+                                rows += '<div class="sched-block sched-block-custom" id="blk-' + entry.id + '" data-id="' + entry.id + '" style="background:' + bg + ';height:' + (span * SLOT_H - 3) + 'px;">'
+                                    + '<span class="sb-del" onclick="deleteEntry(\'' + entry.id + '\',event)">&#x2715;</span>'
+                                    + '<span class="sb-subj" style="white-space:pre-line;line-height:1.3;">' + combinedSubj
+                                    + (entry.source === 'GA Generated' ? '<span class="sb-ga">GA</span>' : '')
                                     + '</span>'
                                     + '<span class="sb-prof">' + shortProf + '</span>'
-                                    + '<span class="sb-room">' + (item.room || '') + '</span>'
-                                    + '<span class="sb-section">' + (item.section || '') + '</span>'
-                                    + '<div class="sb-resize" data-id="' + item.id + '"></div>'
+                                    + '<span class="sb-room" style="white-space:pre-line;line-height:1.3;">' + combinedRoom + '</span>'
+                                    + '<span class="sb-section" style="white-space:pre-line;line-height:1.3;">' + combinedSection + '</span>'
+                                    + '<div class="sb-resize" data-id="' + entry.id + '"></div>'
                                     + '</div>';
-                            });
-                            rows += '</td>';
+                                rows += '</td>';
+                            } else {
+                                // Single course - original rendering
+                                var blockH = span * SLOT_H - 3;
+                                for (var k = 1; k < span; k++) covered[day + '-' + (si + k)] = true;
+                                rows += '<td rowspan="' + span + '" data-day="' + day + '" data-slot="' + si + '" data-id="' + entry.id + '" style="padding:0;position:relative;">';
+
+                                var yearOrSchoolYear = entry.schoolYear || entry.year;
+                                var bg = colorFor(entry.subjCode, yearOrSchoolYear, entry.semester);
+                                var profName = entry.prof || '';
+                                if (profName.indexOf(',') > -1) {
+                                    profName = profName.split(',')[0].trim();
+                                }
+                                var nameParts = profName.split(' ');
+                                var shortProf = nameParts.slice(-2).join(' ');
+                                rows += '<div class="sched-block" id="blk-' + entry.id + '" data-id="' + entry.id + '" style="background:' + bg + ';height:' + blockH + 'px;">'
+                                    + '<span class="sb-del" onclick="deleteEntry(\'' + entry.id + '\',event)">&#x2715;</span>'
+                                    + '<span class="sb-subj">' + entry.subjCode
+                                    + (entry.source === 'GA Generated' ? '<span class="sb-ga">GA</span>' : '')
+                                    + '</span>'
+                                    + '<span class="sb-prof">' + shortProf + '</span>'
+                                    + '<span class="sb-room">' + (entry.room || '') + '</span>'
+                                    + '<span class="sb-section">' + (entry.section || '') + '</span>'
+                                    + '<div class="sb-resize" data-id="' + entry.id + '"></div>'
+                                    + '</div>';
+                                rows += '</td>';
+                            }
                         } else {
                             rows += '<td data-day="' + day + '" data-slot="' + si + '"></td>';
                         }

@@ -245,6 +245,15 @@ class SupabaseTable:
             doc_id = str(uuid.uuid4())
         return SupabaseDocumentRef(self.client, self.table_name, doc_id)
 
+    def add(self, data):
+        """Add a new document with auto-generated ID (Firestore compatibility)."""
+        import uuid
+        doc_id = str(uuid.uuid4())
+        data['id'] = doc_id
+        response = self.client.table(self.table_name).insert(data).execute()
+        # Return tuple: (document_ref, actual_data) to match Firestore behavior
+        return (SupabaseDocumentRef(self.client, self.table_name, doc_id), response.data[0] if response.data else None)
+
 
 class SupabaseDocument:
     """Represents a document returned from a query."""
