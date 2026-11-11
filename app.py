@@ -1063,6 +1063,103 @@ def delete_conversation(user_id, conversation_id):
 
 # ── CHE AI Chat API ──────────────────────────────────────────
 
+@app.route('/api/admin/cleanup-temp-accounts', methods=['POST'])
+@login_required
+def cleanup_temp_accounts():
+    """Update schedules to proper account names and remove temp accounts"""
+    try:
+        # Step 1: Update schedules to match proper account names
+        name_mappings = {
+            'Mark Paulo S. Alcala, Engr., EnP.': 'Mark Paulo Alcala, Engr., EnP.',
+            'Mars V. Arriesgado, EnP.': 'Mars Arriesgado, EnP.',
+            'Mary Joy Ancheeta': 'Mary Joy J. Ancheta'
+        }
+
+        # Get all schedules for 2026-2027 Semester 1
+        schedules_result = supabase.table('schedules')\
+            .select('*')\
+            .eq('school_year', '2026-2027')\
+            .eq('semester', '1')\
+            .execute()
+
+        updated_count = 0
+        for sched in schedules_result.data:
+            old_name = sched.get('prof', '')
+            if old_name in name_mappings:
+                new_name = name_mappings[old_name]
+                supabase.table('schedules')\
+                    .update({'prof': new_name})\
+                    .eq('id', sched['id'])\
+                    .execute()
+                updated_count += 1
+
+        logger.info(f"✅ Updated {updated_count} schedules")
+
+        # Step 2: Delete temp member accounts from Firebase
+        temp_names = [
+            ('Mark Paulo S.', 'Alcala'),
+            ('Mars V.', 'Arriesgado'),
+            ('Mary Joy', 'Ancheeta')
+        ]
+
+        deleted_count = 0
+        for first, last in temp_names:
+            members = db.collection('members')\
+                .where('first', '==', first)\
+                .where('last', '==', last)\
+                .get()
+
+            for member in members:
+                db.collection('members').document(member.id).delete()
+                deleted_count += 1
+                logger.info(f"🗑️ Deleted temp member: {first} {last}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Updated {updated_count} schedules and deleted {deleted_count} temp accounts',
+            'schedules_updated': updated_count,
+            'accounts_deleted': deleted_count
+        })
+
+    except Exception as e:
+        logger.error(f"Cleanup error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/fix-mary-joy-name', methods=['POST'])
+@login_required
+def fix_mary_joy_name():
+    """Fix Mary Joy's last name from Ancheeta to Ancheta"""
+    try:
+        # Find Mary Joy by old spelling
+        members = db.collection('members')\
+            .where('first', '==', 'Mary Joy')\
+            .where('last', '==', 'Ancheeta')\
+            .get()
+
+        if not members:
+            return jsonify({'success': False, 'error': 'Mary Joy Ancheeta not found'})
+
+        # Update to correct spelling
+        for member in members:
+            db.collection('members').document(member.id).update({
+                'last': 'Ancheta',
+                'suffix': 'J.'
+            })
+            logger.info(f"✅ Updated Mary Joy's name to Ancheta")
+
+        return jsonify({
+            'success': True,
+            'message': 'Updated Mary Joy Ancheeta → Mary Joy J. Ancheta'
+        })
+
+    except Exception as e:
+        logger.error(f"Error fixing Mary Joy name: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/admin/add-temp-members', methods=['POST'])
 @login_required
 def add_temp_members():
