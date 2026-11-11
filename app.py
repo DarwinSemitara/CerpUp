@@ -1163,19 +1163,24 @@ def import_csv_schedules():
             if not room or room.lower() == 'none':
                 room = 'TBA'
 
-            schedules.append({
-                'prof': faculty,
-                'subj_code': course,
-                'subj_name': '',
-                'day': day,
-                'start': start_time,
-                'end': end_time,
-                'room': room,
-                'section': section,
-                'units': '3',
-                'semester': semester,
-                'school_year': school_year
-            })
+            # Split multiple days (e.g., "Tuesday, Thursday" -> ["Tuesday", "Thursday"])
+            days = [d.strip() for d in day.split(',')]
+
+            # Create a separate schedule entry for each day
+            for single_day in days:
+                schedules.append({
+                    'prof': faculty,
+                    'subj_code': course,
+                    'subj_name': '',
+                    'day': single_day,
+                    'start': start_time,
+                    'end': end_time,
+                    'room': room,
+                    'section': section,
+                    'units': '3',
+                    'semester': semester,
+                    'school_year': school_year
+                })
 
         logger.info(
             f"✅ Parsed {len(schedules)} schedules, skipped {skipped} rows")
