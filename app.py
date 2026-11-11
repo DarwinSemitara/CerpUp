@@ -1102,6 +1102,14 @@ def import_csv_schedules():
             section = str(row_data.get('Section', '')).strip()
             room = str(row_data.get('Room', '')).strip()
 
+            # Skip rows with missing required fields
+            if not faculty or not day or not start_time or not end_time or not course:
+                continue
+
+            # Skip if time is 'None' string
+            if start_time.lower() == 'none' or end_time.lower() == 'none':
+                continue
+
             # Keep TBA as is
             if not room or room.lower() == 'none':
                 room = 'TBA'
@@ -1137,7 +1145,9 @@ def import_csv_schedules():
 
     except Exception as e:
         logger.error(f"Excel import error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'details': traceback.format_exc()}), 500
 
 
 @app.route('/api/che/chat', methods=['POST'])
