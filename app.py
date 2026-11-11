@@ -1063,6 +1063,35 @@ def delete_conversation(user_id, conversation_id):
 
 # ── CHE AI Chat API ──────────────────────────────────────────
 
+@app.route('/api/admin/debug-excel-headers', methods=['GET'])
+@login_required
+def debug_excel_headers():
+    """Debug endpoint to see Excel file structure"""
+    import openpyxl
+
+    try:
+        xlsx_path = 'static/reference/class_schedule_new.xlsx'
+        wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+        sheet = wb.active
+
+        # Get headers
+        headers = [cell.value for cell in sheet[1]]
+
+        # Get first 3 data rows
+        sample_rows = []
+        for row in sheet.iter_rows(min_row=2, max_row=4, values_only=True):
+            sample_rows.append(list(row))
+
+        return jsonify({
+            'success': True,
+            'headers': headers,
+            'sample_rows': sample_rows,
+            'total_rows': sheet.max_row - 1  # Excluding header
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/admin/import-csv-schedules', methods=['POST'])
 @login_required
 def import_csv_schedules():
@@ -1087,27 +1116,47 @@ def import_csv_schedules():
         for cell in sheet[1]:
             headers.append(cell.value)
 
+        logger.info(f"📋 Excel headers found: {headers}")
+
         # Process data rows
-        for row in sheet.iter_rows(min_row=2, values_only=True):
+        skipped = 0
+        for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
             if not row[0]:  # Skip empty rows
+                skipped += 1
                 continue
 
             row_data = dict(zip(headers, row))
 
-            faculty = str(row_data.get('Faculty', '')).strip()
-            day = str(row_data.get('Day', '')).strip()
-            start_time = str(row_data.get('Start', '')).strip()
-            end_time = str(row_data.get('End', '')).strip()
-            course = str(row_data.get('Course', '')).strip()
-            section = str(row_data.get('Section', '')).strip()
-            room = str(row_data.get('Room', '')).strip()
+            # Log first row for debugging
+            if row_idx == 2:
+                logger.info(f"📝 First data row: {row_data}")
+
+            faculty = str(row_data.get('Faculty', '')).strip(
+            ) if row_data.get('Faculty') else ''
+            day = str(row_data.get('Day', '')).strip(
+            ) if row_data.get('Day') else ''
+            start_time = str(row_data.get('Start Time', '')).strip(
+            ) if row_data.get('Start Time') else ''
+            end_time = str(row_data.get('End Time', '')).strip(
+            ) if row_data.get('End Time') else ''
+            course = str(row_data.get('Course', '')).strip(
+            ) if row_data.get('Course') else ''
+            section = str(row_data.get('Section', '')).strip(
+            ) if row_data.get('Section') else ''
+            room = str(row_data.get('Room', '')).strip(
+            ) if row_data.get('Room') else ''
 
             # Skip rows with missing required fields
             if not faculty or not day or not start_time or not end_time or not course:
+                if row_idx <= 5:  # Log first few skipped rows
+                    logger.warning(
+                        f"⏭️  Row {row_idx} skipped - missing: faculty={bool(faculty)}, day={bool(day)}, start={bool(start_time)}, end={bool(end_time)}, course={bool(course)}")
+                skipped += 1
                 continue
 
             # Skip if time is 'None' string
             if start_time.lower() == 'none' or end_time.lower() == 'none':
+                skipped += 1
                 continue
 
             # Keep TBA as is
@@ -1128,6 +1177,9 @@ def import_csv_schedules():
                 'school_year': school_year
             })
 
+        logger.info(
+            f"✅ Parsed {len(schedules)} schedules, skipped {skipped} rows")
+
         # Insert in batches
         batch_size = 500
         total_inserted = 0
@@ -1139,8 +1191,9 @@ def import_csv_schedules():
 
         return jsonify({
             'success': True,
-            'message': f'Successfully imported {total_inserted} schedules',
-            'count': total_inserted
+            'message': f'Successfully imported {total_inserted} schedules (skipped {skipped} rows)',
+            'count': total_inserted,
+            'skipped': skipped
         })
 
     except Exception as e:
@@ -5767,7 +5820,7 @@ def assign_faculty_courses(faculty_id):
             lambda: supabase.table('courses')
             .select('id, course_code, available_sections')
         )
-        course_by_code = {c['course_code']: c for c in (courses_result.data or [])}
+        course_by_code = {c['course_code']                          : c for c in (courses_result.data or [])}
         course_by_id = {c['id']: c for c in (courses_result.data or [])}
 
         if eligibility_codes is not None:
