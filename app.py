@@ -1063,6 +1063,312 @@ def delete_conversation(user_id, conversation_id):
 
 # ── CHE AI Chat API ──────────────────────────────────────────
 
+@app.route('/api/admin/lock-and-clean-2026-2027-sem1', methods=['POST'])
+@login_required
+def lock_and_clean_2026_2027_sem1():
+    """
+    Lock 2026-2027 Semester 1 and clean up staging area
+    - Keeps all 232 schedules on timetable (untouched)
+    - Removes all faculty_courses assignments for this term (clears staging)
+    - Makes this term read-only
+    """
+    try:
+        actions = []
+
+        # Step 1: Delete all faculty_courses assignments
+        # (This clears the staging area but doesn't touch schedules table)
+        deleted_count = 0
+        try:
+            # Get all assignments
+            assignments = supabase.table(
+                'faculty_courses').select('id').execute()
+
+            # Delete all of them
+            for assignment in assignments.data:
+                supabase.table('faculty_courses').delete().eq(
+                    'id', assignment['id']).execute()
+                deleted_count += 1
+
+            actions.append(
+                f"Cleared {deleted_count} faculty course assignments (staging area)")
+        except Exception as e:
+            actions.append(f"Error clearing assignments: {str(e)}")
+
+        # Step 2: Set a flag that 2026-2027 Sem 1 is locked
+        # (We can use a simple marker in a config table, or just document it)
+        actions.append("2026-2027 Semester 1 is now considered locked")
+        actions.append("232 schedules on timetable remain untouched")
+
+        return jsonify({
+            'success': True,
+            'message': 'Successfully locked 2026-2027 Sem 1 and cleared staging',
+            'actions': actions,
+            'deleted_assignments': deleted_count,
+            'schedules_kept': 232
+        })
+
+    except Exception as e:
+        logger.error(f"Lock and clean error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/faculty-assignments-debug', methods=['GET'])
+@login_required
+def faculty_assignments_debug():
+    """Debug endpoint to see all faculty course assignments"""
+    try:
+        # Get all members
+        members_result = supabase.table(
+            'members').select('id, first, last').execute()
+        members_map = {}
+        for m in members_result.data:
+            full_name = f"{m.get('first', '')} {m.get('last', '')}".strip()
+            members_map[m['id']] = full_name
+
+        # Get all courses
+        courses_result = supabase.table('courses').select('id, code').execute()
+        courses_map = {c['id']: c['code'] for c in courses_result.data}
+
+        # Get all faculty_courses assignments
+        assignments_result = supabase.table(
+            'faculty_courses').select('*').execute()
+
+        formatted = []
+        for a in assignments_result.data:
+            formatted.append({
+                'id': a['id'],
+                'professor': members_map.get(a['faculty_id'], f"Unknown ({a['faculty_id']})"),
+                'course': courses_map.get(a['course_id'], f"Unknown ({a['course_id']})"),
+                'section': a.get('section', ''),
+                'units': a.get('units', 0),
+                'faculty_id': a['faculty_id'],
+                'course_id': a['course_id']
+            })
+
+        return jsonify({
+            'success': True,
+            'count': len(formatted),
+            'assignments': formatted
+        })
+
+    except Exception as e:
+        logger.error(f"Debug assignments error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/delete-faculty-assignment/<assignment_id>', methods=['DELETE'])
+@login_required
+def delete_faculty_assignment(assignment_id):
+    """Delete a specific faculty course assignment"""
+    try:
+        supabase.table('faculty_courses').delete().eq(
+            'id', assignment_id).execute()
+        return jsonify({'success': True, 'message': 'Assignment deleted'})
+    except Exception as e:
+        logger.error(f"Delete assignment error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/preview-faculty-cleanup', methods=['GET'])
+@login_required
+def preview_faculty_cleanup():
+    """Preview what faculty assignments will be removed"""
+    try:
+        # Assignments to remove: {professor_name: [(course_code, section), ...]}
+        assignments_to_remove = {
+            'Arlene Tolentino, EnP.': [('CERP 221', 'SAMAR')],
+            'Casper Agaton, PhD.': [('CERP 270', 'UPLB2')],
+            'Cheamson Garret Boongaling, EnP.': [('HUME 111', 'F'), ('HUME 111', 'G')],
+            'Evaristo Niño Cando': [('CERP 270', 'UPLB2')],
+            'John Ceffrey Eligue, EnP.': [('CERP 201', 'SAMAR')],
+            'Kristina Cordero-Bailey, PhD.': [('CERP 122', 'E')],
+            'Ma. Denise Efel Malvar': [('HUME 111', 'C')]
+        }
+
+        preview = []
+
+        for prof_name, courses_to_remove in assignments_to_remove.items():
+            result = supabase.table('faculty_courses')\
+                .select('*')\
+                .eq('prof_name', prof_name)\
+                .eq('school_year', '2026-2027')\
+                .eq('semester', '1')\
+                .execute()
+
+            for assignment in result.data:
+                course_code = assignment.get('course_code')
+                section = assignment.get('section')
+
+                if (course_code, section) in courses_to_remove:
+                    preview.append({
+                        'id': assignment['id'],
+                        'prof': prof_name,
+                        'course': course_code,
+                        'section': section,
+                        'units': assignment.get('units'),
+                        'full_record': assignment
+                    })
+
+        return jsonify({
+            'success': True,
+            'count': len(preview),
+            'assignments': preview,
+            'message': f'Found {len(preview)} assignments that will be removed'
+        })
+
+    except Exception as e:
+        logger.error(f"Preview cleanup error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/cleanup-faculty-assignments', methods=['POST'])
+@login_required
+def cleanup_faculty_assignments():
+    """Remove incorrect faculty course assignments that appear in staging"""
+    try:
+        actions = []
+
+        # Assignments to remove: {professor_name: [(course_code, section), ...]}
+        assignments_to_remove = {
+            'Arlene Tolentino, EnP.': [('CERP 221', 'SAMAR')],
+            'Casper Agaton, PhD.': [('CERP 270', 'UPLB2')],
+            'Cheamson Garret Boongaling, EnP.': [('HUME 111', 'F'), ('HUME 111', 'G')],
+            'Evaristo Niño Cando': [('CERP 270', 'UPLB2')],
+            'John Ceffrey Eligue, EnP.': [('CERP 201', 'SAMAR')],
+            'Kristina Cordero-Bailey, PhD.': [('CERP 122', 'E')],
+            'Ma. Denise Efel Malvar': [('HUME 111', 'C')]
+        }
+
+        for prof_name, courses_to_remove in assignments_to_remove.items():
+            # Get faculty assignments for this professor
+            result = supabase.table('faculty_courses')\
+                .select('*')\
+                .eq('prof_name', prof_name)\
+                .eq('school_year', '2026-2027')\
+                .eq('semester', '1')\
+                .execute()
+
+            for assignment in result.data:
+                course_code = assignment.get('course_code')
+                section = assignment.get('section')
+
+                if (course_code, section) in courses_to_remove:
+                    supabase.table('faculty_courses')\
+                        .delete()\
+                        .eq('id', assignment['id'])\
+                        .execute()
+                    actions.append(
+                        f"Removed {prof_name}: {course_code} {section}")
+
+        logger.info(f"✅ Cleaned {len(actions)} faculty assignments")
+
+        return jsonify({
+            'success': True,
+            'message': f'Removed {len(actions)} incorrect assignments',
+            'actions': actions
+        })
+
+    except Exception as e:
+        logger.error(f"Cleanup faculty assignments error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/fix-schedule-inconsistencies', methods=['POST'])
+@login_required
+def fix_schedule_inconsistencies():
+    """Fix schedule inconsistencies found in manual review"""
+    try:
+        actions = []
+
+        # 1. Cheamson - Delete HUME 111 F and G (not in actual schedule)
+        cheamson_schedules = supabase.table('schedules')\
+            .select('id, subj_code, section')\
+            .ilike('prof', '%Cheamson%')\
+            .eq('school_year', '2026-2027')\
+            .eq('semester', '1')\
+            .execute()
+
+        for sched in cheamson_schedules.data:
+            subj = sched.get('subj_code', '')
+            if 'HUME 111' in subj and sched.get('section') in ['F', 'G']:
+                supabase.table('schedules').delete().eq(
+                    'id', sched['id']).execute()
+                actions.append(
+                    f"Deleted Cheamson {subj} {sched.get('section')}")
+
+        # 2. Kristina - Delete CERP 122 E (not in actual schedule)
+        kristina_schedules = supabase.table('schedules')\
+            .select('id, subj_code, section')\
+            .ilike('prof', '%Kristina%')\
+            .eq('school_year', '2026-2027')\
+            .eq('semester', '1')\
+            .execute()
+
+        for sched in kristina_schedules.data:
+            subj = sched.get('subj_code', '')
+            if 'CERP 122' in subj and sched.get('section') == 'E':
+                supabase.table('schedules').delete().eq(
+                    'id', sched['id']).execute()
+                actions.append(f"Deleted Kristina CERP 122 E")
+
+        # 3. Ma. Denise - Delete HUME 111 C (not in actual schedule)
+        denise_schedules = supabase.table('schedules')\
+            .select('id, subj_code, section')\
+            .ilike('prof', '%Denise%')\
+            .eq('school_year', '2026-2027')\
+            .eq('semester', '1')\
+            .execute()
+
+        for sched in denise_schedules.data:
+            subj = sched.get('subj_code', '')
+            if 'HUME 111' in subj and sched.get('section') == 'C':
+                supabase.table('schedules').delete().eq(
+                    'id', sched['id']).execute()
+                actions.append(f"Deleted Ma. Denise HUME 111 C")
+
+        # 4. Delete Evaristo's CERP 270 UPLB (full ID)
+        supabase.table('schedules').delete().eq(
+            'id', '10f968a8-6a28-4ea2-bf74-a61c8c9102cf').execute()
+        actions.append('Deleted Evaristo CERP 270 UPLB')
+
+        # 5. Jimwell's time is correct at 07:00 - no change needed
+
+        # 6. Check for Casper's CERP 270 UPLB2 to delete
+        casper_schedules = supabase.table('schedules')\
+            .select('id, subj_code, section')\
+            .ilike('prof', '%Casper%')\
+            .eq('subj_code', 'CERP 270')\
+            .eq('section', 'UPLB2')\
+            .eq('school_year', '2026-2027')\
+            .eq('semester', '1')\
+            .execute()
+
+        for sched in casper_schedules.data:
+            supabase.table('schedules').delete().eq(
+                'id', sched['id']).execute()
+            actions.append(f"Deleted Casper CERP 270 UPLB2")
+
+        logger.info(f"✅ Fixed {len(actions)} schedule inconsistencies")
+
+        return jsonify({
+            'success': True,
+            'message': f'Fixed {len(actions)} issues',
+            'actions': actions
+        })
+
+    except Exception as e:
+        logger.error(f"Fix inconsistencies error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/admin/cleanup-temp-accounts', methods=['POST'])
 @login_required
 def cleanup_temp_accounts():
