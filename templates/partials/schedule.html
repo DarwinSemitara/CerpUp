@@ -236,6 +236,50 @@
         background: rgba(107, 15, 26, 0.05);
     }
 
+    /* Conflict slot highlighting during drag */
+    .timetable td.conflict-slot {
+        background: #f3f4f6 !important;
+        opacity: 0.6;
+        cursor: not-allowed !important;
+        position: relative;
+    }
+
+    .timetable td.conflict-slot::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(45deg,
+                transparent,
+                transparent 4px,
+                rgba(156, 163, 175, 0.2) 4px,
+                rgba(156, 163, 175, 0.2) 8px);
+        pointer-events: none;
+    }
+
+    /* Occupied slot (permanent graying) */
+    .timetable td.occupied-slot {
+        background: #d1d5db !important;
+        border-color: #9ca3af !important;
+        cursor: not-allowed;
+        position: relative;
+    }
+
+    .timetable td.occupied-slot::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #9ca3af;
+        opacity: 0.3;
+        pointer-events: none;
+        z-index: 0;
+    }
+
     .sched-block {
         position: absolute;
         left: 2px;
@@ -1978,17 +2022,7 @@
                             Room:</label>
                         <select id="room-filter"
                             style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.85rem;width:100%;max-width:300px;outline:none;">
-                            <option value="CERP AVR" selected>CERP AVR</option>
-                            <option value="DCERP Conference Room">DCERP Conference Room</option>
-                            <option value="CLH">CLH</option>
-                            <option value="Geomatics Room">Geomatics Room</option>
-                            <option value="TCC - 01">TCC - 01</option>
-                            <option value="TCC - 02">TCC - 02</option>
-                            <option value="TCC - 03">TCC - 03</option>
-                            <option value="TCC - 04">TCC - 04</option>
-                            <option value="TCC - 10">TCC - 10</option>
-                            <option value="TCC - 11">TCC - 11</option>
-                            <option value="CHE REC">CHE REC</option>
+                            <!-- Options will be populated dynamically from actual schedule data -->
                         </select>
                     </div>
 
@@ -2388,20 +2422,40 @@
                     <label>Classroom</label>
                     <select id="nbm-room" style="cursor:pointer;">
                         <option value="">Select Room</option>
-                        <optgroup label="CERP Rooms">
+                        <optgroup label="DCERP Rooms">
                             <option value="CERP AVR">CERP AVR</option>
-                            <option value="DCERP Conference Room">DCERP Conference Room</option>
-                            <option value="CLH">CLH</option>
+                            <option value="DCERP AVR">DCERP AVR</option>
+                            <option value="DCERP Conf Room">DCERP Conf Room</option>
                             <option value="Geomatics Room">Geomatics Room</option>
+                            <option value="CHE Lecture Hall">CHE Lecture Hall</option>
+                            <option value="CHE MPH">CHE MPH</option>
                         </optgroup>
-                        <optgroup label="Shared Classrooms">
-                            <option value="TCC - 01">TCC - 01</option>
-                            <option value="TCC - 02">TCC - 02</option>
-                            <option value="TCC - 03">TCC - 03</option>
-                            <option value="TCC - 04">TCC - 04</option>
-                            <option value="TCC - 10">TCC - 10</option>
-                            <option value="TCC - 11">TCC - 11</option>
-                            <option value="CHE REC">CHE REC</option>
+                        <optgroup label="TCC Rooms">
+                            <option value="TCC 01">TCC 01</option>
+                            <option value="TCC 02">TCC 02</option>
+                            <option value="TCC 04">TCC 04</option>
+                            <option value="TCC 05">TCC 05</option>
+                            <option value="TCC 11">TCC 11</option>
+                            <option value="TCC 12">TCC 12</option>
+                        </optgroup>
+                        <optgroup label="Graduate School - Undergrad">
+                            <option value="NEW Graduate School Bldg Lecture Room 201">NEW Graduate School Bldg Lecture
+                                Room 201</option>
+                            <option value="NEW Graduate School Bldg Lecture Room 202">NEW Graduate School Bldg Lecture
+                                Room 202</option>
+                        </optgroup>
+                        <optgroup label="Graduate School - Grad Courses">
+                            <option value="UPLB GS">UPLB GS</option>
+                            <option value="UPLB GS Bldg">UPLB GS Bldg</option>
+                        </optgroup>
+                        <optgroup label="Off-Campus">
+                            <option value="PLGU Catarman">PLGU Catarman</option>
+                            <option value="PSAE Davao">PSAE Davao</option>
+                            <option value="PSAE PLGU Catarman">PSAE PLGU Catarman</option>
+                            <option value="Upper Field">Upper Field</option>
+                        </optgroup>
+                        <optgroup label="Other">
+                            <option value="TBA">TBA</option>
                         </optgroup>
                     </select>
                 </div>
@@ -2710,29 +2764,51 @@
                 return hh + ':' + (m === 0 ? '00' : '30') + ' ' + ap;
             }
             function slotIdx(t) {
-                // Normalize time format: remove leading zero from hour (08:00 → 8:00)
-                if (t && t.length >= 5 && t[0] === '0') {
+                if (!t) return -1;
+
+                // Normalize time format
+                // 1. Remove seconds if present (09:30:00 → 09:30)
+                if (t.length > 5 && t.indexOf(':') === 2 && t.lastIndexOf(':') > 2) {
+                    t = t.substring(0, 5); // Keep only HH:MM
+                }
+
+                // 2. Remove leading zero from hour (08:00 → 8:00)
+                if (t.length >= 5 && t[0] === '0') {
                     t = t.substring(1); // Remove leading zero
                 }
+
                 return slots.indexOf(t);
             }
 
-            // 8 distinct colors for up to 8 subjects per semester
-            var palette = [
-                '#fde8ea', // Light red
-                '#e8f4fd', // Light blue
-                '#e8fdf0', // Light green
-                '#fdf6e8', // Light yellow
-                '#f0e8fd', // Light purple
-                '#fde8f8', // Light pink
-                '#e8fdfd', // Light cyan
-                '#fdf0e8'  // Light orange
+            // Expanded color palette with better variety
+            // Soft pastel color palette (20 colors) - faded colors for better text readability
+            var softPalette = [
+                { h: 350, s: 40, l: 85 },  // soft red
+                { h: 210, s: 40, l: 85 },  // soft blue
+                { h: 160, s: 35, l: 85 },  // soft green
+                { h: 45, s: 40, l: 85 },   // soft yellow
+                { h: 270, s: 35, l: 85 },  // soft purple
+                { h: 320, s: 35, l: 85 },  // soft pink
+                { h: 180, s: 30, l: 85 },  // soft cyan
+                { h: 25, s: 40, l: 85 },   // soft orange
+                { h: 290, s: 35, l: 85 },  // soft violet
+                { h: 130, s: 30, l: 85 },  // soft teal
+                { h: 60, s: 35, l: 85 },   // soft lime
+                { h: 200, s: 35, l: 85 },  // soft sky
+                { h: 340, s: 30, l: 85 },  // soft rose
+                { h: 150, s: 30, l: 85 },  // soft mint
+                { h: 240, s: 35, l: 85 },  // soft indigo
+                { h: 90, s: 30, l: 85 },   // soft chartreuse
+                { h: 30, s: 35, l: 85 },   // soft peach
+                { h: 280, s: 30, l: 85 },  // soft lavender
+                { h: 170, s: 30, l: 85 },  // soft aqua
+                { h: 15, s: 35, l: 85 }    // soft coral
             ];
 
-            // Color assignment per year-semester: { 'year-semester': { 'subjCode': 'color' } }
+            // Color assignment per year-semester: { 'year-semester': { 'subjCode-section': { color, colorIndex } } }
             var colorMapBySemester = {};
 
-            function colorFor(code, year, semester) {
+            function colorFor(code, year, semester, section) {
                 var key = year + '-' + semester;
                 if (!colorMapBySemester[key]) {
                     colorMapBySemester[key] = {};
@@ -2740,25 +2816,46 @@
 
                 var semesterMap = colorMapBySemester[key];
 
-                // If this subject already has a color in this semester, return it
-                if (semesterMap[code]) {
-                    return semesterMap[code];
+                // Use course code + section as unique key (each section gets unique color)
+                var fullKey = section ? code + '-' + section : code; // e.g., "HUME 100-A"
+
+                // If this exact course-section already has a color, return it
+                if (semesterMap[fullKey]) {
+                    return semesterMap[fullKey].color;
                 }
 
-                // Find which colors are already used in this semester
-                var usedColors = Object.values(semesterMap);
-
-                // Find first available color
-                for (var i = 0; i < palette.length; i++) {
-                    if (usedColors.indexOf(palette[i]) === -1) {
-                        semesterMap[code] = palette[i];
-                        return palette[i];
+                // Find which color indices are already used in this semester
+                var usedColorIndices = [];
+                for (var k in semesterMap) {
+                    if (semesterMap[k].colorIndex !== undefined) {
+                        usedColorIndices.push(semesterMap[k].colorIndex);
                     }
                 }
 
-                // If all colors used (more than 8 subjects), cycle through
-                semesterMap[code] = palette[Object.keys(semesterMap).length % palette.length];
-                return semesterMap[code];
+                // Find first available color
+                var colorIndex = -1;
+                for (var i = 0; i < softPalette.length; i++) {
+                    if (usedColorIndices.indexOf(i) === -1) {
+                        colorIndex = i;
+                        break;
+                    }
+                }
+
+                // If all colors used (more than 20 course-sections), cycle through
+                if (colorIndex === -1) {
+                    colorIndex = Object.keys(semesterMap).length % softPalette.length;
+                }
+
+                var colorDef = softPalette[colorIndex];
+                var hslColor = 'hsl(' + colorDef.h + ', ' + colorDef.s + '%, ' + colorDef.l + '%)';
+
+                // Store with color index for tracking
+                semesterMap[fullKey] = {
+                    color: hslColor,
+                    colorIndex: colorIndex
+                };
+
+                return hslColor;
             }
 
             // Room color mapping (consistent color for each room)
@@ -2775,10 +2872,12 @@
                     hash = roomName.charCodeAt(i) + ((hash << 5) - hash);
                 }
 
-                // Use hash to pick a color from palette
-                var colorIndex = Math.abs(hash) % palette.length;
-                roomColorMap[roomName] = palette[colorIndex];
-                return roomColorMap[roomName];
+                // Use hash to pick a color from softPalette
+                var colorIndex = Math.abs(hash) % softPalette.length;
+                var colorDef = softPalette[colorIndex];
+                var hslColor = 'hsl(' + colorDef.h + ', ' + colorDef.s + '%, ' + colorDef.l + '%)';
+                roomColorMap[roomName] = hslColor;
+                return hslColor;
             }
 
             // Extract surname from full name
@@ -3496,7 +3595,7 @@
                     blocksToRender.forEach(function (block) {
                         var classNames = block.hasAllocation ? '' : 'incomplete';
                         if (block.isCustom) classNames += ' custom-block';
-                        var color = colorFor(block.subjCode, currentSchoolYear, currentSemester);
+                        var color = colorFor(block.subjCode, currentSchoolYear, currentSemester, block.section);
                         var customMark = block.isCustom ? '<span class="subj-custom">custom</span>' : '';
 
                         html += `
@@ -4266,7 +4365,16 @@
 
             async function loadSchedules() {
                 try {
-                    var res = await fetch('/api/schedules');
+                    // Pass current semester and school year as filters
+                    var url = '/api/schedules';
+                    if (currentSchoolYear && currentSemester) {
+                        url += '?schoolYear=' + encodeURIComponent(currentSchoolYear) + '&semester=' + encodeURIComponent(currentSemester);
+                        console.log('📥 Loading schedules for', currentSchoolYear, 'Semester', currentSemester);
+                    } else {
+                        console.log('📥 Loading all schedules (no filters set)');
+                    }
+
+                    var res = await fetch(url);
                     var loadedSchedules = res.ok ? await res.json() : [];
 
                     // Normalize field names from snake_case (database) to camelCase (frontend)
@@ -4455,6 +4563,52 @@
                     });
                     msg += '\nPlease choose a different time slot.';
                     return { valid: false, message: msg };
+                }
+
+                // Check for room conflicts (room can't host two classes at once)
+                // Get the room for this schedule
+                var currentSchedule = schedules.find(function (s) { return String(s.id) === String(excludeId); });
+                var roomToCheck = currentSchedule ? currentSchedule.room : '';
+
+                if (roomToCheck) {
+                    console.log('  Checking room conflicts for:', roomToCheck);
+                    var roomConflicts = [];
+                    schedules.forEach(function (s) {
+                        // Skip self
+                        if (String(s.id) === String(excludeId)) return;
+
+                        // Only check same room, same day, same semester/year
+                        if (s.room !== roomToCheck) return;
+                        if (s.day !== day) return;
+
+                        var sSchoolYear = s.school_year || s.schoolYear;
+                        if (sSchoolYear !== currentSchoolYear) return;
+                        if (s.semester !== currentSemester) return;
+
+                        // Check for time overlap
+                        var existingStart = slotIdx(s.start);
+                        var existingEnd = slotIdx(s.end);
+                        var newStart = slotIdx(start);
+                        var newEnd = slotIdx(end);
+
+                        if (newStart < existingEnd && newEnd > existingStart) {
+                            console.log('    ❌ ROOM CONFLICT:', s.subjCode, s.start, '-', s.end, 'in', s.room);
+                            roomConflicts.push({
+                                subjCode: s.subjCode,
+                                prof: s.prof,
+                                time: fmt(s.start) + ' - ' + fmt(s.end)
+                            });
+                        }
+                    });
+
+                    if (roomConflicts.length > 0) {
+                        var msg = 'Room conflict detected for ' + roomToCheck + ' on ' + day + ':\n\n';
+                        roomConflicts.forEach(function (c) {
+                            msg += '• ' + c.subjCode + ' (' + c.prof + ') at ' + c.time + '\n';
+                        });
+                        msg += '\nThe room is already occupied. Please choose a different time slot or room.';
+                        return { valid: false, message: msg };
+                    }
                 }
 
                 // Teaching load is decided by the course-section allocation on the
@@ -5549,6 +5703,12 @@
                     if (typeof populateRoomSchedule !== 'undefined') populateRoomSchedule();
                     clearFICStatus(); // Clear FIC status when filters disabled
                     disableCoTeachingContainer(); // Disable co-teaching when no faculty selected
+
+                    // Clear occupied slots when no professor selected
+                    document.querySelectorAll('.occupied-slot').forEach(function (cell) {
+                        cell.classList.remove('occupied-slot');
+                    });
+
                     return;
                 }
 
@@ -6026,10 +6186,18 @@
                             grid[s.day][i] = Object.assign({}, s, { span: ei - si, isFirst: i === si, stack: [] });
                         } else if (i === si) {
                             var existing = grid[s.day][i];
-                            // Allow stacking for all days (custom blocks with multiple courses)
-                            existing.stack = existing.stack || [];
-                            existing.stack.push(s);
-                            console.log('  📦 Stacked:', s.subjCode, 'onto', existing.subjCode, 'at', s.day, slots[i]);
+                            // Only allow stacking for intentional custom blocks (marked by user)
+                            // DO NOT stack different sections - they indicate a conflict that should be fixed
+                            var canStack = existing.is_custom || s.is_custom;
+
+                            if (canStack) {
+                                existing.stack = existing.stack || [];
+                                existing.stack.push(s);
+                                console.log('  📦 Stacked (custom):', s.subjCode, 'onto', existing.subjCode, 'at', s.day, slots[i]);
+                            } else {
+                                // Log conflict - these should not overlap
+                                console.error('  ⚠️ CONFLICT DETECTED:', s.subjCode + '-' + s.section, 'overlaps with', existing.subjCode + '-' + existing.section, 'at', s.day, slots[i], '- One will be hidden!');
+                            }
                         }
                     }
                 });
@@ -6057,7 +6225,7 @@
                                 var combinedSection = stacked.map(function (item) { return item.section || ''; }).join(' / ');
 
                                 var yearOrSchoolYear = entry.schoolYear || entry.year;
-                                var bg = colorFor(entry.subjCode, yearOrSchoolYear, entry.semester);
+                                var bg = colorFor(entry.subjCode, yearOrSchoolYear, entry.semester, entry.section);
                                 var profName = entry.prof || '';
                                 if (profName.indexOf(',') > -1) {
                                     profName = profName.split(',')[0].trim();
@@ -6085,7 +6253,7 @@
                                 rows += '<td rowspan="' + span + '" data-day="' + day + '" data-slot="' + si + '" data-id="' + entry.id + '" style="padding:0;position:relative;">';
 
                                 var yearOrSchoolYear = entry.schoolYear || entry.year;
-                                var bg = colorFor(entry.subjCode, yearOrSchoolYear, entry.semester);
+                                var bg = colorFor(entry.subjCode, yearOrSchoolYear, entry.semester, entry.section);
                                 var profName = entry.prof || '';
                                 if (profName.indexOf(',') > -1) {
                                     profName = profName.split(',')[0].trim();
@@ -6440,6 +6608,165 @@
                 overlay.style.height = (er.bottom - sr.top) + 'px';
             }
 
+            // Conflict detection and visual feedback
+            function highlightConflictingSlots(draggedSchedule) {
+                console.log('🔍 Highlighting conflicts for:', draggedSchedule.subjCode, draggedSchedule.section);
+
+                var si = slotIdx(draggedSchedule.start);
+                var ei = slotIdx(draggedSchedule.end);
+                var duration = ei - si; // Duration in slots
+
+                console.log('  Duration:', duration, 'slots (' + (duration * 0.5) + 'h)');
+
+                // Build conflict map: which slots are occupied by other schedules
+                var conflicts = {}; // key: "day-slot" -> array of conflicting schedules
+
+                schedules.forEach(function (sched) {
+                    // Skip the schedule being dragged
+                    if (String(sched.id) === String(draggedSchedule.id)) return;
+
+                    var schedSi = slotIdx(sched.start);
+                    var schedEi = slotIdx(sched.end);
+
+                    // Check for conflicts: same faculty OR same room
+                    var hasFacultyConflict = sched.prof === draggedSchedule.prof;
+                    var hasRoomConflict = sched.room === draggedSchedule.room;
+
+                    if (hasFacultyConflict || hasRoomConflict) {
+                        // Mark all slots occupied by this schedule
+                        for (var slot = schedSi; slot < schedEi; slot++) {
+                            var key = sched.day + '-' + slot;
+                            if (!conflicts[key]) conflicts[key] = [];
+                            conflicts[key].push({
+                                type: hasFacultyConflict ? 'faculty' : 'room',
+                                schedule: sched
+                            });
+                        }
+                    }
+                });
+
+                // Now gray out cells that would cause conflicts
+                DAYS.forEach(function (day) {
+                    for (var slot = 0; slot < TOTAL_SLOTS; slot++) {
+                        var cell = document.querySelector('td[data-day="' + day + '"][data-slot="' + slot + '"]');
+                        if (!cell) continue;
+
+                        // Check if dropping here (starting at this slot) would conflict
+                        var wouldConflict = false;
+                        for (var i = 0; i < duration; i++) {
+                            var checkSlot = slot + i;
+                            if (checkSlot >= TOTAL_SLOTS) {
+                                wouldConflict = true; // Would extend past end of day
+                                break;
+                            }
+                            var key = day + '-' + checkSlot;
+                            if (conflicts[key]) {
+                                wouldConflict = true;
+                                break;
+                            }
+                        }
+
+                        if (wouldConflict) {
+                            cell.classList.add('conflict-slot');
+                        }
+                    }
+                });
+
+                console.log('  ✅ Highlighted', Object.keys(conflicts).length, 'conflicting slot keys');
+            }
+
+            function clearConflictHighlighting() {
+                document.querySelectorAll('.conflict-slot').forEach(function (cell) {
+                    cell.classList.remove('conflict-slot');
+                });
+                console.log('🧹 Cleared conflict highlighting');
+            }
+
+            // Track currently selected schedule block for conflict visualization
+            var selectedScheduleForConflicts = null;
+
+            // Show conflict slots for a specific schedule block when clicked
+            function showConflictSlotsForSchedule(scheduleId) {
+                // Clear any existing highlighting first
+                document.querySelectorAll('.occupied-slot').forEach(function (cell) {
+                    cell.classList.remove('occupied-slot');
+                });
+
+                // Find the schedule data
+                var targetSched = schedules.find(function (s) { return s.id === scheduleId; });
+                if (!targetSched) {
+                    console.log('⚠️ Schedule not found:', scheduleId);
+                    return;
+                }
+
+                selectedScheduleForConflicts = targetSched;
+                console.log('🎯 Showing conflicts for:', targetSched.subjCode, targetSched.section);
+
+                // Get the faculty and room for this schedule
+                var targetProf = targetSched.prof || '';
+                if (targetProf.indexOf(',') > -1) {
+                    targetProf = targetProf.split(',')[0].trim();
+                }
+                var targetRoom = targetSched.room || '';
+
+                console.log('  Faculty:', targetProf);
+                console.log('  Room:', targetRoom);
+
+                var markedCount = 0;
+
+                // Check all time slots across all days
+                DAYS.forEach(function (day) {
+                    for (var slot = 0; slot < TOTAL_SLOTS; slot++) {
+                        var cell = document.querySelector('td[data-day="' + day + '"][data-slot="' + slot + '"]');
+                        if (!cell || cell.dataset.id) continue; // Skip if cell doesn't exist or already has a block
+
+                        // Check if any schedule occupies this slot with conflicting faculty or room
+                        var hasConflict = schedules.some(function (sched) {
+                            // Skip the target schedule itself
+                            if (sched.id === scheduleId) return false;
+
+                            // Only check current semester/year
+                            var schedYear = sched.school_year || sched.schoolYear;
+                            if (schedYear !== currentSchoolYear) return false;
+                            if (sched.semester !== currentSemester) return false;
+
+                            // Check if this schedule occupies this day/slot
+                            if (sched.day !== day) return false;
+
+                            var si = slotIdx(sched.start);
+                            var ei = slotIdx(sched.end);
+                            if (slot < si || slot >= ei) return false;
+
+                            // This slot is occupied - check for conflict
+                            var schedProf = sched.prof || '';
+                            if (schedProf.indexOf(',') > -1) {
+                                schedProf = schedProf.split(',')[0].trim();
+                            }
+                            var schedRoom = sched.room || '';
+
+                            // Conflict if same faculty OR same room
+                            return (schedProf === targetProf) || (schedRoom === targetRoom && targetRoom !== '');
+                        });
+
+                        if (hasConflict) {
+                            cell.classList.add('occupied-slot');
+                            markedCount++;
+                        }
+                    }
+                });
+
+                console.log('  ✅ Marked', markedCount, 'conflicting empty cells');
+            }
+
+            // Clear conflict visualization
+            function clearConflictSlots() {
+                document.querySelectorAll('.occupied-slot').forEach(function (cell) {
+                    cell.classList.remove('occupied-slot');
+                });
+                selectedScheduleForConflicts = null;
+                console.log('🧹 Cleared conflict visualization');
+            }
+
             function attachDrawHandlers() {
                 var tbody = document.getElementById('timetable-body');
                 if (!tbody || tbody._drawBound) return;
@@ -6520,6 +6847,13 @@
                         dragEl = blk;
                         dragEl.classList.add('dragging');
                         console.log('🎯 Started dragging block:', dragId);
+
+                        // Find the schedule being dragged
+                        var draggedSchedule = schedules.find(function (s) { return String(s.id) === String(dragId); });
+                        if (draggedSchedule) {
+                            highlightConflictingSlots(draggedSchedule);
+                        }
+
                         var ghost = document.getElementById('drag-ghost');
                         if (ghost) {
                             ghost.style.background = blk.style.background;
@@ -6604,6 +6938,9 @@
 
                 console.log('🖱️ Mouseup - dragId:', dragId);
 
+                // Clear conflict highlighting
+                clearConflictHighlighting();
+
                 var ghost = document.getElementById('drag-ghost');
                 if (ghost) ghost.style.display = 'none';
 
@@ -6613,6 +6950,81 @@
                 while (td && td.tagName !== 'TD') td = td.parentElement;
 
                 console.log('  Drop target:', td ? (td.dataset.day + ' slot ' + td.dataset.slot) : 'none');
+
+                // Block drops on occupied slots (gray cells showing conflicts)
+                if (td && td.classList.contains('occupied-slot')) {
+                    console.log('❌ Cannot drop on occupied slot!');
+
+                    // Get the schedule being dragged to explain the conflict
+                    var entry = schedules.find(function (s) { return String(s.id) === String(dragId); });
+                    if (entry) {
+                        var targetDay = td.dataset.day;
+                        var targetSlot = parseInt(td.dataset.slot);
+                        var targetTime = slots[targetSlot];
+
+                        // Find what's conflicting at this time
+                        var profNormalized = entry.prof || '';
+                        if (profNormalized.indexOf(',') > -1) {
+                            profNormalized = profNormalized.split(',')[0].trim();
+                        }
+
+                        var conflictingSchedules = schedules.filter(function (s) {
+                            if (String(s.id) === String(dragId)) return false; // Skip self
+                            if (s.day !== targetDay) return false;
+
+                            var sSchoolYear = s.school_year || s.schoolYear;
+                            if (sSchoolYear !== currentSchoolYear) return false;
+                            if (s.semester !== currentSemester) return false;
+
+                            var si = slotIdx(s.start);
+                            var ei = slotIdx(s.end);
+                            if (targetSlot < si || targetSlot >= ei) return false;
+
+                            // Check if it's a faculty or room conflict
+                            var sProf = s.prof || '';
+                            if (sProf.indexOf(',') > -1) {
+                                sProf = sProf.split(',')[0].trim();
+                            }
+
+                            return (sProf === profNormalized) || (s.room === entry.room && entry.room !== '');
+                        });
+
+                        if (conflictingSchedules.length > 0) {
+                            var conf = conflictingSchedules[0];
+                            var confProf = conf.prof || '';
+                            if (confProf.indexOf(',') > -1) {
+                                confProf = confProf.split(',')[0].trim();
+                            }
+
+                            var message = '';
+                            if (confProf === profNormalized) {
+                                message = 'Faculty Conflict on ' + targetDay + ' at ' + targetTime + '\n\n' +
+                                    profNormalized + ' is already teaching:\n' +
+                                    '• ' + conf.subjCode + ' ' + (conf.section || '') + '\n' +
+                                    '  Time: ' + fmt(conf.start) + ' - ' + fmt(conf.end) + '\n\n' +
+                                    'Please choose a different time slot.';
+                            } else if (conf.room === entry.room) {
+                                message = 'Room Conflict on ' + targetDay + ' at ' + targetTime + '\n\n' +
+                                    'Room ' + entry.room + ' is already occupied by:\n' +
+                                    '• ' + conf.subjCode + ' ' + (conf.section || '') + ' (' + confProf + ')\n' +
+                                    '  Time: ' + fmt(conf.start) + ' - ' + fmt(conf.end) + '\n\n' +
+                                    'Please choose a different time slot or change the room.';
+                            }
+
+                            showConflictModal(message);
+                        } else {
+                            showConflictModal('Cannot place schedule here - time slot is already occupied.\n\nPlease choose a different time slot.');
+                        }
+                    } else {
+                        showConflictModal('Cannot place schedule here - time slot is already occupied.\n\nPlease choose a different time slot.');
+                    }
+
+                    dragEl.classList.remove('dragging');
+                    dragEl.style.opacity = '1';
+                    dragEl = null;
+                    dragId = null;
+                    return;
+                }
 
                 if (td && td.dataset && td.dataset.day && !td.dataset.id) {
                     // Use dragId directly (can be UUID string or number) - compare as strings
@@ -6874,6 +7286,34 @@
                 attachDrawHandlers();
                 attachMoveHandlers();
                 attachResizeHandlers();
+
+                // Add click handlers to show conflict visualization
+                document.querySelectorAll('.sched-block').forEach(function (block) {
+                    block.addEventListener('click', function (e) {
+                        // Don't trigger if clicking delete or resize handle
+                        if (e.target.classList.contains('sb-del') || e.target.classList.contains('sb-resize')) {
+                            return;
+                        }
+
+                        e.stopPropagation(); // Prevent bubbling to table
+                        var scheduleId = block.dataset.id;
+                        if (scheduleId) {
+                            showConflictSlotsForSchedule(scheduleId);
+                        }
+                    });
+                });
+
+                // Clear conflict visualization when clicking empty cells
+                var tbody = document.getElementById('timetable-body');
+                if (tbody && !tbody._clickBound) {
+                    tbody._clickBound = true;
+                    tbody.addEventListener('click', function (e) {
+                        // Only clear if clicking directly on a TD (empty cell)
+                        if (e.target.tagName === 'TD' && !e.target.dataset.id) {
+                            clearConflictSlots();
+                        }
+                    });
+                }
             }
 
             async function updateEntry(id, changes) {
@@ -8904,6 +9344,35 @@
             console.log('typeof window.schedules:', typeof window.schedules);
             console.log('typeof window.filtered:', typeof window.filtered);
 
+            // Populate room dropdown with ALL rooms from actual schedules
+            var roomFilter = document.getElementById('room-filter');
+            if (roomFilter && window.schedules && window.schedules.length > 0) {
+                // Get unique rooms from all schedules, sorted
+                var allRooms = [...new Set(window.schedules
+                    .map(s => s.room)
+                    .filter(r => r && r.trim() !== ''))].sort();
+
+                var currentRoom = roomFilter.value;
+                roomFilter.innerHTML = '';
+
+                allRooms.forEach(function (room) {
+                    var opt = document.createElement('option');
+                    opt.value = room;
+                    opt.textContent = room;
+                    if (room === currentRoom) opt.selected = true;
+                    roomFilter.appendChild(opt);
+                });
+
+                // If no room was selected or current room doesn't exist, select first
+                if (!currentRoom || !allRooms.includes(currentRoom)) {
+                    if (allRooms.length > 0) {
+                        roomFilter.value = allRooms[0];
+                    }
+                }
+
+                console.log('📋 Room dropdown populated with', allRooms.length, 'rooms:', allRooms);
+            }
+
             // Clear existing room blocks
             var cells = document.querySelectorAll('.room-cell');
             cells.forEach(function (cell) {
@@ -8957,12 +9426,9 @@
 
             // Use available schedules
             schedulesToUse.forEach(function (sched) {
-                // Filter by room if selected
-                // CRITICAL: Normalize room names for comparison (handle both "TCC - 01" and "TCC-01" formats)
+                // Filter by room if selected (exact match, no normalization)
                 if (selectedRoom) {
-                    var normalizedSchedRoom = sched.room.replace(/\s*-\s*/g, ' - '); // Normalize to "TCC - 01"
-                    var normalizedSelectedRoom = selectedRoom.replace(/\s*-\s*/g, ' - '); // Normalize to "TCC - 01"
-                    if (normalizedSchedRoom !== normalizedSelectedRoom) return;
+                    if (sched.room !== selectedRoom) return;
                 }
 
                 matchingCount++;
@@ -10129,8 +10595,8 @@
             // Show progress
             showGenerationProgress();
 
-            // Start generation
-            fetch('/api/schedule/generate-full', {
+            // Start generation (V2 - Independent mode with grad course protection)
+            fetch('/api/schedule/generate-full-v2', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(params)
@@ -10186,8 +10652,8 @@
             // Show draggable progress indicator
             showGenerationProgress();
 
-            // Start generation
-            fetch('/api/schedule/generate-full', {
+            // Start generation (V2 - Independent mode with grad course protection)
+            fetch('/api/schedule/generate-full-v2', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
