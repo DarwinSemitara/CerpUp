@@ -1,3 +1,4 @@
+<!-- CACHE BUSTER: 2026-11-20-10:20 - Updated conflict resolution UI -->
 <style>
     /* ── Layout ── */
     #sched-root {
@@ -1968,82 +1969,158 @@
 
         <!-- Rooms Tab (Draggable Window) -->
         <div id="rooms-tab"
-            style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);width:700px;height:500px;min-width:700px;min-height:500px;max-width:900px;max-height:650px;background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);z-index:1000;overflow:hidden;resize:both;">
-            <div style="display:flex;flex-direction:column;height:100%;">
-                <!-- Tab Header (Draggable) -->
-                <div id="rooms-tab-header"
-                    style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid #e5e7eb;background:#f9fafb;cursor:move;user-select:none;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                            stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                        <h2 style="font-size:1.1rem;font-weight:700;color:#111827;margin:0;">Rooms Management</h2>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <!-- Minimize Button -->
-                        <button onclick="minimizeRoomsTab()"
-                            style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
-                            onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'">
-                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
-                            </svg>
-                        </button>
-                        <!-- Maximize/Restore Button -->
-                        <button id="rooms-maximize-btn" onclick="toggleMaximizeRoomsTab()"
-                            style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
-                            onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'">
-                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2.5">
+            style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);width:900px;height:650px;min-width:900px;min-height:650px;max-width:1600px;max-height:800px;background:white;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);z-index:1000;overflow:hidden;resize:both;transition:width 0.3s ease;">
+            <div style="display:flex;flex-direction:row;height:100%;position:relative;">
+                <!-- Main Rooms Content -->
+                <div id="rooms-main-content"
+                    style="flex:1;display:flex;flex-direction:column;overflow:hidden;transition:all 0.3s ease;">
+                    <!-- Tab Header (Draggable) -->
+                    <div id="rooms-tab-header"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid #e5e7eb;background:#f9fafb;cursor:move;user-select:none;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
-                        </button>
-                        <!-- Close Button -->
-                        <button onclick="closeRoomsTab()"
-                            style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
-                            onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'">
-                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                            <h2 style="font-size:1.1rem;font-weight:700;color:#111827;margin:0;">Rooms Management</h2>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <!-- Room Conflicts Warning Button -->
+                            <button id="room-conflicts-btn" onclick="toggleRoomConflictsPanel()"
+                                style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;position:relative;"
+                                onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='white'"
+                                title="View Room Conflicts">
+                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span id="room-conflicts-badge"
+                                    style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:2px 5px;border-radius:10px;min-width:16px;text-align:center;"></span>
+                            </button>
+                            <!-- Maximize/Restore Button -->
+                            <button id="rooms-maximize-btn" onclick="toggleMaximizeRoomsTab()"
+                                style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
+                                onmouseover="this.style.background='#e5e7eb'"
+                                onmouseout="this.style.background='white'">
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                </svg>
+                            </button>
+                            <!-- Close Button -->
+                            <button onclick="closeRoomsTab()"
+                                style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
+                                onmouseover="this.style.background='#e5e7eb'"
+                                onmouseout="this.style.background='white'">
+                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                        <!-- Room Filter - Fixed at top -->
+                        <div style="padding:16px 24px;border-bottom:1px solid #e5e7eb;background:white;flex-shrink:0;">
+                            <label
+                                style="font-size:0.85rem;font-weight:600;color:#6b7280;margin-bottom:6px;display:block;">Select
+                                Room:</label>
+                            <select id="room-filter"
+                                style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.85rem;width:100%;max-width:300px;outline:none;">
+                                <!-- Options will be populated dynamically from actual schedule data -->
+                            </select>
+                        </div>
+
+                        <!-- Scrollable Timetable Area -->
+                        <div style="flex:1;overflow-y:auto;padding:24px;">
+                            <!-- Room Timetable -->
+                            <div class="timetable-wrap">
+                                <table class="timetable" id="room-timetable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:68px;">Time</th>
+                                            <th>Monday</th>
+                                            <th>Tuesday</th>
+                                            <th>Wednesday</th>
+                                            <th>Thursday</th>
+                                            <th>Friday</th>
+                                            <th>Saturday</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="room-timetable-body">
+                                        <!-- Generated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Tab Content -->
-                <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-                    <!-- Room Filter - Fixed at top -->
-                    <div style="padding:16px 24px;border-bottom:1px solid #e5e7eb;background:white;flex-shrink:0;">
-                        <label
-                            style="font-size:0.85rem;font-weight:600;color:#6b7280;margin-bottom:6px;display:block;">Select
-                            Room:</label>
-                        <select id="room-filter"
-                            style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.85rem;width:100%;max-width:300px;outline:none;">
-                            <!-- Options will be populated dynamically from actual schedule data -->
-                        </select>
+                <!-- Room Conflicts Panel (slides out from right side of rooms tab) -->
+                <div id="room-conflicts-panel"
+                    style="width:0;overflow:hidden;border-left:2px solid #e5e7eb;background:white;transition:width 0.3s ease;display:flex;flex-direction:column;">
+                    <!-- Panel Header -->
+                    <div
+                        style="padding:16px 20px;border-bottom:2px solid #e5e7eb;background:#f9fafb;flex-shrink:0;min-width:500px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#dc2626"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <h2 style="font-size:1.1rem;font-weight:700;color:#111827;margin:0;">Room Conflicts</h2>
+                                <span id="conflicts-count-badge"
+                                    style="background:#dc2626;color:white;font-size:0.75rem;font-weight:700;padding:2px 8px;border-radius:10px;"></span>
+                            </div>
+                            <button onclick="toggleRoomConflictsPanel()"
+                                style="width:28px;height:28px;border-radius:6px;border:none;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;transition:all 0.15s;"
+                                onmouseover="this.style.background='#e5e7eb'"
+                                onmouseout="this.style.background='white'">
+                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Scrollable Timetable Area -->
-                    <div style="flex:1;overflow-y:auto;padding:24px;">
-                        <!-- Room Timetable -->
-                        <div class="timetable-wrap">
-                            <table class="timetable" id="room-timetable">
+                    <!-- Panel Content -->
+                    <div style="flex:1;overflow-y:auto;padding:20px;min-width:500px;">
+                        <div id="conflicts-empty-state"
+                            style="display:none;text-align:center;padding:60px 20px;color:#9ca3af;">
+                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.5" style="margin:0 auto 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p style="font-size:1rem;font-weight:600;margin:0 0 8px;">No Room Conflicts</p>
+                            <p style="font-size:0.875rem;margin:0;">All rooms are properly scheduled</p>
+                        </div>
+
+                        <div id="conflicts-table-container">
+                            <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
                                 <thead>
-                                    <tr>
-                                        <th style="width:68px;">Time</th>
-                                        <th>Monday</th>
-                                        <th>Tuesday</th>
-                                        <th>Wednesday</th>
-                                        <th>Thursday</th>
-                                        <th>Friday</th>
-                                        <th>Saturday</th>
+                                    <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+                                        <th style="padding:12px;text-align:left;font-weight:600;color:#374151;">Room
+                                        </th>
+                                        <th style="padding:12px;text-align:left;font-weight:600;color:#374151;">Day &
+                                            Time
+                                        </th>
+                                        <th style="padding:12px;text-align:left;font-weight:600;color:#374151;">
+                                            Conflicting
+                                            Schedules</th>
+                                        <th style="padding:12px;text-align:center;font-weight:600;color:#374151;">Count
+                                        </th>
                                     </tr>
                                 </thead>
-                                <tbody id="room-timetable-body">
-                                    <!-- Generated by JavaScript -->
+                                <tbody id="conflicts-table-body">
+                                    <!-- Populated by JavaScript -->
                                 </tbody>
                             </table>
                         </div>
@@ -2062,7 +2139,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round"
                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span><strong>Instruction:</strong> Click and drag on any day column to create a block. Drag existing
+                <span><strong>Instruction:</strong> Click and drag on any day column to create a block. Drag
+                    existing
                     blocks to move them. Pull the bottom edge to resize.</span>
             </div>
 
@@ -2159,7 +2237,8 @@
 
                     <!-- Faculty Side Panel -->
                     <div class="faculty-side-panel" style="display:flex;flex-direction:column;">
-                        <h3 style="margin:0 0 16px 0;font-size:1rem;font-weight:600;color:#111827;flex-shrink:0;">FIC
+                        <h3 style="margin:0 0 16px 0;font-size:1rem;font-weight:600;color:#111827;flex-shrink:0;">
+                            FIC
                             Status</h3>
 
                         <!-- FIC Status Display - Scrollable Container -->
@@ -2175,7 +2254,8 @@
                             style="display:block;margin-top:auto;padding-top:12px;padding-bottom:0;flex-shrink:0;">
                             <div style="padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
                                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                                    <span style="font-weight:600;color:#374151;font-size:0.875rem;">Total Load:</span>
+                                    <span style="font-weight:600;color:#374151;font-size:0.875rem;">Total
+                                        Load:</span>
                                     <span id="fic-total-hours"
                                         style="font-weight:700;color:#6b0f1a;font-size:0.9rem;">0.0
                                         hours</span>
@@ -2353,7 +2433,8 @@
                             <input type="checkbox" id="dual-plot-toggle" onchange="toggleDualPlot()">
                             <span class="dual-plot-slider"></span>
                         </label>
-                        <span style="font-size:0.85rem;color:#374151;font-weight:500;">Dual-Plot (MW, WF, TTH)</span>
+                        <span style="font-size:0.85rem;color:#374151;font-weight:500;">Dual-Plot (MW, WF,
+                            TTH)</span>
                     </div>
                 </div>
 
@@ -2439,9 +2520,11 @@
                             <option value="TCC 12">TCC 12</option>
                         </optgroup>
                         <optgroup label="Graduate School - Undergrad">
-                            <option value="NEW Graduate School Bldg Lecture Room 201">NEW Graduate School Bldg Lecture
+                            <option value="NEW Graduate School Bldg Lecture Room 201">NEW Graduate School Bldg
+                                Lecture
                                 Room 201</option>
-                            <option value="NEW Graduate School Bldg Lecture Room 202">NEW Graduate School Bldg Lecture
+                            <option value="NEW Graduate School Bldg Lecture Room 202">NEW Graduate School Bldg
+                                Lecture
                                 Room 202</option>
                         </optgroup>
                         <optgroup label="Graduate School - Grad Courses">
@@ -5829,6 +5912,37 @@
             window.addEventListener('che-schedule-generated', function (event) {
                 console.log('🔔 CHE schedule generation completed, auto-refreshing schedules...', event.detail);
 
+                // CHECK FOR ROOM CONFLICTS FIRST
+                var conflictCount = event.detail.room_conflicts || 0;
+                console.log('%c🔍 CHE CONFLICT CHECK: ' + conflictCount + ' conflicts detected', 'background: #fef2f2; color: #dc2626; font-size: 16px; font-weight: bold; padding: 8px;');
+
+                if (conflictCount > 0) {
+                    console.log('%c⚠️ SHOWING CONFLICT PROMPT', 'background: #fef2f2; color: #dc2626; font-size: 16px; font-weight: bold; padding: 8px;');
+
+                    // DEBUG: Temporary alert to verify this code path is executing
+                    alert('🔍 CONFLICT DETECTION: Found ' + conflictCount + ' room conflicts. Showing resolution prompt now.');
+
+                    // Show conflict detection message with resolution prompt
+                    showScheduleAIMessage(
+                        'Schedule generation complete. Detected ' + conflictCount + ' room conflict' + (conflictCount === 1 ? '' : 's') + '.\n\n' +
+                        'Would you like to run automatic conflict resolution?',
+                        false
+                    );
+
+                    // Show Yes/No buttons for conflict resolution
+                    showConflictResolutionButtons();
+
+                    // Still reload schedules to show them
+                    if (typeof loadSchedules === 'function') {
+                        loadSchedules();
+                    }
+
+                    return; // Exit early, don't show the success modal
+                }
+
+                console.log('%c✅ NO CONFLICTS - showing success modal', 'background: #f0fdf4; color: #16a34a; font-size: 14px; font-weight: bold; padding: 8px;');
+
+                // NO CONFLICTS - proceed with normal success flow
                 // Show full-screen loading modal (blocks all interactions)
                 showScheduleLoadingModal(event.detail.scheduleCount || 0);
 
@@ -9468,6 +9582,11 @@
                 var block = document.createElement('div');
                 block.className = 'room-block';
 
+                // Add data attribute for conflict highlighting
+                block.setAttribute('data-schedule-id', sched.id);
+                block.setAttribute('data-room', sched.room);
+                block.setAttribute('data-day', sched.day);
+
                 // Check if this schedule belongs to current user (member)
                 var isCurrentUserSchedule = false;
                 if (window.currentUser && window.currentUser.role === 'user') {
@@ -9604,6 +9723,426 @@
                 populateRoomSchedule();
             }
         };
+
+        // ═══ Room Conflicts Detection & Panel ═══
+        var conflictsPanelState = {
+            isOpen: false
+        };
+
+        window.toggleRoomConflictsPanel = function () {
+            var panel = document.getElementById('room-conflicts-panel');
+            var roomsTab = document.getElementById('rooms-tab');
+
+            if (!conflictsPanelState.isOpen) {
+                // Open panel - expand rooms tab width and show conflicts panel
+                roomsTab.style.width = '1400px';
+                panel.style.width = '500px';
+
+                // Detect and display conflicts
+                detectAndDisplayRoomConflicts();
+                conflictsPanelState.isOpen = true;
+            } else {
+                // Close panel - restore rooms tab width
+                roomsTab.style.width = '900px';
+                panel.style.width = '0';
+                conflictsPanelState.isOpen = false;
+            }
+        };
+
+        function detectAndDisplayRoomConflicts() {
+            console.log('🔍 Detecting room conflicts...');
+
+            // Get current semester and school year from the dropdowns
+            var schoolYearSelect = document.getElementById('schoolyear-select');
+            var semesterSelect = document.getElementById('semester-select');
+
+            var currentSchoolYear = schoolYearSelect ? schoolYearSelect.value : '';
+            var currentSemester = semesterSelect ? semesterSelect.value : '';
+
+            console.log('📅 Current filters - School Year:', currentSchoolYear, 'Semester:', currentSemester);
+
+            // Get schedules from global window.schedules
+            var schedules = window.schedules || [];
+
+            console.log('📊 Total schedules before filter:', schedules.length);
+
+            // Filter by current school year and semester
+            schedules = schedules.filter(function (s) {
+                return s.schoolYear === currentSchoolYear && s.semester === currentSemester;
+            });
+
+            console.log('📊 Schedules after filter:', schedules.length);
+
+            // Additional filters: exclude Saturday, grad school rooms
+            schedules = schedules.filter(function (s) {
+                // Exclude Saturday
+                if (s.day === 'Saturday') return false;
+
+                // Exclude grad school rooms
+                if (s.room && s.room.includes('Graduate School')) return false;
+
+                return true;
+            });
+
+            console.log('📊 After excluding Saturday & grad rooms:', schedules.length);
+
+            if (!schedules || schedules.length === 0) {
+                console.log('⚠️ No schedules to check for conflicts');
+                showNoConflicts();
+                return;
+            }
+
+            // Helper function to check if two time ranges overlap
+            function timesOverlap(start1, end1, start2, end2) {
+                // Convert times to minutes for comparison
+                function timeToMinutes(timeStr) {
+                    var parts = timeStr.split(':');
+                    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                }
+
+                var s1 = timeToMinutes(start1);
+                var e1 = timeToMinutes(end1);
+                var s2 = timeToMinutes(start2);
+                var e2 = timeToMinutes(end2);
+
+                // Check if ranges overlap
+                return (s1 < e2 && s2 < e1);
+            }
+
+            // Group schedules by room, day, and check for time overlaps
+            var conflicts = [];
+            var roomDaySchedules = {};
+
+            // Group schedules by room and day
+            schedules.forEach(function (schedule) {
+                if (!schedule.room || !schedule.day || !schedule.start || !schedule.end) {
+                    return;
+                }
+
+                var room = schedule.room.trim();
+                var day = schedule.day.trim();
+                var key = room + '|' + day;
+
+                if (!roomDaySchedules[key]) {
+                    roomDaySchedules[key] = [];
+                }
+
+                roomDaySchedules[key].push({
+                    id: schedule.id,
+                    subjCode: schedule.subjCode,
+                    section: schedule.section,
+                    prof: schedule.prof,
+                    startTime: schedule.start,
+                    endTime: schedule.end,
+                    room: room,
+                    day: day
+                });
+            });
+
+            // Track unique conflicts to avoid duplicates (A+B and B+A counting as 2)
+            var conflictKeys = {};
+
+            // Find overlapping schedules (count each unique pair once)
+            Object.keys(roomDaySchedules).forEach(function (key) {
+                var scheduleList = roomDaySchedules[key];
+
+                if (scheduleList.length > 1) {
+                    console.log('🔍 Checking', scheduleList.length, 'schedules for', key);
+                }
+
+                // Check each pair of schedules for overlap
+                for (var i = 0; i < scheduleList.length; i++) {
+                    for (var j = i + 1; j < scheduleList.length; j++) {
+                        var sched1 = scheduleList[i];
+                        var sched2 = scheduleList[j];
+
+                        // Check if they overlap
+                        if (timesOverlap(sched1.startTime, sched1.endTime, sched2.startTime, sched2.endTime)) {
+                            // Check if it's co-teaching (same course+section)
+                            var course1 = sched1.subjCode + '-' + sched1.section;
+                            var course2 = sched2.subjCode + '-' + sched2.section;
+
+                            // Check if it's a stacked schedule (same course, section, time, room - intentionally stacked)
+                            var isStacked = (course1 === course2 &&
+                                sched1.startTime === sched2.startTime &&
+                                sched1.endTime === sched2.endTime);
+
+                            var isSameCourse = (course1 === course2);
+
+                            console.log('⏱️ Time overlap found:', {
+                                room: key,
+                                sched1: course1 + ' ' + sched1.startTime + '-' + sched1.endTime,
+                                sched2: course2 + ' ' + sched2.startTime + '-' + sched2.endTime,
+                                sameCourse: isSameCourse,
+                                isStacked: isStacked
+                            });
+
+                            if (!isSameCourse && !isStacked) {
+                                // Create a unique key for this conflict pair (sorted IDs to prevent A+B and B+A duplicates)
+                                var ids = [sched1.id, sched2.id].sort();
+                                var conflictKey = ids[0] + '|' + ids[1];
+
+                                // Only add if we haven't seen this pair before
+                                if (!conflictKeys[conflictKey]) {
+                                    conflictKeys[conflictKey] = true;
+                                    console.log('✅ REAL CONFLICT - Adding to list (key:', conflictKey, ')');
+
+                                    conflicts.push({
+                                        room: sched1.room,
+                                        day: sched1.day,
+                                        startTime: sched1.startTime,
+                                        endTime: sched1.endTime,
+                                        schedules: [
+                                            {
+                                                id: sched1.id,
+                                                subjCode: sched1.subjCode,
+                                                section: sched1.section,
+                                                prof: sched1.prof,
+                                                startTime: sched1.startTime,
+                                                endTime: sched1.endTime
+                                            },
+                                            {
+                                                id: sched2.id,
+                                                subjCode: sched2.subjCode,
+                                                section: sched2.section,
+                                                prof: sched2.prof,
+                                                startTime: sched2.startTime,
+                                                endTime: sched2.endTime
+                                            }
+                                        ]
+                                    });
+                                } else {
+                                    console.log('⏭️ Skipping duplicate conflict pair');
+                                }
+                            } else {
+                                console.log('⏭️ Skipping (co-teaching or stacked)');
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('📊 Found ' + conflicts.length + ' room conflicts');
+
+            if (conflicts.length === 0) {
+                showNoConflicts();
+            } else {
+                displayConflicts(conflicts);
+            }
+
+            // Update badge count
+            updateConflictsBadge(conflicts.length);
+        }
+
+        function showNoConflicts() {
+            document.getElementById('conflicts-empty-state').style.display = 'block';
+            document.getElementById('conflicts-table-container').style.display = 'none';
+            document.getElementById('conflicts-count-badge').textContent = '0';
+        }
+
+        function displayConflicts(conflicts) {
+            document.getElementById('conflicts-empty-state').style.display = 'none';
+            document.getElementById('conflicts-table-container').style.display = 'block';
+            document.getElementById('conflicts-count-badge').textContent = conflicts.length;
+
+            var tbody = document.getElementById('conflicts-table-body');
+            tbody.innerHTML = '';
+
+            conflicts.forEach(function (conflict) {
+                var row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #e5e7eb';
+                row.style.transition = 'background-color 0.15s';
+                row.style.cursor = 'pointer';
+                row.onmouseover = function () { this.style.backgroundColor = '#f3f4f6'; };
+                row.onmouseout = function () { this.style.backgroundColor = 'transparent'; };
+
+                // Add click handler to navigate to room and highlight conflicts
+                row.onclick = function () {
+                    console.log('🎯 Clicked conflict for room:', conflict.room);
+                    console.log('🎯 Conflict schedule IDs:', conflict.schedules.map(function (s) { return s.id; }));
+
+                    // Switch to the room filter
+                    var roomFilter = document.getElementById('room-filter');
+                    if (roomFilter) {
+                        roomFilter.value = conflict.room;
+                        // Trigger the filter
+                        filterRoomSchedule();
+
+                        // Highlight the conflicting schedules
+                        setTimeout(function () {
+                            conflict.schedules.forEach(function (schedule) {
+                                console.log('🔍 Looking for schedule ID:', schedule.id);
+
+                                // Find the room blocks in the timetable
+                                var roomBlocks = document.querySelectorAll('.room-block');
+                                console.log('📊 Total room blocks found:', roomBlocks.length);
+
+                                roomBlocks.forEach(function (block) {
+                                    var blockId = block.getAttribute('data-schedule-id');
+
+                                    if (blockId == schedule.id) { // Use == to handle string vs number
+                                        console.log('✅ Found matching block for ID:', blockId);
+
+                                        // Add subtle highlight effect (thinner, less bright red)
+                                        block.style.outline = '2px solid #f87171';
+                                        block.style.outlineOffset = '0px';
+                                        block.style.zIndex = '1000';
+                                        block.style.boxShadow = '0 0 0 2px rgba(248, 113, 113, 0.2), 0 4px 6px rgba(0,0,0,0.12)';
+
+                                        // Scroll into view
+                                        block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                                        // Remove highlight after 4 seconds
+                                        setTimeout(function () {
+                                            block.style.outline = '';
+                                            block.style.outlineOffset = '';
+                                            block.style.zIndex = '2';
+                                            block.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
+                                        }, 4000);
+                                    }
+                                });
+                            });
+                        }, 300); // Increased delay to ensure room view renders
+                    }
+                };
+
+                // Room cell
+                var roomCell = document.createElement('td');
+                roomCell.style.padding = '12px';
+                roomCell.style.fontWeight = '600';
+                roomCell.style.color = '#111827';
+                roomCell.textContent = conflict.room;
+                row.appendChild(roomCell);
+
+                // Day & Time cell
+                var timeCell = document.createElement('td');
+                timeCell.style.padding = '12px';
+                timeCell.style.color = '#6b7280';
+
+                // Format overlapping time range
+                var allTimes = conflict.schedules.map(function (s) {
+                    return s.startTime + '-' + s.endTime;
+                }).join(' vs ');
+
+                timeCell.innerHTML = '<div style="font-weight:500;color:#374151;">' + conflict.day + '</div>' +
+                    '<div style="font-size:0.8125rem;color:#9ca3af;">' + allTimes + '</div>';
+                row.appendChild(timeCell);
+
+                // Conflicting Schedules cell
+                var schedulesCell = document.createElement('td');
+                schedulesCell.style.padding = '12px';
+                var schedulesHTML = conflict.schedules.map(function (s) {
+                    return '<div style="margin:4px 0;padding:6px 10px;background:#fef2f2;border-left:3px solid #dc2626;border-radius:4px;font-size:0.8125rem;">' +
+                        '<span style="font-weight:600;color:#dc2626;">' + s.subjCode + '-' + s.section + '</span>' +
+                        '<span style="color:#6b7280;margin-left:8px;">(' + s.prof + ')</span>' +
+                        '</div>';
+                }).join('');
+                schedulesCell.innerHTML = schedulesHTML;
+                row.appendChild(schedulesCell);
+
+                // Count cell (showing number of courses in conflict, which is always 2 for a pair)
+                var countCell = document.createElement('td');
+                countCell.style.padding = '12px';
+                countCell.style.textAlign = 'center';
+                countCell.innerHTML = '<span style="display:inline-block;background:#dc2626;color:white;font-weight:700;padding:4px 12px;border-radius:12px;font-size:0.8125rem;">' +
+                    conflict.schedules.length + '</span>';
+                row.appendChild(countCell);
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateConflictsBadge(count) {
+            var badge = document.getElementById('room-conflicts-badge');
+
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Auto-detect conflicts when rooms tab opens or schedules change
+        var originalPopulateRoom = populateRoomSchedule;
+        populateRoomSchedule = function () {
+            originalPopulateRoom();
+            // Update conflicts count
+            var schedules = window.filtered && window.filtered.length > 0 ? window.filtered : (window.schedules || []);
+            if (schedules && schedules.length > 0) {
+                detectConflictsCount();
+            }
+        };
+
+        function detectConflictsCount() {
+            // Get current semester and school year
+            var schoolYearSelect = document.getElementById('schoolyear-select');
+            var semesterSelect = document.getElementById('semester-select');
+
+            var currentSchoolYear = schoolYearSelect ? schoolYearSelect.value : '';
+            var currentSemester = semesterSelect ? semesterSelect.value : '';
+
+            var schedules = window.schedules || [];
+
+            // Filter by current school year and semester
+            schedules = schedules.filter(function (s) {
+                return s.schoolYear === currentSchoolYear && s.semester === currentSemester;
+            });
+
+            // Exclude Saturday, grad school rooms
+            schedules = schedules.filter(function (s) {
+                if (s.day === 'Saturday') return false;
+                if (s.room && s.room.includes('Graduate School')) return false;
+                return true;
+            });
+
+            // Helper function to check if two time ranges overlap
+            function timesOverlap(start1, end1, start2, end2) {
+                function timeToMinutes(timeStr) {
+                    var parts = timeStr.split(':');
+                    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                }
+                var s1 = timeToMinutes(start1);
+                var e1 = timeToMinutes(end1);
+                var s2 = timeToMinutes(start2);
+                var e2 = timeToMinutes(end2);
+                return (s1 < e2 && s2 < e1);
+            }
+
+            var conflictCount = 0;
+            var roomDaySchedules = {};
+
+            // Group by room and day
+            schedules.forEach(function (schedule) {
+                if (!schedule.room || !schedule.day || !schedule.start || !schedule.end) return;
+                var key = schedule.room.trim() + '|' + schedule.day.trim();
+                if (!roomDaySchedules[key]) roomDaySchedules[key] = [];
+                roomDaySchedules[key].push(schedule);
+            });
+
+            // Check for overlaps
+            Object.keys(roomDaySchedules).forEach(function (key) {
+                var schedList = roomDaySchedules[key];
+                for (var i = 0; i < schedList.length; i++) {
+                    for (var j = i + 1; j < schedList.length; j++) {
+                        if (timesOverlap(schedList[i].start, schedList[i].end, schedList[j].start, schedList[j].end)) {
+                            var course1 = schedList[i].subjCode + '-' + schedList[i].section;
+                            var course2 = schedList[j].subjCode + '-' + schedList[j].section;
+
+                            // Check if stacked (same course, section, time)
+                            var isStacked = (course1 === course2 &&
+                                schedList[i].start === schedList[j].start &&
+                                schedList[i].end === schedList[j].end);
+
+                            if (course1 !== course2 && !isStacked) conflictCount++;
+                        }
+                    }
+                }
+            });
+
+            updateConflictsBadge(conflictCount);
+        }
+
 
         // ═══ Unsaved Changes Warning and Cleanup ═══
 
@@ -10218,13 +10757,17 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // Helper function to show AI response
+        // Helper function to show AI response (uses global CHE container)
         function showScheduleAIMessage(text, isError) {
-            var messagesContainer = document.getElementById('schedule-chat-messages');
-            if (!messagesContainer) return;
+            // Use global CHE messages container instead of local one
+            var messagesContainer = document.getElementById('che-messages');
+            if (!messagesContainer) {
+                console.warn('⚠️ CHE messages container not found');
+                return;
+            }
 
             var aiMsg = document.createElement('div');
-            aiMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+            aiMsg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;';
             var bgColor = isError ? '#fee2e2' : '#f3f4f6';
             var textColor = isError ? '#dc2626' : '#111827';
             aiMsg.innerHTML =
@@ -10239,6 +10782,8 @@
 
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            console.log('✅ Message added to CHE chat');
         }
 
         // Render interactive form for action confirmation
@@ -10826,6 +11371,11 @@
                 fetch('/api/schedule/generate-progress')
                     .then(function (res) { return res.json(); })
                     .then(function (progress) {
+                        // DEBUG: Log every poll response
+                        if (progress.status === 'completed') {
+                            console.log('📥 POLL received completion:', progress);
+                            console.log('   room_conflicts field:', progress.room_conflicts);
+                        }
                         updateProgressWidget(progress);
 
                         // Track whether the backend is still making progress
@@ -10884,15 +11434,37 @@
 
                             hideGenerationProgress();
 
-                            // Ask CHE if user is satisfied with the generated schedule
-                            showScheduleAIMessage(
-                                (progress.message || 'Schedule generation finished.') +
-                                '\n\nReview the timetable for that term. Blocks labeled GA were produced by the genetic algorithm. Use Re-generate if you want another run (that replaces the target term).',
-                                false
-                            );
+                            // Check if generation result includes conflict count
+                            console.log('🔍 FRONTEND DEBUG: Processing completion');
+                            console.log('  progress object:', progress);
+                            console.log('  progress.room_conflicts:', progress.room_conflicts);
+                            console.log('  typeof progress.room_conflicts:', typeof progress.room_conflicts);
 
-                            // Add Save and Re-generate buttons (will disappear on page refresh)
-                            showSaveAndRegenerateButtons(false);
+                            var conflictCount = progress.room_conflicts || 0;
+                            console.log('  conflictCount after || 0:', conflictCount);
+                            console.log('  conflictCount > 0?', conflictCount > 0);
+
+                            if (conflictCount > 0) {
+                                // Show conflict detection message with resolution prompt
+                                showScheduleAIMessage(
+                                    'Schedule generation complete. Detected ' + conflictCount + ' room conflict' + (conflictCount === 1 ? '' : 's') + '.\n\n' +
+                                    'Would you like to run automatic conflict resolution?',
+                                    false
+                                );
+
+                                // Show Yes/No buttons for conflict resolution
+                                showConflictResolutionButtons();
+                            } else {
+                                // No conflicts - show normal completion message
+                                showScheduleAIMessage(
+                                    (progress.message || 'Schedule generation finished.') +
+                                    '\n\nNo room conflicts detected. Review the timetable for that term.',
+                                    false
+                                );
+
+                                // Add Save and Re-generate buttons
+                                showSaveAndRegenerateButtons(false);
+                            }
 
                             // Reload schedules without page refresh (loads into generated_schedules view)
                             loadGeneratedSchedules();
@@ -10987,6 +11559,124 @@
                 });
         };
 
+        // Show conflict resolution Yes/No buttons (uses global CHE container)
+        function showConflictResolutionButtons() {
+            // Use global CHE messages container
+            var container = document.getElementById('che-messages');
+            if (!container) {
+                console.warn('⚠️ CHE messages container not found');
+                return;
+            }
+
+            var buttonsCard = document.createElement('div');
+            buttonsCard.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:white;margin:12px 0;';
+            buttonsCard.id = 'conflict-resolution-buttons';
+
+            buttonsCard.innerHTML = `
+                <div style="display:flex;gap:12px;justify-content:center;">
+                    <button onclick="runConflictResolution()" style="
+                        background:#6b0f1a;
+                        color:white;
+                        border:none;
+                        padding:10px 24px;
+                        border-radius:6px;
+                        font-weight:600;
+                        cursor:pointer;
+                        font-size:14px;
+                        transition:background 0.15s;
+                    " onmouseover="this.style.background='#7d1220'" onmouseout="this.style.background='#6b0f1a'">
+                        Yes, Resolve Conflicts
+                    </button>
+                    <button onclick="skipConflictResolution()" style="
+                        background:#f3f4f6;
+                        color:#374151;
+                        border:1px solid #d1d5db;
+                        padding:10px 24px;
+                        border-radius:6px;
+                        font-weight:600;
+                        cursor:pointer;
+                        font-size:14px;
+                        transition:background 0.15s;
+                    " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                        No, Keep As Is
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(buttonsCard);
+            container.scrollTop = container.scrollHeight;
+
+            console.log('✅ Conflict resolution buttons added to CHE chat');
+        }
+
+        // Run automatic conflict resolution
+        window.runConflictResolution = function () {
+            // Remove buttons using the new ID
+            var buttonsCard = document.getElementById('conflict-resolution-buttons');
+            if (buttonsCard) {
+                buttonsCard.style.opacity = '0';
+                buttonsCard.style.transform = 'scale(0.95)';
+                buttonsCard.style.transition = 'all 0.15s';
+                setTimeout(function () { buttonsCard.remove(); }, 150);
+            }
+
+            showScheduleAIMessage('Running automatic conflict resolution...', false);
+
+            // Get current school year and semester from dropdowns
+            var schoolYear = document.getElementById('schoolyear-select').value;
+            var semester = document.getElementById('semester-select').value;
+
+            fetch('/api/schedules/resolve-conflicts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    school_year: schoolYear,
+                    semester: semester
+                })
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        var message = 'Conflict resolution complete! ' + data.message;
+                        showScheduleAIMessage(message, false);
+
+                        // Reload schedules to show updated assignments
+                        loadGeneratedSchedules();
+
+                        // Show Save and Re-generate buttons
+                        showSaveAndRegenerateButtons(false);
+                    } else {
+                        showScheduleAIMessage('Conflict resolution failed: ' + (data.error || data.message || 'Unknown error'), true);
+
+                        // Still show Save/Re-generate buttons in case user wants to save anyway
+                        showSaveAndRegenerateButtons(false);
+                    }
+                })
+                .catch(function (err) {
+                    showScheduleAIMessage('Error running conflict resolution: ' + err.message, true);
+
+                    // Show Save/Re-generate buttons
+                    showSaveAndRegenerateButtons(false);
+                });
+        };
+
+        // Skip conflict resolution
+        window.skipConflictResolution = function () {
+            // Remove buttons using the new ID
+            var buttonsCard = document.getElementById('conflict-resolution-buttons');
+            if (buttonsCard) {
+                buttonsCard.style.opacity = '0';
+                buttonsCard.style.transform = 'scale(0.95)';
+                buttonsCard.style.transition = 'all 0.15s';
+                setTimeout(function () { buttonsCard.remove(); }, 150);
+            }
+
+            showScheduleAIMessage('Keeping schedules as is. You can view conflicts in the Rooms tab.', false);
+
+            // Show Save and Re-generate buttons
+            showSaveAndRegenerateButtons(false);
+        };
+
         function renderAddScheduleForm(container, params) {
             // TODO: Implement add schedule form with dropdowns for prof, room, section, etc.
             renderGenericConfirmation(container, { action: 'add_schedule', params: params });
@@ -11006,6 +11696,47 @@
         if (typeof loadChatHistory === 'function') {
             loadChatHistory();
         }
+
+        // ========================================
+        // TEMPORARY: Test conflict resolution UI
+        // ========================================
+        window.testConflictResolutionUI = function () {
+            console.log('🧪 Testing conflict resolution UI');
+
+            // Show the conflict message
+            showScheduleAIMessage(
+                'Schedule generation complete. Detected 18 room conflicts.\n\n' +
+                'Would you like to run automatic conflict resolution?',
+                false
+            );
+
+            // Show Yes/No buttons
+            showConflictResolutionButtons();
+        };
+
+        // Show test button in CHE panel when on schedules page (temporary)
+        setTimeout(function () {
+            console.log('🔍 TEST BUTTON CHECK:');
+            console.log('  Path:', window.location.pathname);
+            console.log('  Includes schedules?', window.location.pathname.includes('schedules'));
+
+            var testBtn = document.getElementById('che-test-conflict-btn');
+            console.log('  Button element found?', !!testBtn);
+
+            if (window.location.pathname.includes('schedules')) {
+                if (testBtn) {
+                    testBtn.style.display = 'block';
+                    console.log('✅ Test conflict button is now visible in CHE panel');
+                } else {
+                    console.log('⚠️ Test button element not found in DOM - check admin_base.html');
+                }
+            }
+        }, 1000);
+                } else {
+            console.log('⚠️ Test button element not found in DOM');
+        }
+            }
+        }, 1000);
     </script>
 
 

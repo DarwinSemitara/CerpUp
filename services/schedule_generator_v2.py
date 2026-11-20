@@ -26,6 +26,177 @@ import uuid
 
 logger = logging.getLogger(__name__)
 
+
+def detect_room_conflicts(schedules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Detect room conflicts in generated schedules.
+    Same logic as frontend detection:
+    - Excludes Saturday schedules
+    - Excludes grad school rooms
+    - Excludes co-teaching (same course+section, different faculty)
+    - Excludes stacked schedules (same course+section+time)
+
+    Returns list of conflicts with details.
+    """
+    logger.info(f"🔍 Starting conflict detection on {len(schedules)} schedules")
+
+    conflicts = []
+    conflict_keys = {}  # Track unique conflicts
+
+    # Helper function to convert time to minutes
+    def time_to_minutes(time_str):
+        if not time_str:
+            return 0
+        # Handle both "HH:MM" and "HH:MM:SS" formats
+        parts = str(time_str).split(':')
+        return int(parts[0]) * 60 + int(parts[1])
+
+    # Helper function to check time overlap
+    def times_overlap(start1, end1, start2, end2):
+        s1 = time_to_minutes(start1)
+        e1 = time_to_minutes(end1)
+        s2 = time_to_minutes(start2)
+        e2 = time_to_minutes(end2)
+        # Overlap if: start1 < end2 AND start2 < end1
+        overlaps = (s1 < e2 and s2 < e1)
+        return overlaps
+
+    # Filter schedules
+    filtered_schedules = []
+    saturday_count = 0
+    grad_count = 0
+
+    for s in schedules:
+        # Exclude Saturday
+        if s.get('day') == 'Saturday':
+            saturday_count += 1
+            continue
+        # Exclude grad school rooms
+        if s.get('room') and 'Graduate School' in s.get('room', ''):
+            grad_count += 1
+            continue
+        filtered_schedules.append(s)
+
+    logger.info(
+        f"📊 Filtered: {len(filtered_schedules)} schedules (excluded {saturday_count} Saturday, {grad_count} grad school)")
+
+    # Group by room and day
+    room_day_schedules = {}
+    for schedule in filtered_schedules:
+        room = schedule.get('room', '').strip()
+        day = schedule.get('day', '').strip()
+
+        if not room or not day:
+            continue
+
+        key = f"{room}|{day}"
+        if key not in room_day_schedules:
+            room_day_schedules[key] = []
+        room_day_schedules[key].append(schedule)
+
+    logger.info(
+        f"📊 Grouped into {len(room_day_schedules)} room+day combinations")
+
+    # Check for overlaps in each room+day
+    total_pairs_checked = 0
+    overlaps_found = 0
+    co_teaching_skipped = 0
+    stacked_skipped = 0
+
+    for key, schedule_list in room_day_schedules.items():
+        if len(schedule_list) < 2:
+            continue
+
+        # Log rooms with multiple schedules
+        if len(schedule_list) > 2:
+            logger.debug(f"  Checking {key}: {len(schedule_list)} schedules")
+
+        for i in range(len(schedule_list)):
+            for j in range(i + 1, len(schedule_list)):
+                sched1 = schedule_list[i]
+                sched2 = schedule_list[j]
+                total_pairs_checked += 1
+
+                # Check if times overlap
+                if times_overlap(
+                    sched1.get('start', ''),
+                    sched1.get('end', ''),
+                    sched2.get('start', ''),
+                    sched2.get('end', '')
+                ):
+                    overlaps_found += 1
+
+                    # Check if co-teaching (same course+section, different faculty)
+                    course1 = f"{sched1.get('subjCode', '')}-{sched1.get('section', '')}"
+                    course2 = f"{sched2.get('subjCode', '')}-{sched2.get('section', '')}"
+
+                    is_co_teaching = (
+                        course1 == course2 and
+                        sched1.get('prof', '') != sched2.get('prof', '')
+                    )
+
+                    # Check if stacked (same course+section+time)
+                    is_stacked = (
+                        course1 == course2 and
+                        sched1.get('start', '') == sched2.get('start', '') and
+                        sched1.get('end', '') == sched2.get('end', '')
+                    )
+
+                    if is_co_teaching:
+                        co_teaching_skipped += 1
+                        logger.debug(
+                            f"  ⏭️ Skipping co-teaching: {course1} ({sched1.get('prof', '')} + {sched2.get('prof', '')})")
+                        continue
+
+                    if is_stacked:
+                        stacked_skipped += 1
+                        logger.debug(f"  ⏭️ Skipping stacked: {course1}")
+                        continue
+
+                    # Real conflict - create unique key to avoid duplicates
+                    ids = sorted([
+                        str(sched1.get('id', str(i))),
+                        str(sched2.get('id', str(j)))
+                    ])
+                    conflict_key = f"{ids[0]}|{ids[1]}"
+
+                    if conflict_key not in conflict_keys:
+                        conflict_keys[conflict_key] = True
+                        conflicts.append({
+                            'room': sched1.get('room', ''),
+                            'day': sched1.get('day', ''),
+                            'schedules': [
+                                {
+                                    'id': sched1.get('id'),
+                                    'subjCode': sched1.get('subjCode', ''),
+                                    'section': sched1.get('section', ''),
+                                    'prof': sched1.get('prof', ''),
+                                    'start': sched1.get('start', ''),
+                                    'end': sched1.get('end', '')
+                                },
+                                {
+                                    'id': sched2.get('id'),
+                                    'subjCode': sched2.get('subjCode', ''),
+                                    'section': sched2.get('section', ''),
+                                    'prof': sched2.get('prof', ''),
+                                    'start': sched2.get('start', ''),
+                                    'end': sched2.get('end', '')
+                                }
+                            ]
+                        })
+                        logger.debug(
+                            f"  ⚠️ CONFLICT: {key} - {course1} vs {course2}")
+
+    logger.info(f"📊 Detection summary:")
+    logger.info(f"  - Checked {total_pairs_checked} schedule pairs")
+    logger.info(f"  - Found {overlaps_found} time overlaps")
+    logger.info(f"  - Skipped {co_teaching_skipped} co-teaching")
+    logger.info(f"  - Skipped {stacked_skipped} stacked")
+    logger.info(f"  - Result: {len(conflicts)} REAL conflicts")
+
+    return conflicts
+
+
 # Graduate courses (completely frozen)
 GRAD_COURSES = [
     'CERP 200', 'CERP 201', 'CERP 211', 'CERP 220', 'CERP 221',
@@ -996,7 +1167,7 @@ def generate_schedule_v2(
             initial_chromosome=genes,
             gene_groups=gene_groups,  # Pass synchronized groups
             rooms=V2_AVAILABLE_ROOMS,
-            pop_size=50,  # Increased from 30 for better exploration
+            pop_size=70,  # Increased to 70 for better conflict resolution
             max_generations=800,  # Increased from 500 for more optimization
             time_limit=300.0,  # 5 minutes (increased from 3)
             progress_callback=ga_progress
@@ -1095,13 +1266,40 @@ def generate_schedule_v2(
 
         logger.info(f"Generated {len(schedules)} total schedules")
 
+        # Detect room conflicts in generated schedules
+        logger.info("=" * 70)
+        logger.info("POST-GENERATION CONFLICT DETECTION")
+        logger.info("=" * 70)
+
+        room_conflicts = detect_room_conflicts(schedules)
+        conflict_count = len(room_conflicts)
+
+        logger.info(
+            f"✅ Post-generation conflict detection complete: {conflict_count} room conflicts found")
+
+        if conflict_count > 0:
+            logger.warning(
+                f"⚠️ CONFLICTS DETECTED: {conflict_count} room conflicts need resolution")
+            # Log first few conflicts for debugging
+            for i, conflict in enumerate(room_conflicts[:3]):
+                logger.warning(
+                    f"  Conflict {i+1}: Room {conflict['room']} on {conflict['day']}")
+                for sched in conflict['schedules']:
+                    logger.warning(
+                        f"    - {sched['subjCode']}-{sched['section']} ({sched['prof']}) {sched['start']}-{sched['end']}")
+        else:
+            logger.info("✅ No room conflicts detected - schedule is clean!")
+
+        logger.info("=" * 70)
+
         return {
             'success': True,
             'message': f'V3 Hybrid generation complete ({final_fitness:.0f} conflicts)',
             'schedules': schedules,
             'warnings': warnings,
             'fitness': final_fitness,
-            'details': details
+            'details': details,
+            'room_conflicts': conflict_count  # Add conflict count to response
         }
 
     except Exception as e:
@@ -1112,3 +1310,283 @@ def generate_schedule_v2(
             'schedules': frozen_schedules,
             'warnings': warnings + [str(e)]
         }
+
+
+def resolve_room_conflicts(
+    schedules: List[Dict[str, Any]],
+    conflicts: List[Dict[str, Any]],
+    available_rooms: List[str],
+    school_year: str,
+    semester: str
+) -> Dict[str, Any]:
+    """
+    Automatically resolve room conflicts by reassigning time/room for conflicting schedules.
+
+    Rules:
+    1. Preserve MW/TTH/MWF patterns (paired schedules move together)
+    2. Keep duration and units unchanged
+    3. Try 6-hour daily limit first, allow 8-hour emergency fallback (only 1 day per faculty)
+    4. Only modify conflicting schedules, leave others untouched
+
+    Returns:
+    {
+        'success': bool,
+        'resolved_count': int,
+        'updated_schedules': List[Dict],
+        'emergency_exceptions': List[str],  # Faculty who used 8-hour exception
+        'unresolved': List[Dict]  # Conflicts that couldn't be resolved
+    }
+    """
+    logger.info(f"Starting conflict resolution for {len(conflicts)} conflicts")
+
+    # Helper functions
+    def time_to_minutes(time_str):
+        parts = time_str.split(':')
+        return int(parts[0]) * 60 + int(parts[1])
+
+    def minutes_to_time(minutes):
+        hours = minutes // 60
+        mins = minutes % 60
+        return f"{hours:02d}:{mins:02d}"
+
+    def get_duration_minutes(start, end):
+        return time_to_minutes(end) - time_to_minutes(start)
+
+    def times_overlap(start1, end1, start2, end2):
+        s1 = time_to_minutes(start1)
+        e1 = time_to_minutes(end1)
+        s2 = time_to_minutes(start2)
+        e2 = time_to_minutes(end2)
+        return (s1 < e2 and s2 < e1)
+
+    # Build schedule index by ID for quick lookup
+    schedule_by_id = {s['id']: s for s in schedules if 'id' in s}
+
+    # Track which schedules are part of paired courses (MW, TTH, MWF)
+    # Group by: (subjCode, section, prof, start, end, room)
+    paired_groups = {}
+    for sched in schedules:
+        key = (
+            sched.get('subjCode', ''),
+            sched.get('section', ''),
+            sched.get('prof', ''),
+            sched.get('start', ''),
+            sched.get('end', ''),
+            sched.get('room', '')
+        )
+        if key not in paired_groups:
+            paired_groups[key] = []
+        paired_groups[key].append(sched['id'])
+
+    # Track faculty daily hours (for 6/8 hour limit)
+    faculty_daily_hours = {}
+    for sched in schedules:
+        prof = sched.get('prof', '')
+        day = sched.get('day', '')
+        duration = get_duration_minutes(
+            sched.get('start', '0:00'), sched.get('end', '0:00')) / 60.0
+        key = (prof, day)
+        faculty_daily_hours[key] = faculty_daily_hours.get(key, 0) + duration
+
+    # Track which faculty have used their 8-hour exception
+    emergency_exceptions = {}  # faculty -> day
+
+    # Updated schedules
+    updated_schedules = []
+    unresolved = []
+    resolved_count = 0
+
+    # Collect all conflicting schedule IDs to avoid processing duplicates
+    processed_ids = set()
+
+    # Process each conflict
+    for conflict in conflicts:
+        conflict_schedules = conflict['schedules']
+
+        # For each schedule in the conflict, try to find a new slot
+        for sched_info in conflict_schedules:
+            sched_id = sched_info['id']
+
+            if sched_id in processed_ids or sched_id not in schedule_by_id:
+                continue
+
+            original_sched = schedule_by_id[sched_id]
+
+            # Find all paired schedules (same course/section/prof/time/room but different days)
+            paired_key = (
+                original_sched['subjCode'],
+                original_sched['section'],
+                original_sched['prof'],
+                original_sched['start'],
+                original_sched['end'],
+                original_sched['room']
+            )
+            paired_schedule_ids = paired_groups.get(paired_key, [sched_id])
+            paired_schedules = [schedule_by_id[pid]
+                                for pid in paired_schedule_ids if pid in schedule_by_id]
+
+            duration_minutes = get_duration_minutes(
+                original_sched['start'], original_sched['end'])
+            duration_hours = duration_minutes / 60.0
+
+            # Get days this course meets
+            meeting_days = [s['day'] for s in paired_schedules]
+
+            logger.info(
+                f"Trying to resolve conflict for {original_sched['subjCode']}-{original_sched['section']} ({len(meeting_days)} days: {meeting_days})")
+
+            # Try to find a free slot
+            found_slot = False
+            attempts = 0
+            max_attempts_to_log = 5
+
+            # Time slots to try (8am to 6pm, every 30 minutes)
+            for start_minutes in range(8*60, 18*60 - duration_minutes, 30):
+                end_minutes = start_minutes + duration_minutes
+                new_start = minutes_to_time(start_minutes)
+                new_end = minutes_to_time(end_minutes)
+
+                # Try each available room
+                for room in available_rooms:
+                    attempts += 1
+
+                    # Debug first few attempts
+                    if attempts <= max_attempts_to_log:
+                        logger.debug(
+                            f"  Attempt {attempts}: Testing {new_start}-{new_end} in {room}")
+
+                    # Check if this slot works for ALL meeting days
+                    slot_works = True
+                    exceeds_6hour_limit = False
+                    needs_emergency = False
+                    conflict_reason = None
+
+                    for day in meeting_days:
+                        # Check room availability - ONLY against same semester/year
+                        for other_sched in schedules:
+                            if other_sched['id'] in paired_schedule_ids:
+                                continue  # Skip own paired schedules
+
+                            # IMPORTANT: Only check schedules in the same semester/year
+                            if (other_sched.get('school_year') != school_year or
+                                    other_sched.get('semester') != semester):
+                                continue
+
+                            if (other_sched.get('room') == room and
+                                other_sched.get('day') == day and
+                                    times_overlap(new_start, new_end, other_sched['start'], other_sched['end'])):
+                                slot_works = False
+                                conflict_reason = f"Room {room} occupied on {day} by {other_sched.get('subjCode')}"
+                                break
+
+                        if not slot_works:
+                            break
+
+                        # Check faculty availability - ONLY against same semester/year
+                        prof = original_sched['prof']
+                        for other_sched in schedules:
+                            if other_sched['id'] in paired_schedule_ids:
+                                continue
+
+                            # IMPORTANT: Only check schedules in the same semester/year
+                            if (other_sched.get('school_year') != school_year or
+                                    other_sched.get('semester') != semester):
+                                continue
+
+                            if (other_sched.get('prof') == prof and
+                                other_sched.get('day') == day and
+                                    times_overlap(new_start, new_end, other_sched['start'], other_sched['end'])):
+                                slot_works = False
+                                conflict_reason = f"Prof {prof} teaching {other_sched.get('subjCode')} on {day}"
+                                break
+
+                        if not slot_works:
+                            break
+
+                        # Check 6-hour daily limit
+                        faculty_key = (prof, day)
+                        current_hours = faculty_daily_hours.get(faculty_key, 0)
+
+                        # Subtract old hours from this schedule if it was on this day
+                        for ps in paired_schedules:
+                            if ps['day'] == day:
+                                old_duration = get_duration_minutes(
+                                    ps['start'], ps['end']) / 60.0
+                                current_hours -= old_duration
+
+                        # Add new hours
+                        new_total_hours = current_hours + duration_hours
+
+                        if new_total_hours > 6:
+                            if new_total_hours <= 8:
+                                # Check if faculty hasn't already used emergency exception
+                                if prof not in emergency_exceptions or emergency_exceptions[prof] == day:
+                                    exceeds_6hour_limit = True
+                                    needs_emergency = True
+                                else:
+                                    # Faculty already used exception on a different day
+                                    slot_works = False
+                                    conflict_reason = f"Prof {prof} already used 8h exception on {emergency_exceptions[prof]}"
+                                    break
+                            else:
+                                # Exceeds even emergency 8-hour limit
+                                slot_works = False
+                                conflict_reason = f"Would exceed 8h limit ({new_total_hours:.1f}h on {day})"
+                                break
+
+                    # Log why first few attempts failed
+                    if not slot_works and attempts <= max_attempts_to_log:
+                        logger.debug(f"    ✗ Failed: {conflict_reason}")
+
+                    if slot_works:
+                        # Found a valid slot!
+                        logger.info(
+                            f"  ✓ Found slot: {new_start}-{new_end} in {room} ({meeting_days})")
+
+                        # Update all paired schedules
+                        for ps in paired_schedules:
+                            ps['start'] = new_start
+                            ps['end'] = new_end
+                            ps['room'] = room
+                            updated_schedules.append(ps)
+                            processed_ids.add(ps['id'])
+
+                        # Mark emergency exception if needed
+                        if needs_emergency:
+                            for day in meeting_days:
+                                faculty_key = (original_sched['prof'], day)
+                                new_hours = faculty_daily_hours.get(
+                                    faculty_key, 0)
+                                # Recalculate
+                                for ps in paired_schedules:
+                                    if ps['day'] == day:
+                                        new_hours = sum(
+                                            get_duration_minutes(
+                                                s['start'], s['end']) / 60.0
+                                            for s in schedules
+                                            if s.get('prof') == original_sched['prof'] and s.get('day') == day
+                                        )
+                                        if new_hours > 6:
+                                            emergency_exceptions[original_sched['prof']] = day
+                                            logger.warning(
+                                                f"  ⚠️ Emergency 8-hour exception used for {original_sched['prof']} on {day}")
+
+                        found_slot = True
+                        resolved_count += 1
+                        break
+
+                if found_slot:
+                    break
+
+            if not found_slot:
+                logger.warning(
+                    f"  ✗ Could not resolve conflict for {original_sched['subjCode']}-{original_sched['section']}")
+                unresolved.append(conflict)
+
+    return {
+        'success': len(unresolved) == 0,
+        'resolved_count': resolved_count,
+        'updated_schedules': updated_schedules,
+        'emergency_exceptions': list(emergency_exceptions.keys()),
+        'unresolved': unresolved
+    }

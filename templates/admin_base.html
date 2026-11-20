@@ -553,6 +553,25 @@
         </div>
         <div class="che-messages" id="che-messages"></div>
         <div class="che-suggestions" id="che-suggestions"></div>
+
+        <!-- TEMPORARY: Test conflict resolution button (only shows on schedules page) -->
+        <div id="che-test-conflict-btn"
+            style="display:none;padding:12px;background:#fef3c7;border-top:2px solid #fbbf24;text-align:center;">
+            <button onclick="if(window.testConflictResolutionUI) window.testConflictResolutionUI()" style="
+                background:#fbbf24;
+                color:#78350f;
+                border:none;
+                padding:8px 16px;
+                border-radius:6px;
+                font-weight:700;
+                cursor:pointer;
+                font-size:13px;
+                box-shadow:0 1px 3px rgba(0,0,0,0.1);
+            ">
+                🧪 TEST: Show Conflict UI (2027-2028 Sem 1)
+            </button>
+        </div>
+
         <div class="che-input-area">
             <textarea class="che-input" id="che-input" rows="1" placeholder="Ask CHE anything about DCERP…"
                 onkeydown="cheKeyDown(event)"
@@ -1645,8 +1664,8 @@
                 // Show processing message
                 appendCHEMsg('ai', 'I\'m generating the schedule now. This might take a moment...');
 
-                // Call the schedule generation API
-                const response = await fetch('/api/schedule/generate-full', {
+                // Call the schedule generation API (V2 - Independent mode)
+                const response = await fetch('/api/schedule/generate-full-v2', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1823,7 +1842,8 @@
                             detail: {
                                 targetYear,
                                 targetSemester,
-                                scheduleCount
+                                scheduleCount,
+                                room_conflicts: progress.room_conflicts || 0  // Add conflict count
                             }
                         });
                         window.dispatchEvent(event);
